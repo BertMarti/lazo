@@ -69,15 +69,14 @@ Lazo necesita un pequeño servidor para que la familia comparta las listas. Est�
 
 ## Modelos y su función
 
-La IA es **opcional** y **gratuita por defecto**. Lazo funciona perfectamente sin ella.
+La IA es **opcional** y está **apagada por defecto**: Lazo funciona entero sin ella.
 
-| Motor | Coste | Para qué | Cuándo elegirlo |
-|---|---|---|---|
-| **Sin IA** | Gratis | Columnas de Excel por sinónimos, ideas de un catálogo por edades | Siempre disponible |
-| **Google Gemini** (por defecto) | Gratis con tu clave | Entender Excel raros, limpiar nombres de producto, sugerir ideas por edad, gustos y presupuesto | Para empezar |
-| **Groq, OpenRouter (:free), NVIDIA** | Gratis con tu clave | Lo mismo que Gemini | Si Gemini llega a su límite |
-| **Ollama** | Gratis, en tu ordenador | Lo mismo, sin que nada salga de casa | Máxima privacidad |
-| **Claude** (Anthropic) | De pago, con tu clave | Lo mismo, con más calidad | Si quieres lo mejor |
+| Motor | Para qué | Cuándo elegirlo |
+|---|---|---|
+| **Sin IA** | Columnas de Excel por sinónimos y ajuste a mano; ideas de un catálogo por edades | Siempre disponible |
+| **Ollama** (en tu casa) | Entender Excel raros y sugerir ideas por edad, gustos y presupuesto | Lo recomendado: gratis y nada sale de tu red |
+| **Claude** o **Gemini de pago** | Lo mismo, con tu clave | Si no tienes Ollama |
+| Groq, OpenRouter, NVIDIA y la capa gratuita de Gemini | Lo mismo | Solo para probar: sus condiciones no encajan con el uso diario en la UE ([detalles](docs/legal/proveedores.md)) |
 
 La clave de la IA se queda en tu dispositivo: el servidor de Lazo nunca la ve. A la IA nunca le llega el nombre de un niño ni su año de nacimiento, solo una franja de edad («6–8 años»).
 

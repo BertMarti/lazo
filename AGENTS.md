@@ -13,7 +13,7 @@ Lazo es una app de listas de regalos en familia: PWA + Android (Capacitor) sobre
 3. **Un único sistema de botones** (`src/ui/Button.tsx`): `Button`, `ButtonLink`, `FileButton`, `IconButton` y `ButtonGroup`. Prohibido escribir `<button className="btn…">` a mano.
 4. **Sin HTML inyectado:** nada de `dangerouslySetInnerHTML` ni `innerHTML`.
 5. **Menores:** solo el nombre de pila y, opcional, el año de nacimiento. A la IA, solo una franja de edad.
-6. **IA gratuita por defecto.** Claude solo como opción de pago elegida por el usuario. Las claves, solo en el dispositivo.
+6. **IA opcional y apagada por defecto.** En producción solo Ollama (en casa) o una clave de pago del usuario (Claude, Gemini con facturación). Gemini gratuito, Groq, OpenRouter y NVIDIA: solo desarrollo y pruebas (`docs/legal/proveedores.md`). Las claves, solo en el dispositivo; las de `.env.local` son de desarrollo.
 7. **Enlaces:** solo metadatos públicos (Open Graph y JSON-LD). Nada de selectores propios de cada tienda. La descarga siempre pasa por el servicio `unfurl` con la protección anti-SSRF.
 
 ## Cómo se trabaja
@@ -48,11 +48,11 @@ Lazo es una app de listas de regalos en familia: PWA + Android (Capacitor) sobre
 
 | Modelo | Proveedor | Función |
 |---|---|---|
-| `gemini-3.8-flash` | Google, gratis con clave (por defecto) | Mapear columnas de un Excel, normalizar productos, sugerir ideas |
+| `gemma3` (u otro) | Ollama en casa (recomendado en producción) | Mapear columnas de un Excel, sugerir ideas |
+| `gemini-3.8-flash` | Google; en la UE solo de pago | Lo mismo; la capa gratuita, solo pruebas |
 | `qwen/qwen3.8-27b` | Groq, gratis | Respaldo del anterior |
 | `nvidia/nemotron-3.5-super-vl:free` | OpenRouter, gratis | Respaldo |
 | `nvidia/nemotron-3.5-super-vl-120b-a12b` | NVIDIA NIM, gratis (solo Android: sin CORS) | Respaldo |
-| `gemma3` | Ollama local | Privacidad total |
 | `claude-haiku-5-5` | Anthropic, de pago | Opción de calidad elegida por el usuario |
 
 **En el desarrollo:**

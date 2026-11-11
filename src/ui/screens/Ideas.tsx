@@ -76,7 +76,7 @@ export function IdeasSheet({ list, canAdd, onClose, onAdded }: { list: GiftList;
       <label className="field">
         <span>Gustos</span>
         <input className="input" value={likes} onChange={(e) => setLikes(e.target.value)} maxLength={200} placeholder="cocina, montaña, novela negra…" />
-        <small>{ai.provider === 'none' ? 'Ideas de nuestro catálogo. Activa una IA gratuita en Ajustes para ideas a medida.' : 'Solo se envían la franja de edad, los gustos y el presupuesto. Nunca el nombre.'}</small>
+        <small>{ai.provider === 'none' ? 'Ideas de nuestro catálogo. Si quieres ideas a medida, activa una IA en Ajustes.' : 'Solo se envían la franja de edad, los gustos y el presupuesto. Nunca el nombre.'}</small>
       </label>
       <Button variant="primary" icon={Sparkle} loading={busy} onClick={run}>Ver ideas</Button>
       {err && <p className="notice notice-error" role="alert">{err}</p>}

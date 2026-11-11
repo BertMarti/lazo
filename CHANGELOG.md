@@ -4,6 +4,9 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Cambiado
+- **La IA viene apagada y Ollama es la opción recomendada.** Tras revisar las condiciones de los proveedores, para el uso diario en la UE solo valen Ollama en casa o una clave de pago (Claude, o Gemini con facturación). Gemini gratuito, Groq, OpenRouter y NVIDIA quedan marcados «solo pruebas». Lazo funciona entero sin IA. Detalles en `docs/legal/proveedores.md`.
+
 ## [0.2.0] - 2026-11-11 · La hucha y las plazas
 
 Primera versión completa: servidor para casa, plazas para cada persona, hucha común, día de la entrega y app de Android.

@@ -34,15 +34,14 @@ export function Settings() {
     <div className="stack-lg" style={{ maxWidth: 640 }}>
       <section className="panel stack" aria-labelledby="ia">
         <h2 id="ia" className="h-section">Inteligencia artificial</h2>
-        <p className="lead">Opcional. Ayuda a entender Excel raros y a pensar ideas de regalo. La clave se guarda solo en este dispositivo; el servidor de Lazo nunca la ve.</p>
+        <p className="lead">Opcional: Lazo funciona igual sin IA. Ayuda a entender Excel raros y a pensar ideas de regalo. La clave se guarda solo en este dispositivo; el servidor de Lazo nunca la ve.</p>
         <label className="field">
           <span>Proveedor</span>
           <select className="select" value={s.provider} onChange={(e) => setS({ ...s, provider: e.target.value as AiSettings['provider'], model: undefined })}>
-            <option value="none">Sin IA (gratis, sin clave)</option>
+            <option value="none">Sin IA (recomendado si no tienes Ollama)</option>
             {PRESETS.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-                {p.free ? ' · gratis' : ''}
               </option>
             ))}
           </select>
