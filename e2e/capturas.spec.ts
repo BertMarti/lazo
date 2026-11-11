@@ -1,29 +1,34 @@
-import { test } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 
-// Capturas de diseño (no son aserciones). CAPTURAS=docs/design/v0.1 npx playwright test e2e/capturas.spec.ts
+// Capturas de diseño (no son aserciones). CAPTURAS=docs/design/v0.2 npx playwright test e2e/capturas.spec.ts
 const dir = process.env.CAPTURAS;
 test.skip(!dir, 'Solo cuando se piden capturas');
 
-const shots: [string, string, ((p: import('@playwright/test').Page) => Promise<void>)?][] = [
-  ['inicio', '/#/'],
-  ['grupo', '/#/g/navidad'],
-  ['lista-ajena', '/#/l/l-pablo'],
-  ['lista-propia', '/#/l/l-marta'],
-  ['lista-nina', '/#/l/l-vera'],
-  ['regalo-a-medias', '/#/l/l-pablo', async (p) => { await p.getByRole('button', { name: /Bicicleta de montaña/ }).click(); }],
-  ['nuevo-regalo', '/#/l/l-marta/nuevo'],
-  ['compras', '/#/compras'],
-  ['amigo-invisible', '/#/sorteo/navidad', async (p) => { await p.getByRole('button', { name: 'Abrir el sobre' }).click(); }],
+const shots: [string, string, string, ((p: Page) => Promise<void>)?][] = [
+  ['grupo', 'alberto', '/#/g/navidad'],
+  ['grupo-visto-por-mama', 'mama', '/#/g/navidad'],
+  ['lista-de-mama', 'alberto', '/#/l/l-mama'],
+  ['lista-propia', 'alberto', '/#/l/l-alberto'],
+  ['regalo-a-medias', 'alberto', '/#/l/l-mama', async (p) => { await p.locator('.gift', { hasText: 'Robot de cocina' }).locator('.gift-open').click(); }],
+  ['anadir', 'alberto', '/#/l/l-alberto/nuevo'],
+  ['compras', 'alberto', '/#/compras'],
+  ['amigo-invisible', 'alberto', '/#/sorteo/navidad', async (p) => { await p.getByRole('button', { name: /Abrir tu sobre/ }).click(); }],
+  ['inicio', 'alberto', '/#/'],
 ];
 
-for (const [name, url, act] of shots) {
+for (const [name, who, url, act] of shots) {
   test(name, async ({ page }, info) => {
-    await page.addInitScript(() => localStorage.clear());
+    await page.addInitScript((w) => {
+      localStorage.clear();
+      localStorage.setItem('lazo-demo-v2:viewer', w);
+      localStorage.setItem('lazo:explicado', '1');
+      sessionStorage.setItem('lazo:inicio', '1');
+    }, who);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(url);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
     if (act) await act(page);
     await page.waitForTimeout(500);
-    await page.screenshot({ path: `${dir}/${info.project.name}/${name}.png`, fullPage: info.project.name === 'escritorio' ? false : true });
+    await page.screenshot({ path: `${dir}/${info.project.name}/${name}.png`, fullPage: info.project.name === 'movil' });
   });
 }

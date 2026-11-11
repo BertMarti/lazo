@@ -1,42 +1,56 @@
 import { formatMoney } from '../core/money';
 import type { ItemStatus } from '../core/status';
 import type { Item } from '../core/types';
-import { initial, Seal, type Flavor } from './kit';
+import { Button } from './Button';
+import { Seal, type Flavor } from './kit';
+import type { StatusLine } from './statusText';
 
 export const PRIORITY: Record<1 | 2 | 3, string> = { 1: 'Me encantaría', 2: 'Me gustaría', 3: 'Si sobra' };
 
 /**
- * Etiqueta de un regalo, envuelta en el papel de su dueño. Si `status` es undefined (lista propia),
- * no se pinta ningún sello ni banda: la sorpresa no deja rastro, ni siquiera visual.
+ * Un regalo. Cuerpo = abre la ficha; pie = estado en frase + la acción de UN toque.
+ * En la lista propia (`line` undefined) no hay pie, ni sello, ni precinto: la sorpresa no deja rastro.
  */
-export function GiftTag({ item, flavor, status, fresh, onOpen }: { item: Item; flavor: Flavor; status?: ItemStatus; fresh?: boolean; onOpen: () => void }) {
-  const taken = status && (status.kind === 'reserved' || status.kind === 'bought');
+export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAction }: {
+  item: Item;
+  flavor: Flavor;
+  status?: ItemStatus;
+  line?: StatusLine;
+  fresh?: boolean;
+  busy?: boolean;
+  onOpen: () => void;
+  onAction?: () => void;
+}) {
+  const taken = status && (status.kind === 'reserved' || status.kind === 'bought' || status.kind === 'covered');
   return (
-    <button type="button" className="gift" data-flavor={flavor} onClick={onOpen} aria-label={`${item.title}${status ? `, ${statusWord(status)}` : ''}`}>
-      <div className="gift-wrap">
-        {item.image ? <img src={item.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="monogram" aria-hidden>{initial(item.title)}</span>}
-        {taken && (
-          <span className={`band${status.kind === 'bought' ? ' band-bought' : ''}`} data-enter={fresh || undefined} aria-hidden>
-            {status.kind === 'bought' ? 'Comprado' : 'Reservado'}
+    <article className="gift" data-tone={line?.tone ?? 'open'}>
+      <button type="button" className="gift-open" onClick={onOpen} aria-label={`${item.title}${line ? `. ${line.text}` : ''}. Ver detalles`}>
+        <span className="gift-thumb paper" data-flavor={flavor} aria-hidden>
+          {item.image && <img src={item.image} alt="" loading="lazy" referrerPolicy="no-referrer" />}
+          {taken && <span className={`band${status.kind === 'bought' ? ' band-bought' : ''}`} data-enter={fresh || undefined} />}
+        </span>
+        <span className="gift-text">
+          <span className="gift-title">{item.title}</span>
+          <span className="gift-price">
+            {item.priceCents !== undefined ? <span className="money">{formatMoney(item.priceCents, item.currency)}</span> : 'Sin precio'}
+            {item.store && ` · ${item.store}`}
           </span>
-        )}
-      </div>
-      {status && (
-        <span className="seal-slot">
-          <Seal status={status} animate={fresh} />
+          {item.priority === 1 && <span className="prio">{PRIORITY[1]}</span>}
         </span>
+      </button>
+      {line && status && (
+        <div className="gift-foot">
+          <span className="status">
+            <Seal status={status} size={24} animate={fresh} />
+            <span className="status-text">{line.text}</span>
+          </span>
+          {line.action && onAction && (
+            <Button variant={line.action === 'reserve' ? 'primary' : 'secondary'} size="sm" loading={busy} onClick={onAction}>
+              {line.actionLabel}
+            </Button>
+          )}
+        </div>
       )}
-      <div className="gift-body">
-        <span className="gift-title">{item.title}</span>
-        <span className="gift-line">
-          <span className="meta truncate">{item.store ?? 'Sin tienda'}</span>
-          {item.priceCents !== undefined && <span className="price">{formatMoney(item.priceCents, item.currency)}</span>}
-        </span>
-        {item.priority === 1 && <span className="prio">{PRIORITY[1]}</span>}
-      </div>
-    </button>
+    </article>
   );
 }
-
-const statusWord = (s: ItemStatus) =>
-  ({ free: 'libre', reserved: 'reservado', bought: 'comprado', partial: `a medias${s.percent !== undefined ? ` (${s.percent} %)` : ''}`, covered: 'cubierto' })[s.kind];

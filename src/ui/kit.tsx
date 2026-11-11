@@ -1,14 +1,14 @@
-import { X } from '@phosphor-icons/react';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { EyeSlash, X } from '@phosphor-icons/react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ItemStatus } from '../core/status';
 import type { User } from '../core/types';
-import { IconButton } from './Button';
+import { Button, IconButton } from './Button';
 
 export const FLAVORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'] as const;
 export type Flavor = (typeof FLAVORS)[number];
 export const flavorOf = (color?: string): Flavor => (FLAVORS as readonly string[]).includes(color ?? '') ? (color as Flavor) : 'almendra';
 
-export function Avatar({ user, size }: { user: Pick<User, 'name' | 'color'>; size?: 'sm' | 'lg' }) {
+export function Avatar({ user, size }: { user: Pick<User, 'name' | 'color'>; size?: 'sm' | 'md' | 'lg' }) {
   return (
     <span className={['avatar', size && `avatar-${size}`].filter(Boolean).join(' ')} data-flavor={flavorOf(user.color)} aria-hidden>
       {initial(user.name)}
@@ -30,7 +30,7 @@ const SEAL_LABEL: Record<ItemStatus['kind'], string> = {
  * El sello de Lazo: un único trazo para todos los estados.
  * Libre = trazo; reservado = trazo dorado; comprado/cubierto = lleno; a medias = se llena por porcentaje.
  */
-export function Seal({ status, animate }: { status: ItemStatus; animate?: boolean }) {
+export function Seal({ status, animate, size = 44 }: { status: ItemStatus; animate?: boolean; size?: 24 | 44 }) {
   const k = status.kind;
   const filled = k === 'bought' || k === 'covered';
   const pct = k === 'partial' ? (status.percent ?? 50) : filled ? 100 : 0;
@@ -43,7 +43,7 @@ export function Seal({ status, animate }: { status: ItemStatus; animate?: boolea
   });
   const ink = k === 'free' ? 'var(--ink-3)' : 'var(--foil-ink)';
   return (
-    <span className="seal" data-enter={animate || undefined} role="img" aria-label={SEAL_LABEL[k] + (k === 'partial' && status.percent !== undefined ? ` ${status.percent} %` : '')}>
+    <span className="seal" style={{ '--seal': `${size}px` } as CSSProperties} data-enter={animate || undefined} role="img" aria-label={SEAL_LABEL[k] + (k === 'partial' && status.percent !== undefined ? ` ${status.percent} %` : '')}>
       <svg viewBox="0 0 44 44" aria-hidden>
         {scallop.map((p, i) => {
           const [x, y] = p.split(',').map(Number);
@@ -63,6 +63,15 @@ export function Seal({ status, animate }: { status: ItemStatus; animate?: boolea
 
 export const statusLabel = (s: ItemStatus) =>
   s.kind === 'partial' && s.percent !== undefined ? `A medias · ${s.percent} %` : SEAL_LABEL[s.kind];
+
+/** El chip de la regla: «Mamá no ve esto». Único chip dorado de la app. */
+export function VisibilityNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="vis">
+      <EyeSlash size={18} weight="bold" aria-hidden /> {children}
+    </p>
+  );
+}
 
 /** Hoja: <dialog> nativo (foco atrapado, Escape y fondo gratis). Abajo en móvil, centrada en escritorio. */
 export function Sheet({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
@@ -95,21 +104,44 @@ export function Sheet({ title, onClose, children, footer }: { title: string; onC
 }
 
 // — Avisos breves —
-const ToastCtx = createContext<(msg: string) => void>(() => {});
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+type ToastFn = (msg: string, opts?: { action?: ToastAction }) => void;
+const ToastCtx = createContext<ToastFn>(() => {});
 export const useToast = () => useContext(ToastCtx);
+/** Avisos breves: 3 s, o 6 s si llevan acción («Deshacer»). */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [msg, setMsg] = useState<{ text: string; n: number } | null>(null);
-  const show = useCallback((text: string) => setMsg((m) => ({ text, n: (m?.n ?? 0) + 1 })), []);
+  const [msg, setMsg] = useState<{ text: string; n: number; action?: ToastAction } | null>(null);
+  const show = useCallback<ToastFn>((text, opts) => setMsg((m) => ({ text, n: (m?.n ?? 0) + 1, action: opts?.action })), []);
   useEffect(() => {
     if (!msg) return;
-    const t = setTimeout(() => setMsg(null), 3200);
+    const t = setTimeout(() => setMsg(null), msg.action ? 6000 : 3000);
     return () => clearTimeout(t);
   }, [msg]);
   return (
     <ToastCtx.Provider value={show}>
       {children}
-      <div aria-live="polite" className="sr-only">{msg?.text}</div>
-      {msg && <div key={msg.n} className="toast" aria-hidden>{msg.text}</div>}
+      <div role="status" className="toast-host">
+        {msg && (
+          <div key={msg.n} className="toast">
+            <span>{msg.text}</span>
+            {msg.action && (
+              <Button
+                variant="on-box"
+                size="sm"
+                onClick={() => {
+                  msg.action!.run();
+                  setMsg(null);
+                }}
+              >
+                {msg.action.label}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </ToastCtx.Provider>
   );
 }

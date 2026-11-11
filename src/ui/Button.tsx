@@ -2,7 +2,7 @@
 import type { Icon } from '@phosphor-icons/react';
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, LabelHTMLAttributes, ReactNode } from 'react';
 
-export type ButtonVariant = 'primary' | 'foil' | 'secondary' | 'ghost' | 'danger' | 'on-box';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'on-box';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 const ICON: Record<ButtonSize, number> = { sm: 18, md: 20, lg: 22 };
 

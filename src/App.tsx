@@ -1,39 +1,30 @@
 import { ArrowLeft, Gift, ShoppingBag, Shuffle, SquaresFour } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
-import type { Api } from './api/types';
 import { DemoApi } from './api/demo';
-import type { Group } from './core/types';
+import type { Api } from './api/types';
 import { IconButton } from './ui/Button';
 import { ApiCtx, go, lastGroup, useRoute } from './ui/ctx';
-import { daysUntil, OCCASION, ToastProvider } from './ui/kit';
+import { Avatar, daysUntil, ToastProvider } from './ui/kit';
 import { DrawScreen } from './ui/screens/Draw';
 import { GroupScreen } from './ui/screens/Group';
 import { Home } from './ui/screens/Home';
 import { Join } from './ui/screens/Join';
 import { ListScreen } from './ui/screens/List';
 import { Purchases } from './ui/screens/Purchases';
-
-interface Title {
-  name: string;
-  sub?: string;
-  date?: string;
-  back?: string;
-}
+import type { Title } from './ui/title';
 
 export function App({ api }: { api: Api }) {
   const route = useRoute();
   const [, force] = useState(0);
   const [title, setTitle] = useState<Title>({ name: 'Lazo' });
+  const onTitle = useCallback((t: Title) => setTitle(t), []);
   const [section, id, extra] = route;
   const group = section === 'g' || section === 'sorteo' ? id : lastGroup.get();
 
-  const onGroup = useCallback((g: Group) => setTitle({ name: g.name, sub: OCCASION[g.occasion], date: g.date, back: '/' }), []);
-  const onList = useCallback((t: { name: string; sub: string; groupId: string }) => setTitle({ name: t.name, sub: t.sub, back: `/g/${t.groupId}` }), []);
-
   let screen;
   let t: Title = title;
-  if (section === 'g' && id) screen = <GroupScreen id={id} onTitle={onGroup} />;
-  else if (section === 'l' && id) screen = <ListScreen id={id} adding={extra === 'nuevo'} onTitle={onList} />;
+  if (section === 'g' && id) screen = <GroupScreen id={id} onTitle={onTitle} />;
+  else if (section === 'l' && id) screen = <ListScreen id={id} adding={extra === 'nuevo'} onTitle={onTitle} />;
   else if (section === 'compras') {
     screen = <Purchases />;
     t = { name: 'Mis compras', sub: 'Solo lo ves tú' };
@@ -45,7 +36,7 @@ export function App({ api }: { api: Api }) {
     t = { name: 'Bienvenida' };
   } else {
     screen = <Home />;
-    t = { name: 'Lazo', sub: 'Listas de regalos en familia, sin spoilers' };
+    t = { name: 'Tus grupos', sub: 'Lazo · listas de regalos en familia' };
   }
   const d = daysUntil(t.date);
 
@@ -56,19 +47,23 @@ export function App({ api }: { api: Api }) {
           {api instanceof DemoApi && <DemoBar api={api} onChange={() => force((n) => n + 1)} />}
           <header className="topbar">
             <div className="topbar-inner">
-              <div className="row" style={{ alignItems: 'flex-end', minWidth: 0 }}>
+              <div className="topbar-title">
                 {t.back && <IconButton icon={ArrowLeft} label="Atrás" onBox onClick={() => go(t.back!)} />}
+                {t.avatar && <Avatar user={t.avatar} size="md" />}
                 <div style={{ minWidth: 0 }}>
                   {t.sub && <p className="sub">{t.sub}</p>}
                   <h1>{t.name}</h1>
                 </div>
               </div>
-              {d !== null && d >= 0 && (
-                <p className="countdown" aria-label={`Faltan ${d} días`}>
-                  <b>{d}</b>
-                  <span>{d === 1 ? 'día' : 'días'}</span>
-                </p>
-              )}
+              <div className="topbar-actions">
+                {t.actions}
+                {d !== null && d >= 0 && (
+                  <p className="countdown" aria-label={`Faltan ${d} días`}>
+                    <b>{d}</b>
+                    <span>{d === 1 ? 'día' : 'días'}</span>
+                  </p>
+                )}
+              </div>
             </div>
           </header>
           <main id="contenido">{screen}</main>
@@ -76,7 +71,7 @@ export function App({ api }: { api: Api }) {
             <a className="brand" href="#/">
               <Gift size={26} weight="duotone" aria-hidden /> Lazo
             </a>
-            <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l' || !section} icon={SquaresFour} label="Grupo" />
+            <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l'} icon={SquaresFour} label="Grupo" />
             <Tab href="#/compras" current={section === 'compras'} icon={ShoppingBag} label="Mis compras" />
             <Tab href={group ? `#/sorteo/${group}` : '#/'} current={section === 'sorteo'} icon={Shuffle} label="Amigo invisible" />
           </nav>
@@ -98,7 +93,9 @@ function Tab({ href, current, icon: I, label }: { href: string; current: boolean
 function DemoBar({ api, onChange }: { api: DemoApi; onChange: () => void }) {
   return (
     <div className="demo-bar" role="region" aria-label="Demo">
-      <span><b>Demo</b> · datos ficticios</span>
+      <span>
+        <b>Demo</b> · datos ficticios
+      </span>
       <label className="row" style={{ gap: 'var(--s-2)' }}>
         <span>Ver como</span>
         <select
@@ -108,7 +105,11 @@ function DemoBar({ api, onChange }: { api: DemoApi; onChange: () => void }) {
             onChange();
           }}
         >
-          {api.people().map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {api.people().map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
         </select>
       </label>
     </div>

@@ -1,5 +1,5 @@
 import { Plus } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Occasion } from '../../core/types';
 import { Button, ButtonGroup } from '../Button';
 import { go, useApi } from '../ctx';
@@ -9,17 +9,15 @@ export function Home() {
   const api = useApi();
   const { data: groups, error, reload } = useLoad(() => api.groups(), [api]);
   const [creating, setCreating] = useState(false);
+  // Con un solo grupo, directo a él (la mayoría llega invitada a uno).
+  useEffect(() => {
+    if (groups?.length === 1 && !sessionStorage.getItem('lazo:inicio')) {
+      sessionStorage.setItem('lazo:inicio', '1');
+      go(`/g/${groups[0]!.id}`);
+    }
+  }, [groups]);
   return (
     <div className="stack-lg">
-      <div className="section-head">
-        <div className="stack" style={{ gap: 'var(--s-1)' }}>
-          <h2 className="h-section">Tus grupos</h2>
-          <p className="lead">Una caja por ocasión. Dentro, la lista de cada uno.</p>
-        </div>
-        <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-          Crear grupo
-        </Button>
-      </div>
       {error && <p className="notice notice-error">{error}</p>}
       {groups && groups.length === 0 && (
         <div className="empty">
@@ -38,6 +36,11 @@ export function Home() {
             </a>
           );
         })}
+      </div>
+      <div>
+        <Button variant="secondary" icon={Plus} onClick={() => setCreating(true)}>
+          {groups?.length ? 'Crear otro grupo' : 'Crear grupo'}
+        </Button>
       </div>
       {creating && (
         <NewGroup

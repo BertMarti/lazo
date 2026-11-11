@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { DrawImpossible } from '../../core/draw';
 import { formatMoney, parseAmount } from '../../core/money';
 import type { Id } from '../../core/types';
-import { Button, ButtonGroup, IconButton } from '../Button';
+import { Button, ButtonGroup, ButtonLink, IconButton } from '../Button';
 import { useApi } from '../ctx';
 import { Avatar, errorText, useLoad, useToast } from '../kit';
 
@@ -16,24 +16,28 @@ export function DrawScreen({ groupId }: { groupId: string }) {
   const [setup, setSetup] = useState(false);
 
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data) return <p className="meta">Barajando…</p>;
+  if (!data) return <p className="meta">Cargando…</p>;
   const { detail, info } = data;
   const isAdmin = detail.members.some((m) => m.id === me?.id && m.role === 'admin');
 
   return (
     <div className="stack-lg">
-      <p className="lead">Cada uno sabe solo a quién le regala. Ni quien organiza ve el resto.</p>
+      <p className="lead">Solo tú sabes a quién regalas. Ni quien organiza ve el resto.</p>
       {info.receiver ? (
         <div className="envelope" data-open={opened || undefined}>
           <p className="meta" style={{ color: 'var(--on-box-2)' }}>Te ha tocado regalar a</p>
           <Avatar user={info.receiver} size="lg" />
           <p className="who">{info.receiver.name}</p>
-          {info.draw?.budgetCents && <p>Presupuesto: {formatMoney(info.draw.budgetCents)}</p>}
-          <div className="cover">
-            <p className="h-section" style={{ color: 'var(--foil)' }}>Tu sobre</p>
-            <Button variant="foil" onClick={() => setOpened(true)}>Abrir el sobre</Button>
-            <p className="meta" style={{ color: 'var(--on-box-2)' }}>Mira que nadie te esté mirando.</p>
-          </div>
+          {info.draw?.budgetCents ? <p>Presupuesto: <span className="money">{formatMoney(info.draw.budgetCents)}</span></p> : null}
+          {(() => {
+            const l = detail.lists.find((x) => x.user === info.receiver!.id);
+            return l && opened ? <ButtonLink variant="on-box" href={`#/l/${l.id}`}>Ver la lista de {info.receiver.name}</ButtonLink> : null;
+          })()}
+          <button type="button" className="cover" onClick={() => setOpened(true)} aria-label="Abrir tu sobre del amigo invisible">
+            <span className="h-section" style={{ color: 'var(--foil)' }}>Tu sobre</span>
+            <span>Toca para ver a quién regalas</span>
+            <span className="meta" style={{ color: 'var(--on-box-2)' }}>Mira que nadie te esté mirando.</span>
+          </button>
         </div>
       ) : info.draw ? (
         <p className="notice">Este grupo ya tiene sorteo, pero tú no participas.</p>
@@ -45,7 +49,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
       )}
       {isAdmin && !setup && (
         <ButtonGroup>
-          <Button variant={info.draw ? 'secondary' : 'primary'} icon={Shuffle} onClick={() => setSetup(true)}>{info.draw ? 'Repetir el sorteo' : 'Preparar el sorteo'}</Button>
+          <Button variant={info.draw ? 'danger' : 'primary'} size={info.draw ? 'sm' : 'md'} icon={Shuffle} onClick={() => setSetup(true)}>{info.draw ? 'Repetir el sorteo' : 'Preparar el sorteo'}</Button>
         </ButtonGroup>
       )}
       {isAdmin && setup && (
@@ -74,11 +78,12 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
   const [budget, setBudget] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [sure, setSure] = useState(false);
   const name = (id: Id) => members.find((m) => m.id === id)?.name ?? '';
 
   const run = async () => {
     setErr('');
-    if (redo && !confirm('El sorteo anterior se borrará y todos tendrán un sobre nuevo. ¿Seguimos?')) return;
+    if (redo && !sure) return setSure(true);
     const cents = budget.trim() ? parseAmount(budget) : undefined;
     if (budget.trim() && !cents) return setErr('El presupuesto no se entiende. Escribe por ejemplo 30.');
     setBusy(true);
@@ -134,8 +139,9 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
         <input className="input" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="30" />
       </label>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
+      {sure && <p className="notice" role="alert">El sorteo anterior se borrará y cada persona tendrá un sobre nuevo. Pulsa otra vez para confirmar.</p>}
       <ButtonGroup>
-        <Button variant="primary" icon={Shuffle} loading={busy} disabled={chosen.size < 3} onClick={run}>Sortear entre {chosen.size}</Button>
+        <Button variant="primary" icon={Shuffle} loading={busy} disabled={chosen.size < 3} onClick={run}>{sure ? 'Sí, sortear de nuevo' : `Sortear entre ${chosen.size}`}</Button>
         <Button variant="ghost" icon={X} onClick={onCancel}>Cancelar</Button>
       </ButtonGroup>
     </section>
