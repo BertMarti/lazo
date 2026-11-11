@@ -543,7 +543,7 @@ export class DemoApi implements Api {
   private giftTarget(itemId: Id) {
     const item = this.db.items.find((i) => i.id === itemId);
     const list = item && this.db.lists.find((l) => l.id === item.list);
-    if (!item || !list || (item.secret && list.user === this.viewer)) throw new ApiError('Ese regalo ya no existe.');
+    if (!item || !list || ((item.secret || item.removed) && list.user === this.viewer)) throw new ApiError('Ese regalo ya no existe.');
     if (list.user === this.viewer) throw new ApiError('No puedes reservar regalos de tu propia lista.');
     const group = this.member(list.group);
     return { item, list, group };

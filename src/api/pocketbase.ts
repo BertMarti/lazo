@@ -67,7 +67,7 @@ export class PocketBaseApi implements Api {
   createGroup = (input: NewGroup) => this.run(async () => group(await this.pb.collection('groups').create(input)));
 
   addChildList = (groupId: Id, name: string, birthYear?: number) =>
-    this.run(async () => list(await this.pb.collection('lists').create({ group: groupId, name, birthYear, managers: [this.uid()] })));
+    this.run(async () => list(await this.pb.collection('lists').create({ group: groupId, name, birthYear, kind: 'child', managers: [this.uid()] })));
 
   saveItem = (listId: Id, input: ItemInput, id?: Id) =>
     this.run(async () => {

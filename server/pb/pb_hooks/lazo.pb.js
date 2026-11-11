@@ -306,7 +306,8 @@ routerAdd(
     }
     const list = $app.findRecordById('lists', item.getString('list'));
     if (list.getString('user') === me) {
-      if (item.getBool('secret')) throw notFound();
+      // V-1: retirado o sorpresa ≡ inexistente (si no, el código delata si estaba cogido)
+      if (item.getBool('secret') || item.getBool('removed')) throw notFound();
       throw new ForbiddenError('No puedes reservar regalos de tu propia lista.');
     }
     const group0 = $app.findRecordById('groups', list.getString('group'));
