@@ -4,6 +4,9 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Seguridad
+- Nueva prueba PB-13 contra PocketBase real: las cuentas de la hucha de cada persona (su parte, lo que debe, la previsión y la tabla de cobro) salen bien con lo que el servidor le entrega y no cambian por lo que otros hagan en su plaza. Ya son 23 pruebas y no queda ninguna pendiente.
+
 ## [0.3.0] - 2026-11-11 · Más segura y con fotos
 
 Repaso de seguridad completo, fotos de verdad en la demo y una app que se toca bien en cualquier móvil.

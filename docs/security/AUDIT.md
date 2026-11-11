@@ -713,7 +713,7 @@ Mismo control en `DemoApi.claimPlaza`.
 | **PB-10** | **Falta** | `DELETE items` 204 con y sin reservas, queda `removed`, 404 después (V-1, V-2) |
 | PB-11 | Parcial | Solo `>= 400`; comparar cuerpo con y sin presupuesto previo |
 | PB-12 | Parcial | Un tercero no borra; `view` por id; tiempo real del tesorero |
-| **PB-13** | **Falta** | Agregados de `core/hucha` sobre lo que el servidor entrega a X, invariantes a lo de X |
+| PB-13 | Hecha | Agregados de `core/hucha` sobre lo que el servidor entrega a X, invariantes a lo de X |
 | **PB-14** | **Falta** | `/api/batch` con `expand`/`filter` que lleven `_via_` (el lote está activado) |
 | PB-15 | Parcial y frágil | `:258` traga el fallo de la compra con `.catch(() => null)`: si falla, `received` es `[]` y la prueba pasa. Afirmar `r.json.length === 1`, `from`, que lo reservado no sale, `ask` por no admin → 403 |
 | PB-16 | Parcial | Plazas iguales, libres, de otro grupo; no admin |
@@ -774,4 +774,4 @@ Las reglas de `gift` (modos, unidades, aportaciones, `paidBy`, `unbuy`), `contri
 - **Corregidos:** V-8 (`gift`, aportaciones y borrado de regalos releen y comprueban dentro de la transacción), V-9 (migración `1762870000_endurecer.js`: etiqueta `GET /api/lazo/received/`), V-10 (no se puede borrar la cuenta con una plaza ocupada ni siendo dueño), V-11 (la plaza del tesorero o del suplente no se borra), V-12 (`buyMode` obligatorio; `drawRounds` a 0 al crear), V-13 a–e (liberar limpia `approvedBy` y las solicitudes; el traspaso mueve `items.createdBy`; rechazar borra la solicitud y el cliente lo lee como «rechazada»; sin nombres repetidos al crear plazas ni al aceptar; compra y aportación sobre un retirado → 400) y V-15 (paridad de la demo: `saveItem`, `deleteItem`, `purchases`, `inviteInfo`, `releasePlaza`, `decideJoin` y traspaso de sorpresas).
 - **V-14:** se mantiene como diferencia documentada con la spec (sin impacto de seguridad).
 - `server/test/rules.test.mjs`: **22/22 en verde contra PocketBase 0.40.6**, con PB-2 (no interferencia byte a byte para Mamá), PB-3 (plaza con historial antes de reclamarla), PB-9 (20 reservas simultáneas → 1 fila), PB-14 (lotes con `expand` y `_via_`), PB-17 (enlace usado ≡ falso) y una prueba de V-9/V-10/V-11/V-13.
-- Pendiente: PB-13.
+- PB-13 (2026-11-11): las cuentas de la hucha (`core/hucha`) de cada miembro, calculadas con lo que el servidor le entrega, coinciden con las esperadas y no cambian por lo que pasa en su plaza. **23/23 en verde.** No queda ninguna prueba pendiente.

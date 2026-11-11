@@ -8,6 +8,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, cpSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const BIN = process.env.PB_BIN;
 const PORT = 18090 + Math.floor(Math.random() * 500);
@@ -319,6 +320,45 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     const budget = (await ok('GET', `/api/collections/budgets/records?filter=${encodeURIComponent(`list = "${ids['l-mama']}"`)}`, null, tok.samira)).items[0];
     if (budget) await call('PATCH', `/api/collections/budgets/records/${budget.id}`, { amountCents: 25000 }, tok.samira);
     assert.deepEqual(await snap(), before);
+  });
+
+  test('PB-13: las cuentas de la hucha de cada uno salen bien y no cambian por lo que pase en su plaza', async () => {
+    // core/hucha tal cual lo usa la app, empaquetado con esbuild (como en build:server).
+    const out = join(dir, 'hucha.mjs');
+    (await import('esbuild')).buildSync({ entryPoints: [resolve(import.meta.dirname, '..', '..', 'src/core/hucha.ts')], bundle: true, format: 'esm', outfile: out, logLevel: 'silent' });
+    const H = await import(pathToFileURL(out).href);
+    const get = async (col, t, extra = '') => (await ok('GET', `/api/collections/${col}/records?perPage=500&sort=id${extra}`, null, t)).items;
+    const rows = async (t) => {
+      const g = await ok('GET', `/api/collections/groups/records/${ids.group}?expand=members`, null, t);
+      const lists = (await get('lists', t)).filter((l) => l.group === ids.group);
+      const items = (await get('items', t)).filter((i) => lists.some((l) => l.id === i.list));
+      const claims = (await get('claims', t)).filter((c) => items.some((i) => i.id === c.item)).map((c) => ({ ...c, kind: c.kind || 'self', paidBy: c.paidBy || undefined, paidCents: c.status === 'bought' ? c.paidCents : undefined }));
+      const payments = (await get('payments', t)).filter((p) => p.group === ids.group);
+      return { g, lists, items, claims, payments };
+    };
+    const sums = (who, d) => {
+      const userOf = (l) => d.lists.find((x) => x.id === l)?.user || undefined;
+      const ctx = { me: ids[who], members: d.g.expand.members.map((m) => m.id), lists: d.lists, items: d.items, claims: d.claims, payments: d.payments, treasurer: userOf(d.g.treasurer), deputy: userOf(d.g.deputy), treasurerList: d.g.treasurer || undefined };
+      return { due: H.due(ctx.me, ctx), progress: H.generalProgress(ctx), shares: H.myShares(ctx).map((s) => ({ ...s, list: s.list.id })), forecast: H.forecast(ctx), table: H.collectTable(ctx) };
+    };
+    // Lo esperado: todas las filas (superusuario) menos las de su plaza y los pagos en los que no es parte.
+    const expected = async (who) => {
+      const d = await rows(su);
+      const own = new Set(d.items.filter((i) => i.list === ids[`l-${who}`]).map((i) => i.id));
+      return sums(who, { ...d, items: d.items.filter((i) => !own.has(i.id)), claims: d.claims.filter((c) => !own.has(c.item)), payments: d.payments.filter((p) => p.from === ids[who] || p.to === ids[who]) });
+    };
+    const before = {};
+    for (const who of FAMILY) {
+      before[who] = sums(who, await rows(tok[who]));
+      assert.deepEqual(before[who], await expected(who), `${who}: antes`);
+    }
+    // Samira compra con la hucha la sorpresa de Mamá y Papá le paga a la tesorería: a Mamá no le cambia nada.
+    const res = (await get('claims', tok.samira, `&filter=${encodeURIComponent(`item = "${ids['s-mama']}"`)}`))[0];
+    await ok('POST', '/api/lazo/gift', { action: 'buy', claim: res.id, paidCents: 1400, paidBy: ids.samira }, tok.samira);
+    await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.alberto, amountCents: 300, sub: false }, tok.papa);
+    for (const who of FAMILY) assert.deepEqual(sums(who, await rows(tok[who])), await expected(who), `${who}: después`);
+    assert.deepEqual(sums('mama', await rows(tok.mama)), before.mama, 'Mamá no nota la compra en su plaza');
+    assert.ok(sums('papa', await rows(tok.papa)).shares.some((s) => s.list === ids['l-mama'] && s.spent === 1400), 'la compra cuenta para los demás');
   });
 
   test('PB-9: veinte reservas a la vez del mismo regalo dejan una sola fila', async () => {
