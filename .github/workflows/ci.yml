@@ -21,9 +21,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Contenedor oficial de gitleaks: escanea todo el historial con las reglas de .gitleaks.toml
+      - run: docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:latest git /repo --redact --no-banner -v
 
   check:
     runs-on: ubuntu-latest
