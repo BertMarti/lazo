@@ -78,7 +78,11 @@ export function Sheet({ title, onClose, children, footer }: { title: string; onC
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
-    if (d && !d.open) d.showModal();
+    if (d && !d.open) {
+      d.showModal();
+      // Foco en el primer control útil del cuerpo, nunca en la ✕ (Fable, REFERENCIAS P0).
+      d.querySelector<HTMLElement>('.sheet-body [data-autofocus], .sheet-body input, .sheet-body select, .sheet-body textarea, .sheet-body button, .sheet-foot button')?.focus();
+    }
   }, []);
   return (
     <dialog
@@ -129,7 +133,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <span>{msg.text}</span>
             {msg.action && (
               <Button
-                variant="on-box"
+                variant="link"
                 size="sm"
                 onClick={() => {
                   msg.action!.run();

@@ -1,4 +1,4 @@
-import { ArrowLeft, Gear, Gift, ShoppingBag, Shuffle, SquaresFour } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, ShoppingBag, Shuffle, UsersThree, type Icon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { DemoApi } from './api/demo';
 import type { Api } from './api/types';
@@ -57,6 +57,7 @@ export function App({ api }: { api: Api }) {
                 <div style={{ minWidth: 0 }}>
                   {t.sub && <p className="sub">{t.sub}</p>}
                   <h1>{t.name}</h1>
+                  {d !== null && d >= 0 && <p className="countdown-line">{d > 1 ? `Faltan ${d} días` : d === 1 ? 'Es mañana' : 'Es hoy'}</p>}
                 </div>
               </div>
               <div className="topbar-actions">
@@ -73,9 +74,9 @@ export function App({ api }: { api: Api }) {
           <main id="contenido">{screen}</main>
           <nav className="tabbar" aria-label="Principal">
             <a className="brand" href="#/">
-              <Gift size={26} weight="duotone" aria-hidden /> Lazo
+              Lazo
             </a>
-            <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l'} icon={SquaresFour} label="Grupo" />
+            <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l'} icon={UsersThree} label="Grupo" />
             <Tab href="#/compras" current={section === 'compras'} icon={ShoppingBag} label="Mis compras" />
             <Tab href={group ? `#/sorteo/${group}` : '#/'} current={section === 'sorteo'} icon={Shuffle} label="Amigo invisible" />
           </nav>
@@ -85,7 +86,7 @@ export function App({ api }: { api: Api }) {
   );
 }
 
-function Tab({ href, current, icon: I, label }: { href: string; current: boolean; icon: typeof Gift; label: string }) {
+function Tab({ href, current, icon: I, label }: { href: string; current: boolean; icon: Icon; label: string }) {
   return (
     <a className="tab" href={href} aria-current={current ? 'page' : undefined}>
       <I size={24} weight={current ? 'fill' : 'regular'} aria-hidden />

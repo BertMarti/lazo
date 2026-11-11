@@ -30,9 +30,11 @@ export function Home() {
           const d = daysUntil(g.date);
           return (
             <a key={g.id} className="group-card" href={`#/g/${g.id}`}>
-              <span className="meta">{OCCASION[g.occasion]}</span>
               <h2>{g.name}</h2>
-              {d !== null && <span className="days">{d > 1 ? `Faltan ${d} días` : d === 1 ? 'Es mañana' : d === 0 ? 'Es hoy' : 'Ya pasó'}</span>}
+              <span className="meta">
+                {OCCASION[g.occasion]}
+                {d !== null && ` · ${d > 1 ? `faltan ${d} días` : d === 1 ? 'es mañana' : d === 0 ? 'es hoy' : 'ya pasó'}`}
+              </span>
             </a>
           );
         })}

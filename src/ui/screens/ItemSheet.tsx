@@ -152,7 +152,7 @@ export function ItemSheet({ listId, itemId, users, focusPot, onClose, onChanged 
       {!st || !line ? (
         <VisibilityNote>Si alguien lo reserva, tú no lo verás.</VisibilityNote>
       ) : (
-        <section className="sunken stack" aria-label="Estado">
+        <section className="stack" style={{ borderTop: '1px solid var(--line)', paddingTop: 'var(--s-4)' }} aria-label="Estado">
           <div className="row">
             <Seal status={st} />
             <p className="grow" style={{ fontWeight: 700 }}>{line.text}</p>

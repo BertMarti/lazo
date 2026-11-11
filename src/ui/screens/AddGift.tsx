@@ -1,4 +1,4 @@
-import { Check, ClipboardText, FileXls, PencilSimple } from '@phosphor-icons/react';
+import { Check, ClipboardText, PencilSimple } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatMoney } from '../../core/money';
 import type { Item, Priority } from '../../core/types';
@@ -97,7 +97,7 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
   return (
     <Sheet title="Añadir a tu lista" onClose={onClose}>
       <div className="stack">
-        <Button variant="primary" size="lg" wide icon={ClipboardText} loading={step.kind === 'reading'} onClick={paste} autoFocus>
+        <Button variant="primary" size="lg" wide icon={ClipboardText} loading={step.kind === 'reading'} onClick={paste} data-autofocus>
           {step.kind === 'reading' ? 'Leyendo la tienda…' : peek ? `Pegar ${peek}` : 'Pegar enlace'}
         </Button>
         <p className="meta">Copia el enlace en Amazon o en cualquier tienda y pégalo aquí.</p>
@@ -123,15 +123,14 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
           </>
         )}
       </div>
-      <p className="divider">o</p>
-      <ButtonGroup align="stretch">
-        <Button variant="secondary" icon={PencilSimple} onClick={() => setStep({ kind: 'manual' })}>
+      <div className="stack" style={{ gap: 0 }}>
+        <Button variant="link" onClick={() => setStep({ kind: 'manual' })}>
           Escribirlo a mano
         </Button>
-        <Button variant="ghost" icon={FileXls} onClick={onImport}>
-          Importar Excel
+        <Button variant="link" onClick={onImport}>
+          Importar desde Excel
         </Button>
-      </ButtonGroup>
+      </div>
     </Sheet>
   );
 }

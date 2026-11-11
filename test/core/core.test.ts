@@ -28,7 +28,11 @@ describe('dinero', () => {
   ])('%s → %i', (input, cents) => expect(parseAmount(input)).toBe(cents));
   it('acepta números de Excel', () => expect(parseAmount(19.99)).toBe(1999));
   it.each(['', 'abc', '0', '-5', '12..5', '12.3456'])('rechaza «%s»', (input) => expect(parseAmount(input)).toBeNull());
-  it('formatea en español', () => expect(formatMoney(123456)).toBe('1234,56 €'));
+  it('formatea en español; sin «,00» si es redondo salvo en modo exacto', () => {
+    expect(formatMoney(123456)).toBe('1234,56 €');
+    expect(formatMoney(34900)).toBe('349 €');
+    expect(formatMoney(34900, 'EUR', true)).toBe('349,00 €');
+  });
 });
 
 describe('sorpresa', () => {

@@ -40,7 +40,7 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
   return (
     <article className={`member${compact ? ' member-compact' : ''}`} data-flavor={flavor} aria-current={current || undefined}>
       <div className="member-head">
-        <Avatar user={{ name: list.name, color: owner?.color ?? flavor }} size={compact ? undefined : 'md'} />
+        <Avatar user={{ name: list.name, color: owner?.color ?? flavor }} />
         <div className="grow">
           <h2>
             <a className="member-link" href={`#/l/${list.id}`}>
@@ -61,8 +61,8 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
       </div>
       {mine ? (
         !compact && (
-          <p className="vis-band">
-            <EyeSlash size={18} weight="bold" aria-hidden /> Tu presupuesto y tus reservas son sorpresa
+          <p className="vis-line">
+            <EyeSlash size={18} weight="bold" aria-hidden /> Lo que te regalan es sorpresa
           </p>
         )
       ) : budget ? (
@@ -73,7 +73,7 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
             <span className="meta">Sin presupuesto</span>
             {onSetBudget && (
               <span className="on-top">
-                <Button variant="ghost" size="sm" onClick={onSetBudget}>
+                <Button variant="link" size="sm" onClick={onSetBudget}>
                   Poner presupuesto
                 </Button>
               </span>

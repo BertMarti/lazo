@@ -23,12 +23,15 @@ export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAc
 }) {
   const taken = status && (status.kind === 'reserved' || status.kind === 'bought' || status.kind === 'covered');
   return (
-    <article className="gift" data-tone={line?.tone ?? 'open'}>
+    <article className="gift" data-tone={line?.tone ?? 'open'} data-flavor={flavor}>
+      {taken && !item.image && <span className={`gift-top${status.kind === 'bought' ? ' gift-top-bought' : ''}`} aria-hidden />}
       <button type="button" className="gift-open" onClick={onOpen} aria-label={`${item.title}${line ? `. ${line.text}` : ''}. Ver detalles`}>
-        <span className="gift-thumb paper" data-flavor={flavor} aria-hidden>
-          {item.image && <img src={item.image} alt="" loading="lazy" referrerPolicy="no-referrer" />}
-          {taken && <span className={`band${status.kind === 'bought' ? ' band-bought' : ''}`} data-enter={fresh || undefined} />}
-        </span>
+        {item.image && (
+          <span className="gift-thumb" aria-hidden>
+            <img src={item.image} alt="" loading="lazy" referrerPolicy="no-referrer" />
+            {taken && <span className={`band${status.kind === 'bought' ? ' band-bought' : ''}`} data-enter={fresh || undefined} />}
+          </span>
+        )}
         <span className="gift-text">
           <span className="gift-title">{item.title}</span>
           <span className="gift-price">
@@ -42,7 +45,7 @@ export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAc
         <div className="gift-foot">
           <span className="status">
             <Seal status={status} size={24} animate={fresh} />
-            <span className="status-text">{line.text}</span>
+            <span className="status-text">{bold(line.text, line.strong)}</span>
           </span>
           {line.action && onAction && (
             <Button variant={line.action === 'reserve' ? 'primary' : 'secondary'} size="sm" loading={busy} onClick={onAction}>
@@ -52,5 +55,18 @@ export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAc
         </div>
       )}
     </article>
+  );
+}
+
+/** «Lo compró Samira» con el nombre en negrita. */
+function bold(text: string, strong?: string) {
+  const i = strong ? text.lastIndexOf(strong) : -1;
+  if (!strong || i < 0) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <b>{strong}</b>
+      {text.slice(i + strong.length)}
+    </>
   );
 }

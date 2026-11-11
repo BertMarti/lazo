@@ -152,8 +152,8 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
       ) : (
         <section className="budget-panel" aria-label={`Presupuesto para ${who}`}>
           <div className="budget-panel-head">
-            <span className="meta" style={{ fontWeight: 700 }}>Presupuesto para {who}</span>
-            <Button variant={d.budget ? 'ghost' : 'secondary'} size="sm" onClick={() => setBudgetOpen(true)}>
+            <span className="meta">Presupuesto para {who}</span>
+            <Button variant={d.budget ? 'link' : 'secondary'} size="sm" onClick={() => setBudgetOpen(true)}>
               {d.budget ? 'Cambiar' : 'Poner presupuesto'}
             </Button>
           </div>

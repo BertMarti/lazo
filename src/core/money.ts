@@ -25,6 +25,8 @@ export function parseAmount(input: string | number): Cents | null {
   return Number.isFinite(cents) && cents > 0 && cents <= LIMITS.amount ? cents : null;
 }
 
-export function formatMoney(cents: Cents, currency = 'EUR'): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency }).format(cents / 100);
+/** Céntimos → «12,50 €». Si es redondo, sin «,00» («349 €»), salvo `exact` (la hucha, donde los céntimos importan). */
+export function formatMoney(cents: Cents, currency = 'EUR', exact = false): string {
+  const round = !exact && cents % 100 === 0;
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency, minimumFractionDigits: round ? 0 : 2, maximumFractionDigits: 2 }).format(cents / 100);
 }

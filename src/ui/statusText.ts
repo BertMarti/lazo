@@ -6,6 +6,8 @@ export type GiftAction = 'reserve' | 'buy' | 'pot' | 'mypart' | 'buy-pot';
 
 export interface StatusLine {
   text: string;
+  /** Parte de `text` que va en negrita (el nombre). */
+  strong?: string;
   tone: Tone;
   action?: GiftAction;
   actionLabel?: string;
@@ -39,16 +41,17 @@ export function statusLine(item: Item, status: ItemStatus, claims: Claim[], pots
   }
   if (status.kind === 'partial' || status.kind === 'covered') {
     const verb = inPot ? 'ponéis' : 'ponen';
-    const who = `${verb} ${people(potUsers, me, nameOf)}`;
+    const names = people(potUsers, me, nameOf);
+    const who = `${verb} ${names}`;
     if (status.kind === 'covered') {
       return inPot
-        ? { text: `Cubierto · ${who}`, tone: 'mine', action: 'buy-pot', actionLabel: 'Ya lo compré' }
-        : { text: `Cubierto · ${who}`, tone: 'taken' };
+        ? { text: `Cubierto · ${who}`, strong: names, tone: 'mine', action: 'buy-pot', actionLabel: 'Ya lo compré' }
+        : { text: `Cubierto · ${who}`, strong: names, tone: 'taken' };
     }
     const pct = status.percent !== undefined ? ` · ${status.percent} %` : '';
     return inPot
-      ? { text: `A medias${pct} · ${who}`, tone: 'mine', action: 'mypart', actionLabel: 'Cambiar mi parte' }
-      : { text: `A medias${pct} · ${who}`, tone: 'open', action: 'pot', actionLabel: 'Poner dinero' };
+      ? { text: `A medias${pct} · ${who}`, strong: names, tone: 'mine', action: 'mypart', actionLabel: 'Cambiar mi parte' }
+      : { text: `A medias${pct} · ${who}`, strong: names, tone: 'open', action: 'pot', actionLabel: 'Poner dinero' };
   }
   if (status.kind === 'free') {
     const multi = item.quantity > 1;
@@ -61,7 +64,8 @@ export function statusLine(item: Item, status: ItemStatus, claims: Claim[], pots
   }
   const ids = [...new Set(mine.map((c) => c.user))];
   const plural = ids.length > 1;
+  const names = people(ids, me, nameOf);
   return status.kind === 'bought'
-    ? { text: `${plural ? 'Lo compraron' : 'Lo compró'} ${people(ids, me, nameOf)}`, tone: 'taken' }
-    : { text: `${plural ? 'Lo reservan' : 'Lo reserva'} ${people(ids, me, nameOf)}`, tone: 'taken' };
+    ? { text: `${plural ? 'Lo compraron' : 'Lo compró'} ${names}`, strong: names, tone: 'taken' }
+    : { text: `${plural ? 'Lo reservan' : 'Lo reserva'} ${names}`, strong: names, tone: 'taken' };
 }

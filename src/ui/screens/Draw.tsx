@@ -49,7 +49,11 @@ export function DrawScreen({ groupId }: { groupId: string }) {
       )}
       {isAdmin && !setup && (
         <ButtonGroup>
-          <Button variant={info.draw ? 'danger' : 'primary'} size={info.draw ? 'sm' : 'md'} icon={Shuffle} onClick={() => setSetup(true)}>{info.draw ? 'Repetir el sorteo' : 'Preparar el sorteo'}</Button>
+          {info.draw ? (
+            <Button variant="link" onClick={() => setSetup(true)}>Repetir el sorteo</Button>
+          ) : (
+            <Button variant="primary" icon={Shuffle} onClick={() => setSetup(true)}>Preparar el sorteo</Button>
+          )}
         </ButtonGroup>
       )}
       {isAdmin && setup && (

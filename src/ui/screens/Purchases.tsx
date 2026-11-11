@@ -1,4 +1,3 @@
-import { Check } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { Purchase } from '../../api/types';
 import { formatMoney } from '../../core/money';
@@ -47,19 +46,15 @@ export function Purchases() {
 
   return (
     <div className="stack-lg">
-      <section className="panel stack" aria-label="Resumen">
-        <p className="row between">
-          <span className="lead">En total</span>
-          <span className="money" style={{ fontSize: 'var(--t-2xl)' }}>{formatMoney(toBuy + bought + pots)}</span>
-        </p>
-        <p className="meta">
-          Por comprar {formatMoney(toBuy)} · Comprado {formatMoney(bought)} · A medias {formatMoney(pots)}
-        </p>
-      </section>
+      <p className="lead">
+        {toBuy > 0 ? <>Te quedan por comprar <b className="money">{formatMoney(toBuy)}</b>. </> : 'No te queda nada por comprar. '}
+        {bought > 0 && <>Ya has comprado {formatMoney(bought)}. </>}
+        {pots > 0 && <>A medias llevas puestos {formatMoney(pots)}.</>}
+      </p>
       {[...byPerson.values()].map((rows) => (
         <section key={rows[0]!.list.id} className="purchase-group" aria-label={`Para ${rows[0]!.list.name}`}>
           <h3>Para {rows[0]!.list.name}</h3>
-          <ul className="list-plain panel" style={{ paddingBlock: 'var(--s-2)' }}>
+          <ul className="rows">
             {rows.map((p) => {
               const kind = p.contribution ? 'partial' : p.claim!.status;
               return (
@@ -68,13 +63,13 @@ export function Purchases() {
                   <a className="grow" href={`#/l/${p.list.id}`} style={{ textDecoration: 'none' }}>
                     <p className="truncate" style={{ fontWeight: 700 }}>{p.item.title}</p>
                     <p className="meta">
-                      <span className="money">{p.item.priceCents !== undefined || p.contribution ? formatMoney(cost(p)) : 'Sin precio'}</span>
+                      <span>{p.item.priceCents !== undefined || p.contribution ? formatMoney(cost(p)) : 'Sin precio'}</span>
                       {' · '}
                       {p.contribution ? (p.contribution.paid ? 'A medias, pagado' : 'A medias') : p.claim!.status === 'bought' ? 'Comprado' : 'Por comprar'}
                     </p>
                   </a>
                   {p.claim?.status === 'reserved' && (
-                    <Button variant="secondary" size="sm" icon={Check} loading={busy === p.claim.id} onClick={() => buy(p)}>
+                    <Button variant="secondary" size="sm" loading={busy === p.claim.id} onClick={() => buy(p)}>
                       Ya lo compré
                     </Button>
                   )}
