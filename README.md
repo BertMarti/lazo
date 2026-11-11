@@ -26,11 +26,11 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 **Lazo lo arregla con una regla muy sencilla:** ves qué está libre, reservado o comprado en las listas de los demás, **pero nunca en la tuya**. Ni en la pantalla ni por detrás: el servidor no se lo envía a tu móvil.
 
 <p align="center">
-  <img src="docs/design/v0.2/movil/grupo.png" width="270" alt="La familia en tarjetas, cada una con su presupuesto; la tuya no lo muestra" />
+  <img src="docs/design/v0.3/movil/grupo.png" width="270" alt="La familia en tarjetas, cada una con su presupuesto; la tuya no lo muestra" />
   &nbsp;
-  <img src="docs/design/v0.2/movil/lista-de-mama.png" width="270" alt="Lista de Mamá vista por Alberto: presupuesto, «Mamá no ve esto» y reservar en un toque" />
+  <img src="docs/design/v0.3/movil/lista-de-mama.png" width="270" alt="Lista de Mamá vista por Alberto: presupuesto, «Mamá no ve esto» y reservar en un toque" />
   &nbsp;
-  <img src="docs/design/v0.2/movil/regalo-a-medias.png" width="270" alt="Un regalo a medias: quién pone cuánto y cuánto falta" />
+  <img src="docs/design/v0.3/movil/hucha.png" width="270" alt="La hucha común en frases: cuánto te falta poner y a quién se lo das" />
 </p>
 
 ## Qué puedes hacer

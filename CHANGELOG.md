@@ -4,6 +4,10 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [0.2.0] - 2026-11-11 · La hucha y las plazas
+
+Primera versión completa: servidor para casa, plazas para cada persona, hucha común, día de la entrega y app de Android.
+
 ### Añadido
 - **Presupuesto por persona.** El grupo fija cuánto se gasta en cada uno y una barra muestra lo comprometido (reservas, compras y aportaciones) y lo que queda, o cuánto os pasáis. Lo ve todo el grupo **menos el destinatario**.
 - **Reservar en un toque**, directamente desde la lista y con «Deshacer» durante 6 segundos.
@@ -66,8 +70,9 @@ Primera versión para probar en la demo pública, con datos ficticios y sin serv
 
 | Versión | Desarrollo | IA en el producto |
 |---|---|---|
-| Sin publicar | Fable 5.1: dirección de arte («La bandeja») y auditoría de la regla y de seguridad. Opus 5.5: implementación. OpenCode (`deepseek-v4.1-flash-free`): catálogo de ideas | Ninguna todavía |
+| 0.2.0 | Fable 5.1: dirección de arte («La bandeja») y auditoría de la regla y de seguridad. Opus 5.5: implementación. OpenCode (`deepseek-v4.1-flash-free`): catálogo de ideas | Gemini (gratis, por defecto), Groq, OpenRouter, NVIDIA u Ollama; Claude Haiku 5.5 de pago. Catálogo de ideas sin IA generado con OpenCode |
 | 0.1.0 | Claude Opus 5.5 | Ninguna todavía: el mapeo de Excel va por sinónimos |
 
-[Sin publicar]: https://github.com/BertMarti/lazo/compare/v0.1.0...HEAD
+[Sin publicar]: https://github.com/BertMarti/lazo/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/BertMarti/lazo/releases/tag/v0.2.0
 [0.1.0]: https://github.com/BertMarti/lazo/releases/tag/v0.1.0
