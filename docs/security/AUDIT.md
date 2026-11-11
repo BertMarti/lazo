@@ -760,3 +760,11 @@ Las reglas de `gift` (modos, unidades, aportaciones, `paidBy`, `unbuy`), `contri
 3. V-4, V-5, V-3.
 4. PB-3, PB-9, PB-14 y arreglar PB-15.
 5. V-8 … V-15 y los pendientes de la primera auditoría (G-12, G-11/V-10, G-4, G-13, R-4).
+
+## Estado tras ejecutar PocketBase real (2026-11-11)
+
+- **Hallazgo grave al ejecutar:** en PocketBase 0.40 `members ?= X` sobre una relación múltiple **no** casa; hay que escribir `members.id ?= X`. Con la sintaxis anterior nadie veía nada (fallo seguro, pero la app no funcionaba). Corregido en todas las reglas y filtros (`members`, `admins`, `managers`).
+- **Pagos:** la `createRule` con `group.treasurer.user` no se evaluaba; la validación de quién lleva cada caja pasa a `onRecordCreateRequest('payments')`.
+- **Corregidos:** V-1 (retirado ≡ inexistente en `gift`), V-2 (siempre «retirado» antes de borrar), V-3 (la entrega no revela compras posteriores), V-4 (solicitudes y pagos no se pueden listar ni filtrar desde fuera), V-5 (una cuenta liberada no vuelve con otra plaza) y V-6 (listas de niño con `kind`).
+- `server/test/rules.test.mjs`: **17/17 en verde contra PocketBase 0.40.6** (cada miembro, tiempo real, cortafuegos, PB-5/6/8/10/12/15 y V-4).
+- Pendientes: V-8 a V-15 (bajos) y las pruebas PB-2, PB-9, PB-13, PB-14 y PB-17.

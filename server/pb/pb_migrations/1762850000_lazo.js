@@ -7,8 +7,8 @@ const ME = '@request.auth.id';
 const AUTH = `${ME} != ""`;
 // Sobre un regalo: soy del grupo y la lista NO es mía (las de niños, sin user, las ven todos).
 // Todas las reglas empiezan por AUTH (auditoría G-7: "" y NULL se confunden con visitantes sin sesión).
-const SEE_ITEM = `${AUTH} && item.list.group.members ?= ${ME} && item.list.user != ${ME}`;
-const SEE_LIST = `${AUTH} && list.group.members ?= ${ME} && list.user != ${ME}`;
+const SEE_ITEM = `${AUTH} && item.list.group.members.id ?= ${ME} && item.list.user != ${ME}`;
+const SEE_LIST = `${AUTH} && list.group.members.id ?= ${ME} && list.user != ${ME}`;
 
 migrate(
   (app) => {
@@ -43,10 +43,10 @@ migrate(
         rel('admins', users, { maxSelect: 50 }),
         { type: 'number', name: 'drawRounds', onlyInt: true, min: 0 },
       ],
-      listRule: `${AUTH} && members ?= ${ME}`,
-      viewRule: `${AUTH} && members ?= ${ME}`,
+      listRule: `${AUTH} && members.id ?= ${ME}`,
+      viewRule: `${AUTH} && members.id ?= ${ME}`,
       createRule: AUTH, // el hook fija owner, members y admins
-      updateRule: `${AUTH} && admins ?= ${ME} && @request.body.members:isset = false && @request.body.admins:isset = false && @request.body.owner:isset = false && @request.body.drawRounds:isset = false`,
+      updateRule: `${AUTH} && admins.id ?= ${ME} && @request.body.members:isset = false && @request.body.admins:isset = false && @request.body.owner:isset = false && @request.body.drawRounds:isset = false`,
       deleteRule: `${AUTH} && owner = ${ME}`,
     });
 
@@ -60,16 +60,16 @@ migrate(
         { type: 'number', name: 'birthYear', onlyInt: true, min: 2000, max: 2100 },
         { type: 'text', name: 'notes', max: 500 },
       ],
-      listRule: `${AUTH} && group.members ?= ${ME}`,
-      viewRule: `${AUTH} && group.members ?= ${ME}`,
+      listRule: `${AUTH} && group.members.id ?= ${ME}`,
+      viewRule: `${AUTH} && group.members.id ?= ${ME}`,
       // Las listas de miembros las crea el hook al entrar; desde la API solo listas de niños.
-      createRule: `${AUTH} && group.admins ?= ${ME} && user = "" && managers ?= ${ME}`,
-      updateRule: `${AUTH} && group.members ?= ${ME} && (user = ${ME} || managers ?= ${ME}) && @request.body.group:isset = false && @request.body.user:isset = false && @request.body.managers:isset = false`,
-      deleteRule: `${AUTH} && group.members ?= ${ME} && user = "" && managers ?= ${ME}`,
+      createRule: `${AUTH} && group.admins.id ?= ${ME} && user = "" && managers.id ?= ${ME}`,
+      updateRule: `${AUTH} && group.members.id ?= ${ME} && (user = ${ME} || managers.id ?= ${ME}) && @request.body.group:isset = false && @request.body.user:isset = false && @request.body.managers:isset = false`,
+      deleteRule: `${AUTH} && group.members.id ?= ${ME} && user = "" && managers.id ?= ${ME}`,
       indexes: ['CREATE INDEX idx_lists_group ON lists (`group`)'],
     });
 
-    const EDIT_LIST = `${AUTH} && list.group.members ?= ${ME} && (list.user = ${ME} || list.managers ?= ${ME})`;
+    const EDIT_LIST = `${AUTH} && list.group.members.id ?= ${ME} && (list.user = ${ME} || list.managers.id ?= ${ME})`;
     const items = col({
       name: 'items',
       fields: [
@@ -87,8 +87,8 @@ migrate(
         { type: 'text', name: 'notes', max: 1000 },
         rel('createdBy', users),
       ],
-      listRule: `${AUTH} && list.group.members ?= ${ME}`,
-      viewRule: `${AUTH} && list.group.members ?= ${ME}`,
+      listRule: `${AUTH} && list.group.members.id ?= ${ME}`,
+      viewRule: `${AUTH} && list.group.members.id ?= ${ME}`,
       createRule: `${EDIT_LIST} && createdBy = ${ME}`,
       updateRule: `${EDIT_LIST} && @request.body.list:isset = false && @request.body.createdBy:isset = false`,
       deleteRule: EDIT_LIST,
@@ -152,8 +152,8 @@ migrate(
         rel('participants', users, { maxSelect: 500 }),
         rel('createdBy', users),
       ],
-      listRule: `${AUTH} && group.members ?= ${ME}`,
-      viewRule: `${AUTH} && group.members ?= ${ME}`,
+      listRule: `${AUTH} && group.members.id ?= ${ME}`,
+      viewRule: `${AUTH} && group.members.id ?= ${ME}`,
       createRule: null, // solo el hook /api/lazo/draw
       updateRule: null,
       deleteRule: null,
@@ -202,7 +202,7 @@ migrate(
     });
 
     // Ver a otra persona solo si compartimos grupo (nombre y color; el correo es sintético y oculto).
-    users.listRule = `${AUTH} && (id = ${ME} || groups_via_members.members ?= ${ME})`;
+    users.listRule = `${AUTH} && (id = ${ME} || groups_via_members.members.id ?= ${ME})`;
     users.viewRule = users.listRule;
     app.save(users);
 

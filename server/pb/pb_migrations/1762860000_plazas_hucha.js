@@ -4,7 +4,7 @@
 
 const ME = '@request.auth.id';
 const AUTH = `${ME} != ""`;
-const SEE_LIST = `${AUTH} && list.group.members ?= ${ME} && list.user != ${ME}`;
+const SEE_LIST = `${AUTH} && list.group.members.id ?= ${ME} && list.user != ${ME}`;
 
 migrate(
   (app) => {
@@ -19,14 +19,14 @@ migrate(
     };
 
     // — groups —
-    add(groups, { type: 'select', name: 'buyMode', maxSelect: 1, values: ['hucha', 'individual', 'mixto'] });
+    add(groups, { type: 'select', name: 'buyMode', maxSelect: 1, values: ['hucha', 'individual', 'mixto'] }); // el hook pone «mixto» si falta
     add(groups, { type: 'bool', name: 'allowNewNames' });
     add(groups, { type: 'relation', name: 'treasurer', collectionId: lists.id, maxSelect: 1 });
     add(groups, { type: 'relation', name: 'deputy', collectionId: lists.id, maxSelect: 1 });
     add(groups, { type: 'relation', name: 'revealAskedBy', collectionId: users.id, maxSelect: 1 });
     add(groups, { type: 'number', name: 'revealedAt', onlyInt: true, min: 0 });
     const hookOnly = ['members', 'admins', 'owner', 'drawRounds', 'treasurer', 'deputy', 'revealAskedBy', 'revealedAt'].map((f) => `@request.body.${f}:isset = false`).join(' && ');
-    groups.updateRule = `${AUTH} && admins ?= ${ME} && ${hookOnly}`;
+    groups.updateRule = `${AUTH} && admins.id ?= ${ME} && ${hookOnly}`;
     app.save(groups);
 
     // — lists (plazas) —
@@ -35,24 +35,24 @@ migrate(
     add(lists, { type: 'select', name: 'via', maxSelect: 1, values: ['creator', 'personal', 'approved'] });
     add(lists, { type: 'relation', name: 'approvedBy', collectionId: users.id, maxSelect: 1 });
     add(lists, { type: 'relation', name: 'prevUser', collectionId: users.id, maxSelect: 1 });
-    lists.createRule = `${AUTH} && group.admins ?= ${ME} && user = "" && claimedAt = 0 && via = "" && approvedBy = "" && prevUser = "" && ((kind = "child" && managers ?= ${ME}) || (kind = "person" && managers:length = 0 && birthYear = 0))`;
+    lists.createRule = `${AUTH} && group.admins.id ?= ${ME} && user = "" && claimedAt = 0 && via = "" && approvedBy = "" && prevUser = "" && ((kind = "child" && managers.id ?= ${ME}) || (kind = "person" && managers:length = 0 && birthYear = 0))`;
     const listLocked = ['group', 'user', 'managers', 'kind', 'claimedAt', 'via', 'approvedBy', 'prevUser'].map((f) => `@request.body.${f}:isset = false`).join(' && ');
-    lists.updateRule = `${AUTH} && group.members ?= ${ME} && (user = ${ME} || managers ?= ${ME} || (kind = "person" && user = "" && group.admins ?= ${ME})) && ${listLocked}`;
-    lists.deleteRule = `${AUTH} && group.members ?= ${ME} && ((kind = "child" && managers ?= ${ME}) || (kind = "person" && user = "" && group.admins ?= ${ME}))`;
+    lists.updateRule = `${AUTH} && group.members.id ?= ${ME} && (user = ${ME} || managers.id ?= ${ME} || (kind = "person" && user = "" && group.admins.id ?= ${ME})) && ${listLocked}`;
+    lists.deleteRule = `${AUTH} && group.members.id ?= ${ME} && ((kind = "child" && managers.id ?= ${ME}) || (kind = "person" && user = "" && group.admins.id ?= ${ME}))`;
     lists.indexes = [...lists.indexes, "CREATE UNIQUE INDEX idx_lists_group_user ON lists (`group`, user) WHERE user != ''"];
     app.save(lists);
 
     // — items: sorpresas y retirados —
     add(items, { type: 'bool', name: 'secret' });
     add(items, { type: 'bool', name: 'removed' });
-    const VIS = `${AUTH} && list.group.members ?= ${ME} && (list.user != ${ME} || (secret = false && removed = false))`;
-    const OWN = `secret = false && removed = false && (list.user = ${ME} || list.managers ?= ${ME})`;
+    const VIS = `${AUTH} && list.group.members.id ?= ${ME} && (list.user != ${ME} || (secret = false && removed = false))`;
+    const OWN = `secret = false && removed = false && (list.user = ${ME} || list.managers.id ?= ${ME})`;
     const SURP = `secret = true && createdBy = ${ME} && list.user != ${ME}`;
     items.listRule = VIS;
     items.viewRule = VIS;
-    items.createRule = `${AUTH} && list.group.members ?= ${ME} && createdBy = ${ME} && removed = false && ((secret = false && (list.user = ${ME} || list.managers ?= ${ME})) || (secret = true && list.kind = "person" && list.user != ${ME}))`;
-    items.updateRule = `${AUTH} && list.group.members ?= ${ME} && (${OWN} || ${SURP}) && @request.body.list:isset = false && @request.body.createdBy:isset = false && @request.body.secret:isset = false && @request.body.removed:isset = false`;
-    items.deleteRule = `${AUTH} && list.group.members ?= ${ME} && (${OWN} || ${SURP})`;
+    items.createRule = `${AUTH} && list.group.members.id ?= ${ME} && createdBy = ${ME} && removed = false && ((secret = false && (list.user = ${ME} || list.managers.id ?= ${ME})) || (secret = true && list.kind = "person" && list.user != ${ME}))`;
+    items.updateRule = `${AUTH} && list.group.members.id ?= ${ME} && (${OWN} || ${SURP}) && @request.body.list:isset = false && @request.body.createdBy:isset = false && @request.body.secret:isset = false && @request.body.removed:isset = false`;
+    items.deleteRule = `${AUTH} && list.group.members.id ?= ${ME} && (${OWN} || ${SURP})`;
     app.save(items);
 
     // — claims: solo por POST /api/lazo/gift —
@@ -81,11 +81,12 @@ migrate(
           { type: 'bool', name: 'sub' },
           { type: 'number', name: 'at', onlyInt: true, min: 0 },
         ],
-        listRule: `${AUTH} && (from = ${ME} || to = ${ME})`,
-        viewRule: `${AUTH} && (from = ${ME} || to = ${ME})`,
-        createRule: `${AUTH} && (from = ${ME} || to = ${ME}) && from != to && group.members ?= from && group.members ?= to && ((sub = false && (from = group.treasurer.user || to = group.treasurer.user)) || (sub = true && (from = group.deputy.user || to = group.deputy.user) && from != group.treasurer.user && to != group.treasurer.user))`,
+        listRule: `${AUTH} && group.members.id ?= ${ME} && (from = ${ME} || to = ${ME})`,
+        viewRule: `${AUTH} && group.members.id ?= ${ME} && (from = ${ME} || to = ${ME})`,
+        // Quién lleva cada caja lo comprueba el hook (onRecordCreateRequest('payments')).
+        createRule: `${AUTH} && (from = ${ME} || to = ${ME}) && from != to`,
         updateRule: null,
-        deleteRule: `${AUTH} && (from = ${ME} || to = ${ME})`,
+        deleteRule: `${AUTH} && group.members.id ?= ${ME} && (from = ${ME} || to = ${ME})`,
         indexes: ['CREATE INDEX idx_pay_group ON payments (`group`)'],
       }),
     );
@@ -108,8 +109,9 @@ migrate(
           { type: 'select', name: 'status', required: true, maxSelect: 1, values: ['pending', 'approved', 'rejected'] },
           { type: 'relation', name: 'decidedBy', collectionId: users.id, maxSelect: 1 },
         ],
-        listRule: `${AUTH} && (user = ${ME} || (status = "pending" && group.admins ?= ${ME}))`,
-        viewRule: `${AUTH} && (user = ${ME} || (status = "pending" && group.admins ?= ${ME}))`,
+        // V-4: el solicitante solo puede pedir su solicitud por id (viewRule), nunca listar ni filtrar.
+        listRule: `${AUTH} && status = "pending" && group.admins.id ?= ${ME}`,
+        viewRule: `${AUTH} && (user = ${ME} || (status = "pending" && group.admins.id ?= ${ME}))`,
         createRule: null,
         updateRule: null,
         deleteRule: null,

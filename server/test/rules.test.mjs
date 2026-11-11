@@ -241,6 +241,33 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.equal((await call('POST', '/api/lazo/plaza-release', { list: ids['l-alberto'] }, tok.alberto)).status, 403);
   });
 
+  test('PB-10: quitar un regalo propio responde igual esté cogido o no; los demás lo ven retirado', async () => {
+    const t = tok.juancarlos;
+    const taken = ids['a-juancarlos']; // reservado por Samira
+    const free = (await ok('POST', '/api/collections/items/records', { list: ids['l-juancarlos'], title: 'Para quitar', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.juancarlos }, t)).id;
+    const r1 = await call('DELETE', `/api/collections/items/records/${taken}`, null, t);
+    const r2 = await call('DELETE', `/api/collections/items/records/${free}`, null, t);
+    assert.equal(r1.status, 204);
+    assert.equal(r2.status, 204);
+    assert.equal(r1.text, r2.text);
+    assert.equal((await call('GET', `/api/collections/items/records/${taken}`, null, t)).status, 404);
+    // Y el endpoint gift responde igual a un retirado que a uno que no existe (V-1)
+    const g1 = await call('POST', '/api/lazo/gift', { action: 'reserve', item: taken, kind: 'self' }, t);
+    const g2 = await call('POST', '/api/lazo/gift', { action: 'reserve', item: free, kind: 'self' }, t);
+    assert.equal(g1.status, g2.status);
+    assert.equal(g1.text, g2.text);
+    const seen = await ok('GET', `/api/collections/items/records/${taken}`, null, tok.samira);
+    assert.equal(seen.removed, true);
+  });
+
+  test('V-4: una solicitud pendiente no lista ni filtra nada del grupo', async () => {
+    const inv = await ok('POST', '/api/lazo/invite', { group: ids.group }, tok.alberto);
+    const r = await ok('POST', '/api/lazo/join', { token: inv.token, name: 'Prima Ana' });
+    assert.equal((await ok('GET', '/api/collections/joinRequests/records', null, r.token)).totalItems, 0);
+    assert.equal((await call('GET', `/api/collections/joinRequests/records/${r.meta.request}`, null, r.token)).status, 200);
+    assert.equal((await ok('GET', `/api/collections/payments/records?filter=${encodeURIComponent('group.name != ""')}`, null, r.token)).totalItems, 0);
+  });
+
   test('PB-12: pagos solo con el tesorero (o el suplente por sus regalos) y solo los ven sus dos partes', async () => {
     await ok('POST', '/api/lazo/hucha-roles', { group: ids.group, treasurer: ids['l-alberto'], deputy: ids['l-samira'] }, tok.alberto);
     assert.equal((await call('POST', '/api/lazo/hucha-roles', { group: ids.group, treasurer: ids['l-papa'], deputy: ids['l-mama'] }, tok.alberto)).status, 400);

@@ -36,6 +36,9 @@ function reclamar(tx, plaza, userId, via, by) {
   if (plaza.getString('user')) throw new BadRequestError('Esa plaza ya está ocupada.');
   const group = tx.findRecordById('groups', plaza.getString('group'));
   if (group.getStringSlice('members').includes(userId)) throw new BadRequestError('Ya estás en este grupo.');
+  // V-5: quien fue sacado de una plaza no puede volver con otra (vería la antigua y mezclaría historiales).
+  const others = tx.findRecordsByFilter('lists', 'group = {:g} && prevUser = {:u} && id != {:p}', '', 1, 0, { g: group.id, u: userId, p: plaza.id });
+  if (others.length) throw new BadRequestError('Esta cuenta ya tuvo otra plaza en este grupo. Pide a quien organiza que te la devuelva.');
   plaza.set('user', userId);
   plaza.set('claimedAt', Date.now());
   plaza.set('via', via);

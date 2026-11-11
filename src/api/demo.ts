@@ -465,7 +465,7 @@ export class DemoApi implements Api {
     if (!plaza) return [];
     const items = new Map(this.db.items.filter((i) => i.list === plaza.id).map((i) => [i.id, i]));
     return this.db.claims
-      .filter((c) => c.status === 'bought' && items.has(c.item))
+      .filter((c) => c.status === 'bought' && items.has(c.item) && (c.boughtAt ?? 0) <= (g.revealedAt ?? 0))
       .map((c) => {
         const it = items.get(c.item)!;
         const pots = this.db.contributions.filter((x) => x.item === it.id && x.amountCents > 0).map((x) => x.user);

@@ -76,6 +76,25 @@ onRecordCreateRequest((e) => {
   e.next();
 }, 'contributions');
 
+// ——— Pagos de la hucha: solo con el tesorero (cuenta general) o con el suplente por los regalos del tesorero ———
+onRecordCreateRequest((e) => {
+  const L = require(`${__hooks}/lib/lazo.cjs`);
+  const group = $app.findRecordById('groups', e.record.getString('group'));
+  const members = group.getStringSlice('members');
+  const from = e.record.getString('from');
+  const to = e.record.getString('to');
+  const userOf = (id) => (id ? $app.findRecordById('lists', id).getString('user') : '');
+  const T = userOf(group.getString('treasurer'));
+  const T2 = userOf(group.getString('deputy'));
+  const ok =
+    members.includes(from) &&
+    members.includes(to) &&
+    (e.record.getBool('sub') ? (from === T2 || to === T2) && from !== T && to !== T : !!T && (from === T || to === T));
+  if (!ok) throw new BadRequestError('Ese pago no se puede apuntar.');
+  void L;
+  e.next();
+}, 'payments');
+
 // ——— Quitar un regalo propio responde SIEMPRE 204: si tenía reservas, compras o aportaciones se oculta (D6) ———
 onRecordDeleteRequest((e) => {
   const id = e.record.id;
@@ -84,9 +103,11 @@ onRecordDeleteRequest((e) => {
     return e.next();
   }
   const touched = $app.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: id }).length || $app.findRecordsByFilter('contributions', 'item = {:i}', '', 1, 0, { i: id }).length;
-  if (!touched) return e.next();
+  // V-2: se marca SIEMPRE como retirado antes de nada, así el dueño recibe exactamente los mismos eventos
+  // de tiempo real (ninguno: un regalo retirado ya no es visible para él) tenga o no reservas.
   e.record.set('removed', true);
   $app.save(e.record);
+  if (!touched) return e.next();
   return e.noContent(204);
 }, 'items');
 
@@ -473,7 +494,7 @@ routerAdd(
       }
     };
     const out = [];
-    for (const c of $app.findRecordsByFilter('claims', 'item.list = {:l} && status = "bought"', '', 0, 0, { l: plaza.id })) {
+    for (const c of $app.findRecordsByFilter('claims', 'item.list = {:l} && status = "bought" && boughtAt <= {:r}', '', 0, 0, { l: plaza.id, r: group.getInt('revealedAt') })) {
       const it = $app.findRecordById('items', c.getString('item'));
       const pots = $app.findRecordsByFilter('contributions', 'item = {:i} && amountCents > 0', '', 0, 0, { i: it.id }).map((x) => x.getString('user'));
       const fromAll = c.getString('kind') === 'pot';
@@ -579,7 +600,7 @@ routerAdd(
   (e) => {
     const url = String(e.requestInfo().body.url || '').slice(0, 2048);
     try {
-      $app.findFirstRecordByFilter('groups', 'members ?= {:me}', { me: e.auth.id });
+      $app.findFirstRecordByFilter('groups', 'members.id ?= {:me}', { me: e.auth.id });
     } catch {
       throw new ForbiddenError('Únete a un grupo primero.');
     }
