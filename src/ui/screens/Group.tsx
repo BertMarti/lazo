@@ -1,4 +1,5 @@
 import { UserPlus } from '@phosphor-icons/react';
+import { Loading } from '../Bow';
 import { useEffect, useState } from 'react';
 import type { Api, GroupDetail, ListDetail } from '../../api/types';
 import { budgetProgress } from '../../core/budget';
@@ -6,6 +7,7 @@ import { itemStatus } from '../../core/status';
 import { Button, ButtonGroup, IconButton } from '../Button';
 import { go, lastGroup, listFlavor, useApi } from '../ctx';
 import { errorText, useLoad, useToast } from '../kit';
+import { GiftCard } from '../Gift';
 import { MemberCard } from '../MemberCard';
 import type { Title } from '../title';
 import { BudgetSheet } from './BudgetSheet';
@@ -36,7 +38,7 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
   }, [data, id, isAdmin, onTitle]);
 
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data || !me) return <p className="meta">Cargando…</p>;
+  if (!data || !me) return <Loading />;
   const g = data.detail.group;
   const nameOf = (uid?: string) => data.detail.members.find((m) => m.id === uid)?.name ?? 'Alguien';
   const myPlaza = data.detail.lists.find((l) => l.user === me.id);
@@ -52,6 +54,12 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
       setBusy(null);
     }
   };
+  // Lo libre de los demás, lo más deseado primero. Nunca nada de la lista propia.
+  const desired = data.lists
+    .filter((l) => l.canSee && l.list.user !== me.id)
+    .flatMap((l) => l.items.filter((i) => !i.removed && i.image && itemStatus(i, l.claims, l.contributions).kind === 'free').map((item) => ({ item, list: l.list })))
+    .sort((a, b) => a.item.priority - b.item.priority)
+    .slice(0, 4);
   const past = g.date ? new Date(g.date + 'T23:59:59') < new Date() : false;
 
   return (
@@ -96,6 +104,16 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
         </div>
       )}
       <MemberGrid data={data} meId={me.id} onAdd={(l) => go(`/l/${l}/nuevo`)} onSetBudget={setBudgetFor} onInvite={isAdmin ? (l) => setInviting(l) : undefined} />
+      {desired.length > 0 && (
+        <section className="desired" aria-label="Lo más deseado">
+          <h2 className="section-title">Lo más deseado</h2>
+          <div className="gifts">
+            {desired.map(({ item, list }) => (
+              <GiftCard key={item.id} item={item} flavor={listFlavor(list, data.detail.members)} forName={list.name} onOpen={() => go(`/l/${list.id}`)} />
+            ))}
+          </div>
+        </section>
+      )}
       {inviting && <InviteSheet groupId={id} focusList={typeof inviting === 'string' ? inviting : undefined} onClose={() => setInviting(false)} onChanged={reload} />}
       {budgetFor && (
         <BudgetSheet

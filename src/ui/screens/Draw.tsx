@@ -1,4 +1,5 @@
 import { Shuffle, X } from '@phosphor-icons/react';
+import { Bow, Loading } from '../Bow';
 import { useState } from 'react';
 import { DrawImpossible } from '../../core/draw';
 import { formatMoney, parseAmount } from '../../core/money';
@@ -16,7 +17,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
   const [setup, setSetup] = useState(false);
 
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data) return <p className="meta">Cargando…</p>;
+  if (!data) return <Loading />;
   const { detail, info } = data;
   const isAdmin = detail.members.some((m) => m.id === me?.id && m.role === 'admin');
 
@@ -43,6 +44,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
         <p className="notice">Este grupo ya tiene sorteo, pero tú no participas.</p>
       ) : (
         <div className="empty">
+          <Bow size={88} />
           <h2>Todavía no hay sorteo</h2>
           <p>{isAdmin ? 'Elige quién participa y qué parejas no pueden tocarse.' : 'Cuando quien organiza el grupo lo haga, aquí verás tu sobre.'}</p>
         </div>

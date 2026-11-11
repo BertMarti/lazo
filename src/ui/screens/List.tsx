@@ -1,4 +1,5 @@
 import { Gift as GiftIcon, FileXls, Lightbulb, Plus, X } from '@phosphor-icons/react';
+import { Bow, Loading } from '../Bow';
 import { useEffect, useState } from 'react';
 import type { ListDetail } from '../../api/types';
 import { budgetProgress, committedOn } from '../../core/budget';
@@ -65,7 +66,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
   }, [data, me, onTitle]);
 
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data || !view || !me) return <p className="meta">Cargando…</p>;
+  if (!data || !view || !me) return <Loading />;
 
   const { d, group } = data;
   const members = group.detail.members;
@@ -199,6 +200,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
 
       {d.items.length === 0 && d.canSee === false ? (
         <div className="empty">
+          <Bow size={88} />
           <h2>Tu lista está vacía</h2>
           <p>Pega un enlace y listo.</p>
         </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Bow, Loading } from '../Bow';
 import type { HuchaData } from '../../api/types';
 import { collectTable, due, forecast, generalProgress, myShares, type HuchaCtx } from '../../core/hucha';
 import { formatMoney, parseAmount } from '../../core/money';
@@ -21,7 +22,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
   const [paying, setPaying] = useState<{ from: Id; to: Id; sub: boolean; amount: number; title: string } | null>(null);
   const [roles, setRoles] = useState(false);
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data || !me) return <p className="meta">Cargando…</p>;
+  if (!data || !me) return <Loading />;
 
   const userOf = (listId?: Id) => data.lists.find((l) => l.id === listId)?.user;
   const T = userOf(data.group.treasurer);
@@ -41,6 +42,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
     return (
       <div className="stack-lg" style={{ maxWidth: 744 }}>
         <div className="empty">
+          <Bow size={88} />
           <h2>Falta elegir quién lleva la hucha</h2>
           <p>{isAdmin ? 'Elige a una persona para llevar el bote y a otra para las cuentas de sus regalos.' : 'Quien organiza el grupo tiene que elegirlo.'}</p>
           {isAdmin && <Button variant="primary" onClick={() => setRoles(true)}>Elegir</Button>}
@@ -51,8 +53,8 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
 
   return (
     <div className="stack-lg" style={{ maxWidth: 744 }}>
-      <section className="stack" aria-label="Tu saldo">
-        <p className="meta">{me.id === T ? 'La llevas tú' : `La lleva ${name(T)}`}</p>
+      <section className="panel stack" aria-label="Tu saldo">
+        {!(me.id === T && d.general === 0) && <p className="meta">{me.id === T ? 'La llevas tú' : `La lleva ${name(T)}`}</p>}
         {d.general > 0 ? (
           <>
             <p style={{ fontWeight: 700 }}>Te falta poner</p>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Bow, Loading } from '../Bow';
 import type { Purchase } from '../../api/types';
 import { formatMoney } from '../../core/money';
 import { Button } from '../Button';
@@ -13,7 +14,7 @@ export function Purchases() {
   const { data, error, reload } = useLoad(() => api.purchases(), [api, me?.id]);
   const [busy, setBusy] = useState<string | null>(null);
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data) return <p className="meta">Cargando…</p>;
+  if (!data) return <Loading />;
 
   const cost = (p: Purchase) => p.contribution?.amountCents ?? (p.claim?.status === 'bought' && p.claim.paidCents !== undefined ? p.claim.paidCents : (p.item.priceCents ?? 0));
   const sum = (f: (p: Purchase) => boolean) => data.filter(f).reduce((s, p) => s + cost(p), 0);
@@ -39,6 +40,7 @@ export function Purchases() {
   if (data.length === 0)
     return (
       <div className="empty">
+        <Bow size={88} />
         <h2>Aún no has reservado nada</h2>
         <p>Abre la lista de alguien y pulsa «Reservar»: así nadie más lo comprará.</p>
       </div>
@@ -59,9 +61,12 @@ export function Purchases() {
               const kind = p.contribution ? 'partial' : p.claim!.status === 'reserved' && p.claim!.kind === 'pot' ? 'pot' : p.claim!.status;
               return (
                 <li key={(p.claim?.id ?? p.contribution!.id) + kind}>
-                  <Seal status={{ kind, unitsLeft: 0, raised: 0, by: [] }} size={24} />
-                  <a className="grow" href={`#/l/${p.list.id}`} style={{ textDecoration: 'none' }}>
-                    <p className="truncate" style={{ fontWeight: 700 }}>{p.item.title}</p>
+                  <span className="gift-thumb" aria-hidden>
+                    {p.item.image ? <img src={p.item.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="noimg"><Bow size={32} /></span>}
+                  </span>
+                  <a className="grow purchase-text" href={`#/l/${p.list.id}`}>
+                    <Seal status={{ kind, unitsLeft: 0, raised: 0, by: [] }} />
+                    <p className="purchase-title">{p.item.title}</p>
                     <p className="meta">
                       <span>{p.item.priceCents !== undefined || p.contribution ? formatMoney(cost(p)) : 'Sin precio'}</span>
                       {' · '}
