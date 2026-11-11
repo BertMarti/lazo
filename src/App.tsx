@@ -112,6 +112,9 @@ function DemoBar({ api, onChange }: { api: DemoApi; onChange: () => void }) {
         <span className="hide-sm"> · datos ficticios</span>
       </span>
       <a href={`#/unirse/${api.generalInviteToken()}`}>Probar a entrar</a>
+      <a className="hide-sm" href="https://github.com/BertMarti/lazo/blob/main/public/demo/fotos/CREDITOS.md" target="_blank" rel="noopener noreferrer">
+        Créditos de las fotos
+      </a>
       <label className="row" style={{ gap: 'var(--s-2)' }}>
         <span className="hide-sm">Ver como</span>
         <select

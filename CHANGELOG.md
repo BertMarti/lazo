@@ -8,6 +8,9 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 - Cerrados los hallazgos bajos de la segunda auditoría (V-8 a V-15): comprobaciones dentro de la transacción, límite de peticiones de «Lo que te regalaron», no se puede borrar la cuenta ocupando una plaza, la plaza de quien lleva la hucha no se borra, sin nombres repetidos y nada se compra sobre un regalo retirado. La demo se comporta igual que el servidor.
 - 22 pruebas contra un PocketBase real, entre ellas 20 reservas simultáneas del mismo regalo (queda una sola) y la comprobación byte a byte de que lo que otros hacen en tu lista no cambia nada de lo que ves.
 
+### Añadido
+- **La demo tiene fotos de verdad:** 19 regalos con foto de Wikimedia Commons con licencia libre, guardadas en el repo y con sus créditos en `public/demo/fotos/CREDITOS.md` (enlace en la barra de la demo).
+
 ### Cambiado
 - **La IA viene apagada y Ollama es la opción recomendada.** Tras revisar las condiciones de los proveedores, para el uso diario en la UE solo valen Ollama en casa o una clave de pago (Claude, o Gemini con facturación). Gemini gratuito, Groq, OpenRouter y NVIDIA quedan marcados «solo pruebas». Lazo funciona entero sin IA. Detalles en `docs/legal/proveedores.md`.
 

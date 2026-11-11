@@ -23,7 +23,7 @@ import {
   type Purchase,
 } from './types';
 
-const KEY = 'lazo-demo-v3';
+const KEY = 'lazo-demo-v4';
 const COLORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'];
 
 /**

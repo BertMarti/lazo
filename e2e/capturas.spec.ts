@@ -13,8 +13,8 @@ const shots: [string, string, string, ((p: Page) => Promise<void>)?][] = [
   ['compra-con-la-hucha', 'alberto', '/#/l/l-mama', async (p) => { await p.locator('.gift', { hasText: 'Robot de cocina' }).locator('.gift-open').click(); }],
   ['entrar-pendiente', 'alberto', '/#/unirse/demoGeneralNavidad2026xx', async (p) => { await p.getByRole('radio', { name: 'Tía Loli' }).check(); await p.getByRole('button', { name: 'Soy Tía Loli' }).click(); }],
   ['solicitud-de-entrada', 'alberto', '/#/unirse/demoGeneralNavidad2026xx', async (p) => { await p.getByRole('radio', { name: 'Tía Loli' }).check(); await p.getByRole('button', { name: 'Soy Tía Loli' }).click(); await p.getByLabel('Ver como').selectOption('alberto'); await p.goto('/#/g/navidad'); }],
-  ['entrega-propuesta', 'alberto', '/#/g/navidad', async (p) => { await p.evaluate(() => { const k = 'lazo-demo-v3'; const db = JSON.parse(localStorage.getItem(k)!); db.groups[0].revealAskedBy = 'alberto'; localStorage.setItem(k, JSON.stringify(db)); }); await p.getByLabel('Ver como').selectOption('papa'); }],
-  ['recibido', 'mama', '/#/g/navidad', async (p) => { await p.evaluate(() => { const k = 'lazo-demo-v3'; const db = JSON.parse(localStorage.getItem(k)!); db.groups[0].revealedAt = 1; localStorage.setItem(k, JSON.stringify(db)); }); await p.goto('/#/recibido/navidad'); await p.waitForTimeout(300); await p.getByRole('button', { name: 'Verlo' }).click(); }],
+  ['entrega-propuesta', 'alberto', '/#/g/navidad', async (p) => { await p.evaluate(() => { const k = 'lazo-demo-v4'; const db = JSON.parse(localStorage.getItem(k)!); db.groups[0].revealAskedBy = 'alberto'; localStorage.setItem(k, JSON.stringify(db)); }); await p.getByLabel('Ver como').selectOption('papa'); }],
+  ['recibido', 'mama', '/#/g/navidad', async (p) => { await p.evaluate(() => { const k = 'lazo-demo-v4'; const db = JSON.parse(localStorage.getItem(k)!); db.groups[0].revealedAt = 1; localStorage.setItem(k, JSON.stringify(db)); }); await p.goto('/#/recibido/navidad'); await p.waitForTimeout(300); await p.getByRole('button', { name: 'Verlo' }).click(); }],
   ['anadir', 'alberto', '/#/l/l-alberto/nuevo'],
   ['compras', 'alberto', '/#/compras'],
   ['amigo-invisible', 'alberto', '/#/sorteo/navidad', async (p) => { await p.getByRole('button', { name: /Abrir tu sobre/ }).click(); }],
@@ -30,7 +30,7 @@ for (const [name, who, url, act] of shots) {
   test(name, async ({ page }, info) => {
     await page.addInitScript((w) => {
       localStorage.clear();
-      localStorage.setItem('lazo-demo-v3:viewer', w);
+      localStorage.setItem('lazo-demo-v4:viewer', w);
       localStorage.setItem('lazo:explicado', '1');
       sessionStorage.setItem('lazo:inicio', '1');
     }, who);

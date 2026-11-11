@@ -48,9 +48,12 @@ export function seed(): DemoData {
     ...users.map((x) => ({ id: `l-c-${x.id}`, group: 'cumple-mama', name: x.name, kind: 'person' as const, user: x.id, managers: [], via: x.id === 'samira' ? ('creator' as const) : ('personal' as const), approvedBy: 'samira' })),
   ];
   let n = 0;
-  const it = (list: string, title: string, o: Partial<Item> = {}): Item => ({
-    id: `i${++n}`, list, title, currency: 'EUR', priority: 2, quantity: 1, createdBy: list.replace(/^l-(c-)?/, ''), ...o,
-  });
+  // Fotos con licencia libre guardadas en el repo (créditos en public/demo/fotos/CREDITOS.md). El taller (i17), sin foto.
+  const photo = (id: string) => (id === 'i17' ? {} : { image: `${import.meta.env.BASE_URL}demo/fotos/${id}.webp` });
+  const it = (list: string, title: string, o: Partial<Item> = {}): Item => {
+    const id = `i${++n}`;
+    return { id, list, title, currency: 'EUR', priority: 2, quantity: 1, createdBy: list.replace(/^l-(c-)?/, ''), ...photo(id), ...o };
+  };
   const items: Item[] = [
     // Mamá
     it('l-mama', 'Marco digital de fotos', { priceCents: 12900, store: 'Amazon', url: 'https://www.amazon.es/s?k=marco+digital+fotos', priority: 1, notes: 'Para ver las fotos de los nietos.' }), // i1
