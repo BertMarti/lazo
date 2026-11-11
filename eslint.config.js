@@ -5,6 +5,8 @@ import globals from "globals";
 export default tseslint.config(
   { ignores: ["dist", "dist-demo", "android", "node_modules", ".superpowers", "server/pb/pb_hooks/lib", "server/unfurl/meta.mjs"] },
   js.configs.recommended,
+  { files: ["server/unfurl/**/*.mjs", "server/test/**/*.mjs"], languageOptions: { globals: globals.node } },
+  { files: ["server/pb/**/*.js"], languageOptions: { globals: { migrate: "readonly", Collection: "readonly", TextField: "readonly", Record: "readonly", routerAdd: "readonly", routerUse: "readonly", onRecordCreateRequest: "readonly", $app: "readonly", $apis: "readonly", $security: "readonly", $http: "readonly", $os: "readonly", __hooks: "readonly", require: "readonly", BadRequestError: "readonly", ForbiddenError: "readonly", UnauthorizedError: "readonly" } } },
   ...tseslint.configs.recommended,
   {
     languageOptions: { globals: globals.browser },
@@ -20,4 +22,5 @@ export default tseslint.config(
       ],
     },
   },
+  { files: ["server/pb/**/*.js"], rules: { "@typescript-eslint/triple-slash-reference": "off", "@typescript-eslint/no-require-imports": "off" } },
 );

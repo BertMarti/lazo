@@ -1,0 +1,51 @@
+name: lazo
+
+services:
+  pocketbase:
+    build: { context: .., dockerfile: server/Dockerfile }
+    container_name: lazo-pb
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ:-Europe/Madrid}
+      UNFURL_KEY: ${UNFURL_KEY:?Falta UNFURL_KEY en .env (openssl rand -hex 32)}
+      UNFURL_URL: http://unfurl:8787
+    volumes:
+      - ./data/pb:/pb/pb_data
+    networks: [interna, publica]
+
+  unfurl:
+    build: { context: .., dockerfile: server/unfurl/Dockerfile }
+    container_name: lazo-unfurl
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      UNFURL_KEY: ${UNFURL_KEY:?Falta UNFURL_KEY en .env}
+    # Sin puertos publicados: solo lo alcanza PocketBase por la red interna. Sale a Internet para leer páginas.
+    networks: [interna, salida]
+
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    container_name: lazo-caddy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on: [pocketbase]
+    environment:
+      LAZO_DOMAIN: ${LAZO_DOMAIN:?Falta LAZO_DOMAIN en .env (p. ej. milazo.duckdns.org)}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+    networks: [publica]
+
+networks:
+  interna:
+    internal: true
+  publica: {}
+  salida: {}

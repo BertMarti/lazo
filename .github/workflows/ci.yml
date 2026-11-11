@@ -36,7 +36,13 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
+      - run: npm run build:server
       - run: npm run test:server
+      - name: Reglas de visibilidad contra PocketBase real
+        run: |
+          curl -fsSL -o /tmp/pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.40.6/pocketbase_0.40.6_linux_amd64.zip
+          unzip -q /tmp/pb.zip pocketbase -d /tmp/pb
+          PB_BIN=/tmp/pb/pocketbase node --test server/test/rules.test.mjs
       - run: npm run build
       - name: Caché de Playwright
         uses: actions/cache@v4

@@ -21,3 +21,7 @@ docs/audit/lighthouse/
 .impeccable/review/
 .impeccable/mocks/
 !.env.example
+server/unfurl/meta.mjs
+server/pb/pb_hooks/lib/
+server/pb/pb_data/
+server/pb/pb_public/

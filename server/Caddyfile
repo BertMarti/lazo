@@ -1,0 +1,15 @@
+{$LAZO_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		-Server
+	}
+	# El panel de administración de PocketBase no se publica: entra por la LAN o por HEIMDALL (VPN).
+	@admin path /_/*
+	respond @admin 404
+	reverse_proxy pocketbase:8090
+}
