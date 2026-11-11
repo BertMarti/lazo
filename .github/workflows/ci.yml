@@ -43,11 +43,20 @@ jobs:
           unzip -q /tmp/pb.zip pocketbase -d /tmp/pb
           PB_BIN=/tmp/pb/pocketbase node --test server/test/rules.test.mjs
       - run: npm run build
-      - name: Caché de Playwright
-        uses: actions/cache@v4
+
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Imagen oficial de Playwright: trae Chromium y sus dependencias (apt de los runners va a veces muy lento).
+    container: mcr.microsoft.com/playwright:v1.65.0-noble
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          path: ~/.cache/ms-playwright
-          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      # Las dependencias del sistema vía apt fallan a veces por un espejo caído: se reintenta tras refrescar índices.
-      - run: npx playwright install --with-deps chromium || (sudo apt-get update && npx playwright install --with-deps chromium)
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
       - run: npx playwright test
+        env:
+          HOME: /root
