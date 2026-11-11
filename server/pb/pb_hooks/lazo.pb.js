@@ -36,6 +36,7 @@ onRecordCreateRequest((e) => {
   if (!e.record.getString('buyMode')) e.record.set('buyMode', 'mixto');
   for (const f of ['treasurer', 'deputy', 'revealAskedBy']) e.record.set(f, '');
   e.record.set('revealedAt', 0);
+  e.record.set('drawRounds', 0); // V-12
   e.next();
   const { parsePlazas } = require(`${__hooks}/lib/plazas.cjs`);
   const raw = e.requestInfo().body.plazas;
@@ -66,14 +67,19 @@ onRecordCreate((e) => {
 }, 'groups');
 
 // ——— A medias: nunca en la propia plaza (rechazo antes de leer nada), ni en modo hucha, ni sobre algo ya cogido ———
+// V-8: comprobar y crear dentro de la misma transacción.
 onRecordCreateRequest((e) => {
-  const item = $app.findRecordById('items', e.record.getString('item'));
-  const list = $app.findRecordById('lists', item.getString('list'));
-  if (!e.auth || list.getString('user') === e.auth.id) throw new ForbiddenError('No puedes aportar en tu propia lista.');
-  const group = $app.findRecordById('groups', list.getString('group'));
-  if (group.getString('buyMode') === 'hucha') throw new BadRequestError('En este grupo todo va a la hucha.');
-  if ($app.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: item.id }).length) throw new BadRequestError('Este regalo ya está cogido.');
-  e.next();
+  $app.runInTransaction((tx) => {
+    const item = tx.findRecordById('items', e.record.getString('item'));
+    const list = tx.findRecordById('lists', item.getString('list'));
+    if (!e.auth || list.getString('user') === e.auth.id) throw new ForbiddenError('No puedes aportar en tu propia lista.');
+    if (item.getBool('removed')) throw new BadRequestError('Lo ha quitado de su lista.'); // V-13 e
+    const group = tx.findRecordById('groups', list.getString('group'));
+    if (group.getString('buyMode') === 'hucha') throw new BadRequestError('En este grupo todo va a la hucha.');
+    if (tx.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: item.id }).length) throw new BadRequestError('Este regalo ya está cogido.');
+    e.app = tx;
+    e.next();
+  });
 }, 'contributions');
 
 // ——— Pagos de la hucha: solo con el tesorero (cuenta general) o con el suplente por los regalos del tesorero ———
@@ -98,24 +104,45 @@ onRecordCreateRequest((e) => {
 // ——— Quitar un regalo propio responde SIEMPRE 204: si tenía reservas, compras o aportaciones se oculta (D6) ———
 onRecordDeleteRequest((e) => {
   const id = e.record.id;
-  if (e.record.getBool('secret')) {
-    if ($app.findRecordsByFilter('claims', 'item = {:i} && status = "bought"', '', 1, 0, { i: id }).length) throw new BadRequestError('Ya está comprado: deshaz la compra antes.');
-    return e.next();
-  }
-  const touched = $app.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: id }).length || $app.findRecordsByFilter('contributions', 'item = {:i}', '', 1, 0, { i: id }).length;
-  // V-2: se marca SIEMPRE como retirado antes de nada, así el dueño recibe exactamente los mismos eventos
-  // de tiempo real (ninguno: un regalo retirado ya no es visible para él) tenga o no reservas.
-  e.record.set('removed', true);
-  $app.save(e.record);
-  if (!touched) return e.next();
-  return e.noContent(204);
+  let touched = 0;
+  // V-8: comprobar y borrar en la misma transacción (una reserva no puede colarse entre medias).
+  $app.runInTransaction((tx) => {
+    e.app = tx;
+    if (e.record.getBool('secret')) {
+      if (tx.findRecordsByFilter('claims', 'item = {:i} && status = "bought"', '', 1, 0, { i: id }).length) throw new BadRequestError('Ya está comprado: deshaz la compra antes.');
+      return e.next();
+    }
+    touched = tx.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: id }).length || tx.findRecordsByFilter('contributions', 'item = {:i}', '', 1, 0, { i: id }).length;
+    // V-2: se marca SIEMPRE como retirado antes de nada, así el dueño recibe exactamente los mismos eventos
+    // de tiempo real (ninguno: un regalo retirado ya no es visible para él) tenga o no reservas.
+    e.record.set('removed', true);
+    tx.save(e.record);
+    if (!touched) return e.next();
+  });
+  if (touched) return e.noContent(204);
 }, 'items');
 
-// ——— Borrar una plaza libre o una lista de niño: nunca si tiene compras (quien borra no es su destinatario) ———
+// ——— Borrar una plaza libre o una lista de niño: nunca si tiene compras ni si lleva la hucha (V-11) ———
 onRecordDeleteRequest((e) => {
   if ($app.findRecordsByFilter('claims', 'item.list = {:l} && status = "bought"', '', 1, 0, { l: e.record.id }).length) throw new BadRequestError('Esta plaza tiene compras apuntadas.');
+  const group = $app.findRecordById('groups', e.record.getString('group'));
+  if ([group.getString('treasurer'), group.getString('deputy')].includes(e.record.id)) throw new BadRequestError('Esta plaza lleva las cuentas de la hucha y no se puede borrar.');
   e.next();
 }, 'lists');
+
+// ——— Plazas nuevas: sin nombres repetidos en el grupo (V-13 d) ———
+onRecordCreateRequest((e) => {
+  const { normName } = require(`${__hooks}/lib/plazas.cjs`);
+  const n = normName(e.record.getString('name'));
+  if ($app.findRecordsByFilter('lists', 'group = {:g}', '', 0, 0, { g: e.record.getString('group') }).some((l) => normName(l.getString('name')) === n)) throw new BadRequestError('Ya hay alguien con ese nombre en el grupo.');
+  e.next();
+}, 'lists');
+
+// ——— Baja de cuenta: nunca con una plaza ocupada ni siendo dueño de un grupo (V-10) ———
+onRecordDeleteRequest((e) => {
+  if ($app.findRecordsByFilter('lists', 'kind = "person" && user = {:u}', '', 1, 0, { u: e.record.id }).length || $app.findRecordsByFilter('groups', 'owner = {:u}', '', 1, 0, { u: e.record.id }).length) throw new BadRequestError('Pide a quien organiza que libere tu sitio antes de borrar tu cuenta.');
+  e.next();
+}, 'users');
 
 // ——— Invitar: enlace general (14 días, 30 usos) o personal de una plaza libre (1 uso). Solo se guarda el hash ———
 routerAdd(
@@ -254,6 +281,9 @@ routerAdd(
           plaza = tx.findRecordById('lists', req.getString('list'));
           if (plaza.getString('user')) throw new BadRequestError('Esa plaza ya está ocupada.');
         } else {
+          const { normName } = require(`${__hooks}/lib/plazas.cjs`);
+          const n = normName(req.getString('name'));
+          if (tx.findRecordsByFilter('lists', 'group = {:g}', '', 0, 0, { g: group.id }).some((l) => normName(l.getString('name')) === n)) throw new BadRequestError('Ya hay alguien con ese nombre: elige su plaza o cámbiale el nombre.');
           plaza = new Record(tx.findCollectionByNameOrId('lists'));
           plaza.set('group', group.id);
           plaza.set('name', req.getString('name'));
@@ -262,9 +292,9 @@ routerAdd(
         }
         L.reclamar(tx, plaza, req.getString('user'), 'approved', e.auth.id);
         req.set('status', 'approved');
-      } else req.set('status', 'rejected');
-      req.set('decidedBy', e.auth.id);
-      tx.save(req);
+        req.set('decidedBy', e.auth.id);
+        tx.save(req);
+      } else tx.delete(req); // V-13 c: así puede volver a pedir entrada
     });
     return e.json(200, { ok: true });
   },
@@ -289,7 +319,9 @@ routerAdd(
       plaza.set('user', '');
       plaza.set('claimedAt', 0);
       plaza.set('via', '');
+      plaza.set('approvedBy', ''); // V-13 a
       tx.save(plaza);
+      for (const r of tx.findRecordsByFilter('joinRequests', 'group = {:g} && user = {:u}', '', 0, 0, { g: group.id, u: who })) tx.delete(r); // V-13 c
       for (const inv of tx.findRecordsByFilter('invites', 'list = {:l} && revoked = false', '', 0, 0, { l: plaza.id })) {
         inv.set('revoked', true);
         tx.save(inv);
@@ -325,7 +357,7 @@ routerAdd(
     } catch {
       throw notFound();
     }
-    const list = $app.findRecordById('lists', item.getString('list'));
+    let list = $app.findRecordById('lists', item.getString('list'));
     if (list.getString('user') === me) {
       // V-1: retirado o sorpresa ≡ inexistente (si no, el código delata si estaba cogido)
       if (item.getBool('secret') || item.getBool('removed')) throw notFound();
@@ -335,7 +367,12 @@ routerAdd(
     if (!group0.getStringSlice('members').includes(me)) throw notFound();
 
     $app.runInTransaction((tx) => {
+      // V-8: releer dentro de la transacción (un join simultáneo no puede convertirla en tu plaza).
+      item = tx.findRecordById('items', item.id);
+      list = tx.findRecordById('lists', list.id);
+      if (list.getString('user') === me) throw new ForbiddenError('No puedes reservar regalos de tu propia lista.');
       const group = tx.findRecordById('groups', group0.id);
+      if (!group.getStringSlice('members').includes(me)) throw notFound();
       const mode = group.getString('buyMode') || 'individual';
       const allowed = (k) => (k === 'self' ? mode !== 'hucha' : mode !== 'individual');
       const rows = () => tx.findRecordsByFilter('claims', 'item = {:i}', '', 0, 0, { i: item.id });
@@ -379,6 +416,7 @@ routerAdd(
         }
         case 'buy': {
           checkPay();
+          if (!c && item.getBool('removed')) throw new BadRequestError('Lo ha quitado de su lista.'); // V-13 e
           if (c) {
             if (c.getString('status') !== 'reserved' || ownSelf(c)) throw new BadRequestError('Esa reserva no es tuya.');
             c.set('status', 'bought');

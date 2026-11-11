@@ -137,6 +137,8 @@ export class DemoApi implements Api {
     l.user = undefined;
     l.claimedAt = 0;
     l.via = undefined;
+    l.approvedBy = undefined;
+    this.db.requests = this.db.requests.filter((r) => !(r.group === g.id && r.user === l.prevUser));
     this.db.invites = this.db.invites.filter((i) => i.list !== l.id);
     this.save();
   }
@@ -146,6 +148,8 @@ export class DemoApi implements Api {
       const item = this.db.items.find((i) => i.id === id && i.list === listId);
       if (!item) throw new ApiError('Ese regalo ya no existe.');
       const list = this.list(listId);
+      // Igual que el servidor: una sorpresa o un retirado de tu plaza es como si no existiera.
+      if ((item.secret || item.removed) && list.user === this.viewer) throw new ApiError('Ese regalo ya no existe.');
       const mayEdit = item.secret ? item.createdBy === this.viewer && list.user !== this.viewer : !item.removed && canEditList(this.viewer, list);
       if (!mayEdit) throw new ApiError('Solo quien lleva esta lista puede cambiarla.');
       Object.assign(item, input);
@@ -173,6 +177,7 @@ export class DemoApi implements Api {
     const item = this.db.items.find((i) => i.id === id);
     if (!item) throw new ApiError('Ese regalo ya no existe.');
     const list = this.list(item.list);
+    if (item.removed && list.user === this.viewer) throw new ApiError('Ese regalo ya no existe.');
     const touched = this.db.claims.some((c) => c.item === id) || this.db.contributions.some((c) => c.item === id);
     if (item.secret) {
       if (item.createdBy !== this.viewer || list.user === this.viewer) throw new ApiError('Ese regalo ya no existe.');
@@ -315,6 +320,7 @@ export class DemoApi implements Api {
     const inv = this.invite(token);
     const g = this.db.groups.find((x) => x.id === inv.group)!;
     const personal = inv.list ? this.db.lists.find((l) => l.id === inv.list) : undefined;
+    if (inv.list && (!personal || personal.user)) throw new ApiError(BAD_INVITE);
     return {
       group: { id: g.id, name: g.name, occasion: g.occasion, date: g.date },
       organizer: this.user(inv.createdBy).name,
@@ -367,8 +373,7 @@ export class DemoApi implements Api {
 
   async requestStatus(requestId: Id) {
     const r = this.db.requests.find((x) => x.id === requestId && x.user === this.viewer);
-    if (!r) throw new ApiError('Esa solicitud ya no existe.');
-    return r.status;
+    return r ? r.status : 'rejected'; // el servidor borra las rechazadas
   }
 
   async joinRequests(groupId: Id) {
@@ -384,12 +389,13 @@ export class DemoApi implements Api {
       let plaza = r.list ? this.db.lists.find((l) => l.id === r.list) : undefined;
       if (r.list && (!plaza || plaza.user)) throw new ApiError('Esa plaza ya está ocupada.');
       if (!plaza) {
+        if (this.db.lists.some((l) => l.group === r.group && normName(l.name) === normName(r.name))) throw new ApiError('Ya hay alguien con ese nombre: elige su plaza o cámbiale el nombre.');
         plaza = { id: uid(), group: r.group, name: r.name, kind: 'person', managers: [] };
         this.db.lists.push(plaza);
       }
       this.claimPlaza(plaza, r.user, 'approved', this.viewer);
-    }
-    r.status = accept ? 'approved' : 'rejected';
+      r.status = 'approved';
+    } else this.db.requests = this.db.requests.filter((x) => x !== r);
     this.save();
   }
 
@@ -506,8 +512,9 @@ export class DemoApi implements Api {
       const list = this.db.lists.find((l) => l.id === item.list)!;
       return { item, list, group: this.db.groups.find((g) => g.id === list.group)! };
     };
-    for (const claim of this.db.claims.filter((c) => c.user === this.viewer || c.paidBy === this.viewer)) out.push({ ...ctx(claim.item), claim });
-    for (const contribution of this.db.contributions.filter((c) => c.user === this.viewer)) out.push({ ...ctx(contribution.item), contribution });
+    const visible = (itemId: Id) => canSeeStatus(this.viewer, ctx(itemId).list);
+    for (const claim of this.db.claims.filter((c) => (c.user === this.viewer || c.paidBy === this.viewer) && visible(c.item))) out.push({ ...ctx(claim.item), claim });
+    for (const contribution of this.db.contributions.filter((c) => c.user === this.viewer && visible(c.item))) out.push({ ...ctx(contribution.item), contribution });
     return out;
   }
 
@@ -527,6 +534,7 @@ export class DemoApi implements Api {
         if (c.paidBy === prev) c.paidBy = user;
       }
       for (const c of this.db.contributions) if (inGroup(c.item) && c.user === prev) c.user = user;
+      for (const i of this.db.items) if (inGroup(i.id) && i.createdBy === prev) i.createdBy = user;
       for (const p of this.db.payments) if (p.group === plaza.group) {
         if (p.from === prev) p.from = user;
         if (p.to === prev) p.to = user;

@@ -767,4 +767,11 @@ Las reglas de `gift` (modos, unidades, aportaciones, `paidBy`, `unbuy`), `contri
 - **Pagos:** la `createRule` con `group.treasurer.user` no se evaluaba; la validación de quién lleva cada caja pasa a `onRecordCreateRequest('payments')`.
 - **Corregidos:** V-1 (retirado ≡ inexistente en `gift`), V-2 (siempre «retirado» antes de borrar), V-3 (la entrega no revela compras posteriores), V-4 (solicitudes y pagos no se pueden listar ni filtrar desde fuera), V-5 (una cuenta liberada no vuelve con otra plaza) y V-6 (listas de niño con `kind`).
 - `server/test/rules.test.mjs`: **17/17 en verde contra PocketBase 0.40.6** (cada miembro, tiempo real, cortafuegos, PB-5/6/8/10/12/15 y V-4).
-- Pendientes: V-8 a V-15 (bajos) y las pruebas PB-2, PB-9, PB-13, PB-14 y PB-17.
+- Pendientes en ese momento: V-8 a V-15 (bajos) y las pruebas PB-2, PB-9, PB-13, PB-14 y PB-17.
+
+## Estado tras los hallazgos bajos (2026-11-11)
+
+- **Corregidos:** V-8 (`gift`, aportaciones y borrado de regalos releen y comprueban dentro de la transacción), V-9 (migración `1762870000_endurecer.js`: etiqueta `GET /api/lazo/received/`), V-10 (no se puede borrar la cuenta con una plaza ocupada ni siendo dueño), V-11 (la plaza del tesorero o del suplente no se borra), V-12 (`buyMode` obligatorio; `drawRounds` a 0 al crear), V-13 a–e (liberar limpia `approvedBy` y las solicitudes; el traspaso mueve `items.createdBy`; rechazar borra la solicitud y el cliente lo lee como «rechazada»; sin nombres repetidos al crear plazas ni al aceptar; compra y aportación sobre un retirado → 400) y V-15 (paridad de la demo: `saveItem`, `deleteItem`, `purchases`, `inviteInfo`, `releasePlaza`, `decideJoin` y traspaso de sorpresas).
+- **V-14:** se mantiene como diferencia documentada con la spec (sin impacto de seguridad).
+- `server/test/rules.test.mjs`: **22/22 en verde contra PocketBase 0.40.6**, con PB-2 (no interferencia byte a byte para Mamá), PB-3 (plaza con historial antes de reclamarla), PB-9 (20 reservas simultáneas → 1 fila), PB-14 (lotes con `expand` y `_via_`), PB-17 (enlace usado ≡ falso) y una prueba de V-9/V-10/V-11/V-13.
+- Pendiente: PB-13.

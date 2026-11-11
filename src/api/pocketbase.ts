@@ -123,7 +123,16 @@ export class PocketBaseApi implements Api {
       return m.pending ? { pending: true, request: m.request!, code: m.code!, group: m.group } : { group: m.group };
     });
 
-  requestStatus = (requestId: Id) => this.run(async () => (await this.pb.collection('joinRequests').getOne(requestId)).status as JoinRequest['status']);
+  // Al rechazar, el servidor borra la solicitud (V-13 c): un 404 es «rechazada».
+  requestStatus = (requestId: Id) =>
+    this.run(async () => {
+      try {
+        return (await this.pb.collection('joinRequests').getOne(requestId)).status as JoinRequest['status'];
+      } catch (e) {
+        if ((e as { status?: number }).status === 404) return 'rejected' as const;
+        throw e;
+      }
+    });
 
   joinRequests = (groupId: Id) =>
     this.run(async () =>

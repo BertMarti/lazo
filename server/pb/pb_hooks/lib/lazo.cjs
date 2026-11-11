@@ -59,6 +59,11 @@ function reclamar(tx, plaza, userId, via, by) {
       c.set('user', userId);
       tx.save(c);
     }
+    // V-13 b: las sorpresas que preparó siguen siendo editables por quien ocupa ahora la plaza.
+    for (const it of tx.findRecordsByFilter('items', 'list.group = {:g} && createdBy = {:p}', '', 0, 0, { g, p: prev })) {
+      it.set('createdBy', userId);
+      tx.save(it);
+    }
     for (const p of tx.findRecordsByFilter('payments', 'group = {:g} && (from = {:p} || to = {:p})', '', 0, 0, { g, p: prev })) {
       if (p.getString('from') === prev) p.set('from', userId);
       if (p.getString('to') === prev) p.set('to', userId);

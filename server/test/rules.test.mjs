@@ -306,4 +306,76 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.equal(seen.size, FAMILY.length);
     assert.equal((await call('POST', '/api/lazo/draw', { group: ids.group, participants: [] }, tok.samira)).status, 403, 'solo admins');
   });
+  test('PB-2: lo que otros hacen sobre la lista de Mamá no cambia ni un byte de lo que Mamá ve', async () => {
+    const snap = async () => {
+      const out = [];
+      for (const col of ['groups', 'lists', 'items', 'claims', 'contributions', 'budgets', 'payments']) out.push((await call('GET', `/api/collections/${col}/records?perPage=500&sort=id`, null, tok.mama)).text);
+      out.push((await call('GET', `/api/collections/items/records/${ids['c-mama']}`, null, tok.mama)).text);
+      return out;
+    };
+    const before = await snap();
+    await ok('POST', '/api/lazo/gift', { action: 'buy', item: ids['c-mama'], kind: 'self', paidCents: 2100, paidBy: ids.juancarlos }, tok.juancarlos);
+    await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Otra sorpresa', priceCents: 900, priority: 2, quantity: 1, createdBy: ids.samira, secret: true }, tok.samira);
+    const budget = (await ok('GET', `/api/collections/budgets/records?filter=${encodeURIComponent(`list = "${ids['l-mama']}"`)}`, null, tok.samira)).items[0];
+    if (budget) await call('PATCH', `/api/collections/budgets/records/${budget.id}`, { amountCents: 25000 }, tok.samira);
+    assert.deepEqual(await snap(), before);
+  });
+
+  test('PB-9: veinte reservas a la vez del mismo regalo dejan una sola fila', async () => {
+    await ok('PATCH', '/api/settings', { rateLimits: { enabled: false } }, su);
+    try {
+      const item = (await ok('POST', '/api/collections/items/records', { list: ids['l-papa'], title: 'Carrera', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.papa }, tok.papa)).id;
+      const who = ['alberto', 'juancarlos', 'samira', 'mama'];
+      const rs = await Promise.all(Array.from({ length: 20 }, (_, i) => call('POST', '/api/lazo/gift', { action: 'reserve', item, kind: 'self' }, tok[who[i % who.length]])));
+      assert.equal(rs.filter((r) => r.status === 200).length, 1, rs.map((r) => r.status).join(','));
+      assert.equal((await ok('GET', `/api/collections/claims/records?filter=${encodeURIComponent(`item = "${item}"`)}`, null, su)).totalItems, 1);
+    } finally {
+      await ok('PATCH', '/api/settings', { rateLimits: { enabled: true } }, su);
+    }
+  });
+
+  test('PB-14: un lote no sirve para sondear con _via_ ni expand', async () => {
+    const A = ids['b-papa'];
+    const r = await call('POST', '/api/batch', { requests: [{ method: 'PATCH', url: `/api/collections/items/records/${A}?expand=claims_via_item,contributions_via_item`, body: { notes: 'lote' } }] }, tok.papa);
+    assert.doesNotMatch(r.text, /amountCents|"status":"reserved"|"status":"bought"/);
+    const f = await call('POST', '/api/batch', { requests: [{ method: 'PATCH', url: `/api/collections/items/records/${A}?filter=${encodeURIComponent('claims_via_item.id != ""')}`, body: { notes: 'lote2' } }] }, tok.papa);
+    assert.doesNotMatch(f.text, /amountCents|"status":"reserved"/);
+  });
+
+  test('PB-3/PB-17: plaza nueva con historial previo; su enlace usado o falso responde igual', async () => {
+    assert.equal((await call('POST', '/api/collections/lists/records', { group: ids.group, name: ' samira ', kind: 'person' }, tok.alberto)).status, 400, 'V-13 d: nombre repetido');
+    const pepe = await ok('POST', '/api/collections/lists/records', { group: ids.group, name: 'Tío Pepe', kind: 'person' }, tok.alberto);
+    const s = await ok('POST', '/api/collections/items/records', { list: pepe.id, title: 'Sorpresa para Pepe', priceCents: 1000, priority: 2, quantity: 1, createdBy: ids.juancarlos, secret: true }, tok.juancarlos);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s.id, kind: 'self' }, tok.juancarlos);
+    await ok('POST', '/api/collections/budgets/records', { list: pepe.id, amountCents: 3000 }, tok.mama);
+    const inv = await ok('POST', '/api/lazo/invite', { group: ids.group, list: pepe.id }, tok.alberto);
+    const info = await ok('POST', '/api/lazo/invite-info', { token: inv.token });
+    assert.equal(info.personal.name, 'Tío Pepe');
+    const u = await ok('POST', '/api/collections/users/records', { email: 'pepe@lazo.invalid', password: 'x'.repeat(20), passwordConfirm: 'x'.repeat(20), name: 'Pepe' }, su);
+    const t = (await ok('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 600 }, su)).token;
+    await ok('POST', '/api/lazo/join', { token: inv.token }, t);
+    const q = (x) => encodeURIComponent(x);
+    for (const col of ['claims', 'contributions']) assert.equal((await ok('GET', `/api/collections/${col}/records?filter=${q(`item.list = "${pepe.id}"`)}`, null, t)).totalItems, 0, col);
+    assert.equal((await ok('GET', `/api/collections/budgets/records?filter=${q(`list = "${pepe.id}"`)}`, null, t)).totalItems, 0);
+    assert.equal((await ok('GET', `/api/collections/items/records?filter=${q(`list = "${pepe.id}"`)}`, null, t)).totalItems, 0);
+    const used = await call('POST', '/api/lazo/invite-info', { token: inv.token });
+    const fake = await call('POST', '/api/lazo/invite-info', { token: 'Z'.repeat(32) });
+    assert.equal(used.status, fake.status);
+    assert.equal(used.text, fake.text);
+  });
+
+  test('V-10/V-11/V-13: baja con plaza, plaza de la hucha y regalos retirados', async () => {
+    assert.equal((await call('DELETE', `/api/collections/users/records/${ids.papa}`, null, tok.papa)).status, 400, 'V-10');
+    const labels = (await ok('GET', '/api/settings', null, su)).rateLimits.rules.map((r) => r.label);
+    assert.ok(labels.includes('GET /api/lazo/received/'), 'V-9');
+    const bought = await call('POST', '/api/lazo/gift', { action: 'buy', item: ids['a-juancarlos'], kind: 'self', paidCents: 100, paidBy: ids.mama }, tok.mama);
+    assert.equal(bought.status, 400, 'V-13 e: compra');
+    const contrib = await call('POST', '/api/collections/contributions/records', { item: ids['a-juancarlos'], user: ids.mama, amountCents: 100 }, tok.mama);
+    assert.equal(contrib.status, 400, 'V-13 e: aportación');
+    // V-11: liberar a la suplente y borrar su plaza no reabre los roles
+    await ok('POST', '/api/lazo/plaza-release', { list: ids['l-samira'] }, tok.alberto);
+    const plaza = await ok('GET', `/api/collections/lists/records/${ids['l-samira']}`, null, su);
+    assert.equal(plaza.approvedBy, '', 'V-13 a');
+    assert.equal((await call('DELETE', `/api/collections/lists/records/${ids['l-samira']}`, null, tok.alberto)).status, 400, 'V-11');
+  });
 });
