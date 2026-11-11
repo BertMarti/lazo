@@ -10,7 +10,7 @@ export function parseAmount(input: string | number): Cents | null {
     const c = Math.round(input * 100);
     return c > 0 && c <= LIMITS.amount ? c : null;
   }
-  const raw = input.replace(/[\s €$£]|EUR|USD|GBP/gi, '');
+  const raw = input.replace(/[\s\u00a0€$£]|EUR|USD|GBP/gi, '');
   if (!/^\d[\d.,]*$/.test(raw) || /[.,]{2}/.test(raw)) return null;
   const dec = Math.max(raw.lastIndexOf(','), raw.lastIndexOf('.'));
   const frac = dec === -1 ? '' : raw.slice(dec + 1);

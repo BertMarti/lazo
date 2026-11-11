@@ -17,11 +17,11 @@ const u = (id: string, name: string, color: string): User => ({ id, name, color 
 
 export function seed(): DemoData {
   const users = [
-    u('marta', 'Marta', '#A8322D'),
-    u('pablo', 'Pablo', '#2F5D50'),
-    u('lucia', 'Lucía', '#B07A1F'),
-    u('jorge', 'Jorge', '#4E5B8C'),
-    u('carmen', 'Abuela Carmen', '#7A4E7E'),
+    u('marta', 'Marta', 'fresa'),
+    u('pablo', 'Pablo', 'menta'),
+    u('lucia', 'Lucía', 'limon'),
+    u('jorge', 'Jorge', 'cielo'),
+    u('carmen', 'Abuela Carmen', 'violeta'),
   ];
   const groups: Group[] = [
     { id: 'navidad', name: 'Navidad en casa de la abuela', occasion: 'navidad', date: '2026-12-24', currency: 'EUR', owner: 'marta' },
