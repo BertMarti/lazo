@@ -22,7 +22,8 @@ docs/audit/lighthouse/
 .impeccable/mocks/
 !.env.example
 server/unfurl/meta.mjs
-server/pb/pb_hooks/lib/
+server/pb/pb_hooks/lib/draw.cjs
+server/pb/pb_hooks/lib/plazas.cjs
 server/pb/pb_data/
 server/pb/pb_public/
 android/app/build/

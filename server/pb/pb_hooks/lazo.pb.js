@@ -26,41 +26,77 @@ onRealtimeSubscribeRequest((e) => {
   e.next();
 });
 
-// ——— Grupos: quien crea es dueño, miembro y admin, y tiene su lista ———
+// ——— Grupos: quien crea es dueño, miembro y admin; su plaza y las plazas previstas («¿Quiénes sois?») ———
 onRecordCreateRequest((e) => {
   if (!e.auth || e.auth.collection().name !== 'users') throw new UnauthorizedError('Entra primero.');
   e.record.set('owner', e.auth.id);
   e.record.set('members', [e.auth.id]);
   e.record.set('admins', [e.auth.id]);
   if (!e.record.getString('currency')) e.record.set('currency', 'EUR');
+  if (!e.record.getString('buyMode')) e.record.set('buyMode', 'mixto');
+  for (const f of ['treasurer', 'deputy', 'revealAskedBy']) e.record.set(f, '');
+  e.record.set('revealedAt', 0);
   e.next();
+  const { parsePlazas } = require(`${__hooks}/lib/plazas.cjs`);
+  const raw = e.requestInfo().body.plazas;
+  const names = parsePlazas(Array.isArray(raw) ? raw.map(String).slice(0, 80) : [], e.auth.getString('name'));
+  const col = $app.findCollectionByNameOrId('lists');
+  for (const name of names) {
+    const l = new Record(col);
+    l.set('group', e.record.id);
+    l.set('name', name);
+    l.set('kind', 'person');
+    $app.save(l);
+  }
 }, 'groups');
 
-// La lista del creador, dentro de la misma transacción (auditoría G-10).
+// La plaza del creador, dentro de la misma transacción (auditoría G-10).
 onRecordCreate((e) => {
   e.next();
   const owner = e.app.findRecordById('users', e.record.getString('owner'));
   const list = new Record(e.app.findCollectionByNameOrId('lists'));
   list.set('group', e.record.id);
   list.set('name', owner.getString('name'));
+  list.set('kind', 'person');
   list.set('user', owner.id);
+  list.set('via', 'creator');
+  list.set('approvedBy', owner.id);
+  list.set('claimedAt', Date.now());
   e.app.save(list);
 }, 'groups');
 
-// ——— Reservas: una unidad cada vez y nunca más de las que hay ———
+// ——— A medias: nunca en la propia plaza (rechazo antes de leer nada), ni en modo hucha, ni sobre algo ya cogido ———
 onRecordCreateRequest((e) => {
-  e.record.set('units', 1);
   const item = $app.findRecordById('items', e.record.getString('item'));
-  // Antes de mirar nada: el destinatario no puede ni preguntar (no debe saber si «ya está reservado»).
   const list = $app.findRecordById('lists', item.getString('list'));
-  if (!e.auth || list.getString('user') === e.auth.id) throw new ForbiddenError('No puedes reservar regalos de tu propia lista.');
-  const taken = $app.findRecordsByFilter('claims', 'item = {:item}', '', 0, 0, { item: item.id }).reduce((s, c) => s + c.getInt('units'), 0);
-  // ponytail: sin bloqueo; dos reservas simultáneas de la última unidad podrían pasar. El índice único (item, user) limita el daño.
-  if (taken >= item.getInt('quantity')) throw new BadRequestError('Alguien se te ha adelantado: ya está reservado.');
+  if (!e.auth || list.getString('user') === e.auth.id) throw new ForbiddenError('No puedes aportar en tu propia lista.');
+  const group = $app.findRecordById('groups', list.getString('group'));
+  if (group.getString('buyMode') === 'hucha') throw new BadRequestError('En este grupo todo va a la hucha.');
+  if ($app.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: item.id }).length) throw new BadRequestError('Este regalo ya está cogido.');
   e.next();
-}, 'claims');
+}, 'contributions');
 
-// ——— Invitar: enlace con token de 192 bits; se guarda solo su hash ———
+// ——— Quitar un regalo propio responde SIEMPRE 204: si tenía reservas, compras o aportaciones se oculta (D6) ———
+onRecordDeleteRequest((e) => {
+  const id = e.record.id;
+  if (e.record.getBool('secret')) {
+    if ($app.findRecordsByFilter('claims', 'item = {:i} && status = "bought"', '', 1, 0, { i: id }).length) throw new BadRequestError('Ya está comprado: deshaz la compra antes.');
+    return e.next();
+  }
+  const touched = $app.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: id }).length || $app.findRecordsByFilter('contributions', 'item = {:i}', '', 1, 0, { i: id }).length;
+  if (!touched) return e.next();
+  e.record.set('removed', true);
+  $app.save(e.record);
+  return e.noContent(204);
+}, 'items');
+
+// ——— Borrar una plaza libre o una lista de niño: nunca si tiene compras (quien borra no es su destinatario) ———
+onRecordDeleteRequest((e) => {
+  if ($app.findRecordsByFilter('claims', 'item.list = {:l} && status = "bought"', '', 1, 0, { l: e.record.id }).length) throw new BadRequestError('Esta plaza tiene compras apuntadas.');
+  e.next();
+}, 'lists');
+
+// ——— Invitar: enlace general (14 días, 30 usos) o personal de una plaza libre (1 uso). Solo se guarda el hash ———
 routerAdd(
   'POST',
   '/api/lazo/invite',
@@ -68,13 +104,24 @@ routerAdd(
     const body = e.requestInfo().body;
     const group = $app.findRecordById('groups', String(body.group || ''));
     if (!group.getStringSlice('admins').includes(e.auth.id)) throw new ForbiddenError('Solo quien organiza el grupo puede invitar.');
+    let listId = '';
+    if (body.list) {
+      const plaza = $app.findRecordById('lists', String(body.list));
+      if (plaza.getString('group') !== group.id || plaza.getString('kind') !== 'person' || plaza.getString('user')) throw new BadRequestError('Esa plaza ya está ocupada.');
+      listId = plaza.id;
+      for (const old of $app.findRecordsByFilter('invites', 'list = {:l} && revoked = false', '', 0, 0, { l: listId })) {
+        old.set('revoked', true);
+        $app.save(old);
+      }
+    }
     const token = $security.randomString(32);
     const days = 14;
     const inv = new Record($app.findCollectionByNameOrId('invites'));
     inv.set('group', group.id);
+    inv.set('list', listId);
     inv.set('tokenHash', $security.sha256(token));
     inv.set('expiresAt', Date.now() + days * 86400000);
-    inv.set('maxUses', 30);
+    inv.set('maxUses', listId ? 1 : 30);
     inv.set('uses', 0);
     inv.set('createdBy', e.auth.id);
     $app.save(inv);
@@ -83,51 +130,359 @@ routerAdd(
   $apis.requireAuth('users'),
 );
 
-// ——— Unirse: token de invitación + nombre → cuenta (si no hay) + miembro + su lista ———
-routerAdd('POST', '/api/lazo/join', (e) => {
-  const body = e.requestInfo().body;
-  const token = String(body.token || '');
-  const name = String(body.name || '').trim().slice(0, 40);
-  const invalid = 'Esta invitación no existe o ha caducado. Pide un enlace nuevo.';
-  if (!/^[A-Za-z0-9]{20,64}$/.test(token)) throw new BadRequestError(invalid);
-  if (!name) throw new BadRequestError('Escribe tu nombre.');
-  let invite;
+// ——— Qué abre un enlace: nombre del grupo, quién organiza y la plaza personal o las libres. Nada más ———
+routerAdd('POST', '/api/lazo/invite-info', (e) => {
+  const L = require(`${__hooks}/lib/lazo.cjs`);
+  const inv = L.findInvite($app, String(e.requestInfo().body.token || ''));
+  const g = $app.findRecordById('groups', inv.getString('group'));
+  let organizer = '';
   try {
-    invite = $app.findFirstRecordByData('invites', 'tokenHash', $security.sha256(token));
+    organizer = $app.findRecordById('users', inv.getString('createdBy')).getString('name');
   } catch {
-    throw new BadRequestError(invalid);
+    /* ya no está */
   }
-  if (invite.getBool('revoked') || invite.getInt('expiresAt') < Date.now() || invite.getInt('uses') >= invite.getInt('maxUses')) throw new BadRequestError(invalid);
+  const listId = inv.getString('list');
+  let personal = null;
+  if (listId) {
+    const plaza = $app.findRecordById('lists', listId);
+    if (plaza.getString('user')) throw new BadRequestError(L.BAD_INVITE);
+    personal = { list: plaza.id, name: plaza.getString('name') };
+  }
+  const free = listId
+    ? []
+    : $app.findRecordsByFilter('lists', 'group = {:g} && kind = "person" && user = ""', 'name', 0, 0, { g: g.id }).map((l) => ({ list: l.id, name: l.getString('name') }));
+  return e.json(200, {
+    group: { id: g.id, name: g.getString('name'), occasion: g.getString('occasion'), date: g.getString('date') || undefined },
+    organizer,
+    personal,
+    free,
+    allowNewNames: !listId && g.getBool('allowNewNames'),
+  });
+});
 
-  const COLORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'];
+// ——— Entrar: personal → dentro al momento; general → solicitud pendiente con código (no es miembro, no lee nada) ———
+routerAdd('POST', '/api/lazo/join', (e) => {
+  const L = require(`${__hooks}/lib/lazo.cjs`);
+  const { normName, parsePlazas } = require(`${__hooks}/lib/plazas.cjs`);
+  const body = e.requestInfo().body;
+  const invite = L.findInvite($app, String(body.token || ''));
   let user = e.auth;
   if (user && user.collection().name !== 'users') throw new ForbiddenError('Entra con una cuenta de la familia.');
+  let meta = {};
   $app.runInTransaction((tx) => {
-    const inv = tx.findRecordById('invites', invite.id); // releer dentro: dos altas simultáneas no pasan del límite
-    if (inv.getBool('revoked') || inv.getInt('expiresAt') < Date.now() || inv.getInt('uses') >= inv.getInt('maxUses')) throw new BadRequestError(invalid);
-    const group = tx.findRecordById('groups', invite.getString('group'));
-    if (!user) {
-      user = new Record(tx.findCollectionByNameOrId('users'));
-      user.set('email', 'u-' + $security.randomStringWithAlphabet(24, 'abcdefghijklmnopqrstuvwxyz0123456789') + '@lazo.invalid');
-      user.setPassword($security.randomString(48)); // nadie la conoce: se entra con el token
-      user.set('name', name);
-      user.set('color', COLORS[group.getStringSlice('members').length % COLORS.length]);
-      tx.save(user);
+    const inv = tx.findRecordById('invites', invite.id);
+    if (inv.getBool('revoked') || inv.getInt('expiresAt') < Date.now() || inv.getInt('uses') >= inv.getInt('maxUses')) throw new BadRequestError(L.BAD_INVITE);
+    const group = tx.findRecordById('groups', inv.getString('group'));
+    if (user && group.getStringSlice('members').includes(user.id)) throw new BadRequestError('Ya estás en este grupo.');
+    const personalId = inv.getString('list');
+    if (personalId) {
+      const plaza = tx.findRecordById('lists', personalId);
+      if (plaza.getString('user')) throw new BadRequestError(L.BAD_INVITE);
+      if (!user) user = L.newUser(tx, plaza.getString('name'), group.getStringSlice('members').length);
+      L.reclamar(tx, plaza, user.id, 'personal', inv.getString('createdBy'));
+      meta = { group: group.id };
+    } else {
+      let listId = '';
+      let name = '';
+      if (body.list) {
+        const plaza = tx.findRecordById('lists', String(body.list));
+        if (plaza.getString('group') !== group.id || plaza.getString('kind') !== 'person' || plaza.getString('user')) throw new BadRequestError('Esa plaza ya está ocupada.');
+        listId = plaza.id;
+        name = plaza.getString('name');
+      } else {
+        if (!group.getBool('allowNewNames')) throw new BadRequestError('Elige tu nombre en la lista.');
+        name = parsePlazas([String(body.name || '')])[0] || '';
+        if (!name) throw new BadRequestError('Escribe tu nombre.');
+        const taken = tx.findRecordsByFilter('lists', 'group = {:g}', '', 0, 0, { g: group.id }).some((l) => normName(l.getString('name')) === normName(name));
+        if (taken) throw new BadRequestError('Ya hay una plaza con ese nombre: elígela en la lista.');
+      }
+      if (tx.findRecordsByFilter('joinRequests', 'group = {:g} && status = "pending"', '', 21, 0, { g: group.id }).length >= 20) throw new BadRequestError('Hay demasiadas entradas pendientes. Avisa a quien organiza.');
+      if (!user) user = L.newUser(tx, name, group.getStringSlice('members').length);
+      if (tx.findRecordsByFilter('joinRequests', 'group = {:g} && user = {:u}', '', 1, 0, { g: group.id, u: user.id }).length) throw new BadRequestError('Ya has pedido entrar en este grupo.');
+      const req = new Record(tx.findCollectionByNameOrId('joinRequests'));
+      req.set('group', group.id);
+      req.set('user', user.id);
+      req.set('list', listId);
+      req.set('name', name);
+      req.set('code', String(parseInt($security.randomStringWithAlphabet(4, '0123456789'), 10)).padStart(4, '0'));
+      req.set('status', 'pending');
+      tx.save(req);
+      meta = { group: group.id, pending: true, request: req.id, code: req.getString('code') };
     }
-    if (!group.getStringSlice('members').includes(user.id)) {
-      group.set('members+', user.id);
-      tx.save(group);
-      const list = new Record(tx.findCollectionByNameOrId('lists'));
-      list.set('group', group.id);
-      list.set('name', user.getString('name'));
-      list.set('user', user.id);
-      tx.save(list);
-      inv.set('uses', inv.getInt('uses') + 1);
-      tx.save(inv);
-    }
+    inv.set('uses', inv.getInt('uses') + 1);
+    tx.save(inv);
   });
-  return $apis.recordAuthResponse(e, user, 'invite', { group: invite.getString('group') });
+  return $apis.recordAuthResponse(e, user, 'invite', meta);
 });
+
+// ——— Aceptar o rechazar una entrada (admin) ———
+routerAdd(
+  'POST',
+  '/api/lazo/join-decide',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const body = e.requestInfo().body;
+    $app.runInTransaction((tx) => {
+      const req = tx.findRecordById('joinRequests', String(body.request || ''));
+      const group = tx.findRecordById('groups', req.getString('group'));
+      if (!L.isAdmin(group, e.auth.id)) throw new ForbiddenError('Solo quien organiza el grupo puede aceptar.');
+      if (req.getString('status') !== 'pending') throw new BadRequestError('Esa solicitud ya está resuelta.');
+      if (body.accept === true) {
+        let plaza;
+        if (req.getString('list')) {
+          plaza = tx.findRecordById('lists', req.getString('list'));
+          if (plaza.getString('user')) throw new BadRequestError('Esa plaza ya está ocupada.');
+        } else {
+          plaza = new Record(tx.findCollectionByNameOrId('lists'));
+          plaza.set('group', group.id);
+          plaza.set('name', req.getString('name'));
+          plaza.set('kind', 'person');
+          tx.save(plaza);
+        }
+        L.reclamar(tx, plaza, req.getString('user'), 'approved', e.auth.id);
+        req.set('status', 'approved');
+      } else req.set('status', 'rejected');
+      req.set('decidedBy', e.auth.id);
+      tx.save(req);
+    });
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Liberar una plaza (admin; nunca la suya ni la del dueño). Expulsa la cuenta; la plaza conserva su historial ———
+routerAdd(
+  'POST',
+  '/api/lazo/plaza-release',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    $app.runInTransaction((tx) => {
+      const plaza = tx.findRecordById('lists', String(e.requestInfo().body.list || ''));
+      const group = tx.findRecordById('groups', plaza.getString('group'));
+      const who = plaza.getString('user');
+      if (!L.isAdmin(group, e.auth.id) || plaza.getString('kind') !== 'person' || !who || who === e.auth.id || who === group.getString('owner')) throw new ForbiddenError('No puedes liberar esa plaza.');
+      group.set('members-', who);
+      group.set('admins-', who);
+      tx.save(group);
+      plaza.set('prevUser', who);
+      plaza.set('user', '');
+      plaza.set('claimedAt', 0);
+      plaza.set('via', '');
+      tx.save(plaza);
+      for (const inv of tx.findRecordsByFilter('invites', 'list = {:l} && revoked = false', '', 0, 0, { l: plaza.id })) {
+        inv.set('revoked', true);
+        tx.save(inv);
+      }
+    });
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Todas las transiciones de un regalo (spec §3.2). Orden: regalo → ¿es tuyo? (403 antes de leer estado) → grupo → transacción ———
+routerAdd(
+  'POST',
+  '/api/lazo/gift',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const a = e.requestInfo().body;
+    const me = e.auth.id;
+    const notFound = () => new NotFoundError('Ese regalo ya no existe.');
+    let claimRec = null;
+    let itemId = String(a.item || '');
+    if (a.claim) {
+      try {
+        claimRec = $app.findRecordById('claims', String(a.claim));
+      } catch {
+        throw notFound();
+      }
+      itemId = claimRec.getString('item');
+    }
+    let item;
+    try {
+      item = $app.findRecordById('items', itemId);
+    } catch {
+      throw notFound();
+    }
+    const list = $app.findRecordById('lists', item.getString('list'));
+    if (list.getString('user') === me) {
+      if (item.getBool('secret')) throw notFound();
+      throw new ForbiddenError('No puedes reservar regalos de tu propia lista.');
+    }
+    const group0 = $app.findRecordById('groups', list.getString('group'));
+    if (!group0.getStringSlice('members').includes(me)) throw notFound();
+
+    $app.runInTransaction((tx) => {
+      const group = tx.findRecordById('groups', group0.id);
+      const mode = group.getString('buyMode') || 'individual';
+      const allowed = (k) => (k === 'self' ? mode !== 'hucha' : mode !== 'individual');
+      const rows = () => tx.findRecordsByFilter('claims', 'item = {:i}', '', 0, 0, { i: item.id });
+      const taken = () => rows().reduce((s, c) => s + c.getInt('units'), 0);
+      const pots = () => tx.findRecordsByFilter('contributions', 'item = {:i} && amountCents > 0', '', 0, 0, { i: item.id });
+      const payers = group.getStringSlice('members').filter((u) => u !== list.getString('user'));
+      const checkPay = () => {
+        if (!Number.isInteger(a.paidCents) || a.paidCents < 0 || a.paidCents > 100000000) throw new BadRequestError('El precio no es válido.');
+        if (!payers.includes(String(a.paidBy || ''))) throw new BadRequestError('Esa persona no puede pagar este regalo.');
+      };
+      const c = claimRec ? tx.findRecordById('claims', claimRec.id) : null;
+      const ownSelf = (r) => (r.getString('kind') || 'self') === 'self' && r.getString('user') !== me;
+      switch (a.action) {
+        case 'reserve': {
+          const kind = a.kind === 'pot' ? 'pot' : 'self';
+          if (!allowed(kind)) throw new BadRequestError(kind === 'self' ? 'En este grupo todo va a la hucha.' : 'En este grupo cada uno compra lo suyo.');
+          if (item.getBool('removed')) throw new BadRequestError('Lo ha quitado de su lista.');
+          if (pots().length) throw new BadRequestError('Este regalo va a medias: pon tu parte.');
+          if (taken() >= item.getInt('quantity')) throw new BadRequestError('Alguien se te ha adelantado: ya está cogido.');
+          const r = new Record(tx.findCollectionByNameOrId('claims'));
+          r.set('item', item.id);
+          r.set('user', me);
+          r.set('kind', kind);
+          r.set('status', 'reserved');
+          r.set('units', 1);
+          tx.save(r);
+          break;
+        }
+        case 'release': {
+          if (!c || c.getString('status') !== 'reserved' || ownSelf(c)) throw new BadRequestError('Esa reserva no es tuya.');
+          tx.delete(c);
+          break;
+        }
+        case 'move': {
+          const kind = a.kind === 'pot' ? 'pot' : 'self';
+          if (!c || c.getString('status') !== 'reserved' || !allowed(kind) || ownSelf(c)) throw new BadRequestError('No se puede cambiar ahora.');
+          c.set('kind', kind);
+          if (kind === 'self') c.set('user', me);
+          tx.save(c);
+          break;
+        }
+        case 'buy': {
+          checkPay();
+          if (c) {
+            if (c.getString('status') !== 'reserved' || ownSelf(c)) throw new BadRequestError('Esa reserva no es tuya.');
+            c.set('status', 'bought');
+            c.set('paidCents', a.paidCents);
+            c.set('paidBy', String(a.paidBy));
+            c.set('boughtAt', Date.now());
+            tx.save(c);
+          } else {
+            const kind = mode === 'hucha' ? 'pot' : mode === 'individual' ? 'self' : a.kind === 'pot' ? 'pot' : 'self';
+            if (taken() >= item.getInt('quantity')) throw new BadRequestError('Alguien se te ha adelantado: ya está cogido.');
+            const ps = pots();
+            if (ps.length && (kind !== 'self' || !ps.some((p) => p.getString('user') === me))) throw new BadRequestError('Lo compra alguien que pone dinero.');
+            const r = new Record(tx.findCollectionByNameOrId('claims'));
+            r.set('item', item.id);
+            r.set('user', me);
+            r.set('kind', kind);
+            r.set('status', 'bought');
+            r.set('units', 1);
+            r.set('paidCents', a.paidCents);
+            r.set('paidBy', String(a.paidBy));
+            r.set('boughtAt', Date.now());
+            tx.save(r);
+          }
+          break;
+        }
+        case 'unbuy': {
+          const keeper = L.keeperOf(tx, group, list.id);
+          if (!c || c.getString('status') !== 'bought' || ![c.getString('user'), c.getString('paidBy'), keeper].includes(me) && !L.isAdmin(group, me)) throw new BadRequestError('No puedes deshacer esta compra.');
+          c.set('status', 'reserved');
+          c.set('paidCents', 0);
+          c.set('paidBy', '');
+          c.set('boughtAt', 0);
+          tx.save(c);
+          break;
+        }
+        default:
+          throw new BadRequestError('Acción desconocida.');
+      }
+    });
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Quién lleva la hucha y quién las cuentas de sus regalos: se fija una sola vez ———
+routerAdd(
+  'POST',
+  '/api/lazo/hucha-roles',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const body = e.requestInfo().body;
+    const group = $app.findRecordById('groups', String(body.group || ''));
+    if (!L.isAdmin(group, e.auth.id)) throw new ForbiddenError('Solo quien organiza el grupo.');
+    if (group.getString('treasurer') || group.getString('deputy')) throw new BadRequestError('Ya están elegidos y no se pueden cambiar.');
+    const t = $app.findRecordById('lists', String(body.treasurer || ''));
+    const d = $app.findRecordById('lists', String(body.deputy || ''));
+    const ok = (l) => l.getString('group') === group.id && l.getString('kind') === 'person' && l.getString('user');
+    if (t.id === d.id || !ok(t) || !ok(d)) throw new BadRequestError('Elige dos personas distintas que ya estén dentro.');
+    group.set('treasurer', t.id);
+    group.set('deputy', d.id);
+    $app.save(group);
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Día de la entrega: dos llaves (un admin propone; otra persona confirma) ———
+routerAdd(
+  'POST',
+  '/api/lazo/reveal',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const body = e.requestInfo().body;
+    const group = $app.findRecordById('groups', String(body.group || ''));
+    const me = e.auth.id;
+    if (!group.getStringSlice('members').includes(me)) throw new ForbiddenError('No perteneces a este grupo.');
+    const admin = L.isAdmin(group, me);
+    const asked = group.getString('revealAskedBy');
+    if (body.action === 'ask' && admin) group.set('revealAskedBy', me);
+    else if (body.action === 'confirm' && asked && asked !== me) {
+      group.set('revealedAt', Date.now());
+      group.set('revealAskedBy', '');
+    } else if (body.action === 'cancel' && admin) group.set('revealAskedBy', '');
+    else if (body.action === 'close' && admin) group.set('revealedAt', 0);
+    else throw new ForbiddenError('No puedes hacer esto.');
+    $app.save(group);
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Lo que te regalaron: solo lo comprado de tu plaza, «de parte de» y nunca precios ———
+routerAdd(
+  'GET',
+  '/api/lazo/received/{group}',
+  (e) => {
+    const me = e.auth.id;
+    let group;
+    try {
+      group = $app.findRecordById('groups', e.request.pathValue('group'));
+    } catch {
+      throw new ForbiddenError('No perteneces a este grupo.');
+    }
+    if (!group.getStringSlice('members').includes(me)) throw new ForbiddenError('No perteneces a este grupo.');
+    if (!group.getInt('revealedAt')) throw new ForbiddenError('La entrega aún no está abierta.');
+    const plaza = $app.findRecordsByFilter('lists', 'group = {:g} && kind = "person" && user = {:u}', '', 1, 0, { g: group.id, u: me })[0];
+    if (!plaza) return e.json(200, []);
+    const nameOf = (id) => {
+      try {
+        return $app.findRecordById('users', id).getString('name');
+      } catch {
+        return 'Alguien';
+      }
+    };
+    const out = [];
+    for (const c of $app.findRecordsByFilter('claims', 'item.list = {:l} && status = "bought"', '', 0, 0, { l: plaza.id })) {
+      const it = $app.findRecordById('items', c.getString('item'));
+      const pots = $app.findRecordsByFilter('contributions', 'item = {:i} && amountCents > 0', '', 0, 0, { i: it.id }).map((x) => x.getString('user'));
+      const fromAll = c.getString('kind') === 'pot';
+      const ids = fromAll ? [] : pots.length ? pots : [c.getString('user')];
+      out.push({ title: it.getString('title'), image: it.getString('image') || undefined, url: it.getString('url') || undefined, from: ids.map((id) => ({ id, name: nameOf(id) })), fromAll });
+    }
+    return e.json(200, out);
+  },
+  $apis.requireAuth('users'),
+);
 
 // ——— Entrar en otro móvil: código de 8 caracteres, 10 minutos, un solo uso ———
 routerAdd(
@@ -261,32 +616,6 @@ routerAdd(
       inv.set('revoked', true);
       $app.save(inv);
     }
-    return e.json(200, { ok: true });
-  },
-  $apis.requireAuth('users'),
-);
-
-// ——— Expulsar a alguien (auditoría G-3): sus reservas y aportaciones se borran; los enlaces, anulados ———
-routerAdd(
-  'POST',
-  '/api/lazo/expel',
-  (e) => {
-    const body = e.requestInfo().body;
-    const group = $app.findRecordById('groups', String(body.group || ''));
-    const who = String(body.user || '');
-    if (!group.getStringSlice('admins').includes(e.auth.id) || who === group.getString('owner') || who === e.auth.id) throw new ForbiddenError('No puedes expulsar a esa persona.');
-    $app.runInTransaction((tx) => {
-      for (const col of ['claims', 'contributions'])
-        for (const r of tx.findRecordsByFilter(col, 'user = {:u} && item.list.group = {:g}', '', 0, 0, { u: who, g: group.id })) tx.delete(r);
-      for (const l of tx.findRecordsByFilter('lists', 'user = {:u} && group = {:g}', '', 0, 0, { u: who, g: group.id })) tx.delete(l);
-      for (const inv of tx.findRecordsByFilter('invites', 'group = {:g} && revoked = false', '', 0, 0, { g: group.id })) {
-        inv.set('revoked', true);
-        tx.save(inv);
-      }
-      group.set('members-', who);
-      group.set('admins-', who);
-      tx.save(group);
-    });
     return e.json(200, { ok: true });
   },
   $apis.requireAuth('users'),
