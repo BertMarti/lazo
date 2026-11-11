@@ -115,10 +115,24 @@ describe('presupuesto', () => {
   it('suma unidades reservadas por precio y, si va a medias, las aportaciones', () => {
     const claims = [claim({ item: 'a' }), claim({ item: 'a', user: 'x' }), claim({ item: 'c' })];
     const pot = [{ ...contrib('p', 2500), item: 'b' }];
-    expect(committedOn(items, claims, pot)).toBe(6000 + 2500);
+    expect(committedOn(items, claims, pot)).toEqual({ pot: 0, own: 6000 + 2500 });
   });
   it('restante, exceso y barra', () => {
     expect(budgetProgress(5000, items, [claim({ item: 'b' })], [])).toMatchObject({ committed: 10000, left: -5000, over: true, percent: 100 });
     expect(budgetProgress(0, items, [], [])).toMatchObject({ percent: 0, over: false });
+  });
+});
+
+import { normName, parsePlazas } from '../../src/core/plazas';
+describe('plazas (U-10)', () => {
+  it('normaliza, quita repetidos, vacíos y al creador; máximo 40', () => {
+    expect(normName('  Mamá  Rosa ')).toBe('mama rosa');
+    expect(parsePlazas('Mamá\nmama\n\nPapá, Samira\nAlberto', 'alberto')).toEqual(['Mamá', 'Papá', 'Samira']);
+    expect(parsePlazas(Array.from({ length: 60 }, (_, i) => `P${i}`))).toHaveLength(40);
+  });
+  it('estado «para la hucha» y comprado con la hucha (U-1)', () => {
+    const it2 = item({ quantity: 2, priceCents: 1000 });
+    expect(itemStatus(it2, [claim({ kind: 'pot' }), claim({ id: 'd', kind: 'self' })], []).kind).toBe('pot');
+    expect(itemStatus(item(), [claim({ kind: 'pot', status: 'bought' })], [])).toMatchObject({ kind: 'bought', fromPot: true });
   });
 });

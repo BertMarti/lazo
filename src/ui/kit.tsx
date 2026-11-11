@@ -21,6 +21,7 @@ export const initial = (name: string) => [...name.replace(/^(abuela|abuelo|tía|
 const SEAL_LABEL: Record<ItemStatus['kind'], string> = {
   free: 'Libre',
   reserved: 'Reservado',
+  pot: 'Para la hucha',
   bought: 'Comprado',
   partial: 'A medias',
   covered: 'Cubierto',
@@ -55,6 +56,7 @@ export function Seal({ status, animate, size = 44 }: { status: ItemStatus; anima
           <circle cx={22} cy={22} r={r} fill="none" stroke="var(--foil-fill)" strokeWidth={5} strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 22 22)" />
         )}
         {filled && <path d="M15.5 22.5l4.5 4.5 8.5-9" fill="none" stroke="#241c05" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />}
+        {k === 'pot' && <circle cx={22} cy={22} r={4} fill="var(--foil-ink)" />}
         {k === 'reserved' && <path d="M14 22h16" stroke="var(--foil-ink)" strokeWidth={2.4} strokeLinecap="round" />}
       </svg>
     </span>

@@ -10,7 +10,7 @@ import { Avatar, type Flavor } from './kit';
  * Tarjeta de una persona del grupo: toda ella abre su lista. La de uno mismo NO lleva barra ni cifras:
  * «Tu presupuesto y tus reservas son sorpresa» (y el servidor ni siquiera las envía).
  */
-export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, budget, compact, current, onAdd, onSetBudget }: {
+export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, budget, compact, current, onAdd, onSetBudget, onInvite }: {
   list: GiftList;
   owner?: Member;
   flavor: Flavor;
@@ -22,10 +22,15 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
   current?: boolean;
   onAdd?: () => void;
   onSetBudget?: () => void;
+  /** Plaza libre y quien mira es admin: enviarle su enlace. */
+  onInvite?: () => void;
 }) {
+  const free = list.kind !== 'child' && !list.user;
   const name = mine ? 'Tu lista' : list.name;
   const gifts = `${giftCount} ${giftCount === 1 ? 'regalo' : 'regalos'}`;
-  const meta = mine
+  const meta = free
+    ? `Aún no ha entrado${giftCount ? ` · ${gifts}` : ''}`
+    : mine
     ? giftCount
       ? gifts
       : 'Tu lista está vacía'
@@ -40,7 +45,11 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
   return (
     <article className={`member${compact ? ' member-compact' : ''}`} data-flavor={flavor} aria-current={current || undefined}>
       <div className="member-head">
-        <Avatar user={{ name: list.name, color: owner?.color ?? flavor }} />
+        {free ? (
+          <span className="avatar avatar-free" aria-hidden>{list.name.trim()[0]?.toUpperCase()}</span>
+        ) : (
+          <Avatar user={{ name: list.name, color: owner?.color ?? flavor }} />
+        )}
         <div className="grow">
           <h2>
             <a className="member-link" href={`#/l/${list.id}`}>
@@ -53,6 +62,12 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
           <span className="on-top">
             <Button variant="primary" size="sm" icon={Plus} onClick={onAdd}>
               Añadir
+            </Button>
+          </span>
+        ) : free && onInvite && !compact ? (
+          <span className="on-top">
+            <Button variant="secondary" size="sm" onClick={onInvite}>
+              Invitar
             </Button>
           </span>
         ) : (
@@ -81,7 +96,7 @@ export function MemberCard({ list, owner, flavor, mine, giftCount, freeCount, bu
           </div>
         )
       )}
-      {!list.user && !compact && <p className="meta">La llevan sus padres</p>}
+      {list.kind === 'child' && !compact && <p className="meta">La llevan sus padres</p>}
     </article>
   );
 }

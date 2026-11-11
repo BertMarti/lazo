@@ -1,9 +1,9 @@
 import PocketBase, { ClientResponseError, type RecordModel } from 'pocketbase';
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
-import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, User } from '../core/types';
+import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
 import { canEditList, canSeeStatus } from '../core/visibility';
-import { ApiError, type Api, type DrawInfo, type GroupDetail, type ItemInput, type ListDetail, type NewGroup, type Purchase } from './types';
+import { ApiError, type Api, type DrawInfo, type GiftAction, type GroupDetail, type HuchaData, type InviteInfo, type ItemInput, type JoinResult, type ListDetail, type NewGroup, type Purchase } from './types';
 
 /**
  * Backend real (PocketBase). La regla de la sorpresa la impone el SERVIDOR (server/pb/pb_migrations):
@@ -96,10 +96,7 @@ export class PocketBaseApi implements Api {
       return drafts.length;
     });
 
-  claim = (itemId: Id, status: Claim['status']) =>
-    this.run(async () => void (await this.pb.collection('claims').create({ item: itemId, user: this.uid(), status })));
-  setClaimStatus = (claimId: Id, status: Claim['status']) => this.run(async () => void (await this.pb.collection('claims').update(claimId, { status })));
-  releaseClaim = (claimId: Id) => this.run(async () => void (await this.pb.collection('claims').delete(claimId)));
+  gift = (a: GiftAction) => this.run(async () => void (await this.pb.send('/api/lazo/gift', { method: 'POST', body: a })));
 
   contribute = (itemId: Id, amountCents: Cents) =>
     this.run(async () => {
@@ -110,18 +107,69 @@ export class PocketBaseApi implements Api {
   setContributionPaid = (id: Id, paid: boolean) => this.run(async () => void (await this.pb.collection('contributions').update(id, { paid })));
   removeContribution = (id: Id) => this.run(async () => void (await this.pb.collection('contributions').delete(id)));
 
-  createInvite = (groupId: Id) =>
+  createInvite = (groupId: Id, listId?: Id) =>
     this.run(async () => {
-      const r = await this.pb.send<{ token: string; expires: string }>('/api/lazo/invite', { method: 'POST', body: { group: groupId } });
+      const r = await this.pb.send<{ token: string; expires: string }>('/api/lazo/invite', { method: 'POST', body: { group: groupId, list: listId } });
       return { url: `${this.pb.baseURL.replace(/\/$/, '')}/#/unirse/${r.token}`, expires: r.expires };
     });
 
-  join = (token: string, name: string) =>
-    this.run(async () => {
-      const r = await this.pb.send<{ token: string; record: RecordModel }>('/api/lazo/join', { method: 'POST', body: { token, name } });
+  inviteInfo = (token: string) => this.run(() => this.pb.send<InviteInfo>('/api/lazo/invite-info', { method: 'POST', body: { token } }));
+
+  join = (token: string, choice: { list?: Id; name?: string }) =>
+    this.run(async (): Promise<JoinResult> => {
+      const r = await this.pb.send<{ token: string; record: RecordModel; meta?: { group: Id; pending?: boolean; request?: Id; code?: string } }>('/api/lazo/join', { method: 'POST', body: { token, ...choice } });
       this.pb.authStore.save(r.token, r.record);
-      return user(r.record);
+      const m = r.meta ?? { group: '' };
+      return m.pending ? { pending: true, request: m.request!, code: m.code!, group: m.group } : { group: m.group };
     });
+
+  requestStatus = (requestId: Id) => this.run(async () => (await this.pb.collection('joinRequests').getOne(requestId)).status as JoinRequest['status']);
+
+  joinRequests = (groupId: Id) =>
+    this.run(async () =>
+      (await this.pb.collection('joinRequests').getFullList({ filter: this.pb.filter('group = {:g} && status = "pending"', { g: groupId }) })).map(
+        (r): JoinRequest => ({ id: r.id, group: r.group, user: r.user, list: opt(r.list), name: r.name, code: r.code, status: r.status }),
+      ),
+    );
+
+  decideJoin = (requestId: Id, accept: boolean) => this.run(async () => void (await this.pb.send('/api/lazo/join-decide', { method: 'POST', body: { request: requestId, accept } })));
+
+  updateGroup = (groupId: Id, patch: Partial<Pick<Group, 'name' | 'date' | 'buyMode' | 'allowNewNames'>>) =>
+    this.run(async () => void (await this.pb.collection('groups').update(groupId, patch)));
+
+  addPlaza = (groupId: Id, name: string) => this.run(async () => list(await this.pb.collection('lists').create({ group: groupId, name, kind: 'person' })));
+
+  releasePlaza = (listId: Id) => this.run(async () => void (await this.pb.send('/api/lazo/plaza-release', { method: 'POST', body: { list: listId } })));
+
+  addSurprise = (listId: Id, input: ItemInput) =>
+    this.run(async () => item(await this.pb.collection('items').create({ ...input, url: input.url ?? '', image: input.image ?? '', list: listId, createdBy: this.uid(), currency: 'EUR', secret: true })));
+
+  hucha = (groupId: Id) =>
+    this.run(async (): Promise<HuchaData> => {
+      const d = await this.groupDetail(groupId);
+      const byGroup = this.pb.filter('list.group = {:g}', { g: groupId });
+      const [items, claims, payments] = await Promise.all([
+        this.pb.collection('items').getFullList({ filter: byGroup }).then((r) => r.map(item)),
+        this.pb.collection('claims').getFullList({ filter: this.pb.filter('item.list.group = {:g} && kind = "pot"', { g: groupId }) }).then((r) => r.map(claim)),
+        this.pb.collection('payments').getFullList({ filter: this.pb.filter('group = {:g}', { g: groupId }) }).then((r) =>
+          r.map((p): Payment => ({ id: p.id, group: p.group, from: p.from, to: p.to, amountCents: p.amountCents, sub: !!p.sub, at: p.at || undefined })),
+        ),
+      ]);
+      return { group: d.group, members: d.members, lists: d.lists, items, claims, payments };
+    });
+
+  setHuchaRoles = (groupId: Id, treasurerList: Id, deputyList: Id) =>
+    this.run(async () => void (await this.pb.send('/api/lazo/hucha-roles', { method: 'POST', body: { group: groupId, treasurer: treasurerList, deputy: deputyList } })));
+
+  addPayment = (groupId: Id, p: { from: Id; to: Id; amountCents: Cents; sub: boolean }) =>
+    this.run(async () => void (await this.pb.collection('payments').create({ group: groupId, ...p, at: Date.now() })));
+
+  removePayment = (id: Id) => this.run(async () => void (await this.pb.collection('payments').delete(id)));
+
+  reveal = (groupId: Id, action: 'ask' | 'confirm' | 'cancel' | 'close') =>
+    this.run(async () => void (await this.pb.send('/api/lazo/reveal', { method: 'POST', body: { group: groupId, action } })));
+
+  received = (groupId: Id) => this.run(() => this.pb.send<Received[]>(`/api/lazo/received/${encodeURIComponent(groupId)}`, { method: 'GET' }));
 
   runDraw = (groupId: Id, participants: Id[], exclusions: [Id, Id][], budgetCents?: Cents) =>
     this.run(async () => void (await this.pb.send('/api/lazo/draw', { method: 'POST', body: { group: groupId, participants, exclusions, budgetCents } })));
@@ -139,15 +187,15 @@ export class PocketBaseApi implements Api {
 
   purchases = () =>
     this.run(async (): Promise<Purchase[]> => {
-      const f = this.pb.filter('user = {:me}', { me: this.uid() });
-      const opts = { filter: f, expand: 'item.list.group' };
+      const mine = this.pb.filter('user = {:me}', { me: this.uid() });
+      const opts = { filter: this.pb.filter('user = {:me} || paidBy = {:me}', { me: this.uid() }), expand: 'item.list.group' };
       const ctx = (r: RecordModel) => {
         const i = r.expand?.item as RecordModel;
         const l = i.expand?.list as RecordModel;
         return { item: item(i), list: list(l), group: group(l.expand?.group as RecordModel) };
       };
       const claims = (await this.pb.collection('claims').getFullList(opts)).map((r) => ({ ...ctx(r), claim: claim(r) }));
-      const pots = (await this.pb.collection('contributions').getFullList(opts)).map((r) => ({ ...ctx(r), contribution: contribution(r) }));
+      const pots = (await this.pb.collection('contributions').getFullList({ filter: mine, expand: 'item.list.group' })).map((r) => ({ ...ctx(r), contribution: contribution(r) }));
       return [...claims, ...pots];
     });
 
@@ -171,12 +219,21 @@ export class PocketBaseApi implements Api {
 // — Conversión de registros —
 const opt = <T>(v: T | '' | 0 | null | undefined): T | undefined => (v === '' || v === null || v === undefined ? undefined : (v as T));
 const user = (r: RecordModel): User => ({ id: r.id, name: String(r.name ?? ''), color: String(r.color ?? '') });
-const group = (r: RecordModel): Group => ({ id: r.id, name: r.name, occasion: r.occasion, date: opt(r.date), currency: r.currency || 'EUR', owner: r.owner });
-const list = (r: RecordModel): GiftList => ({ id: r.id, group: r.group, name: r.name, user: opt(r.user), managers: r.managers ?? [], birthYear: opt(r.birthYear), notes: opt(r.notes) });
+const group = (r: RecordModel): Group => ({
+  id: r.id, name: r.name, occasion: r.occasion, date: opt(r.date), currency: r.currency || 'EUR', owner: r.owner,
+  buyMode: r.buyMode || 'individual', allowNewNames: !!r.allowNewNames, treasurer: opt(r.treasurer), deputy: opt(r.deputy), revealAskedBy: opt(r.revealAskedBy), revealedAt: r.revealedAt || 0,
+});
+const list = (r: RecordModel): GiftList => ({
+  id: r.id, group: r.group, name: r.name, kind: r.kind || (r.user ? 'person' : 'child'), user: opt(r.user), managers: r.managers ?? [], birthYear: opt(r.birthYear), notes: opt(r.notes),
+  claimedAt: r.claimedAt || undefined, via: opt(r.via), approvedBy: opt(r.approvedBy),
+});
 const item = (r: RecordModel): Item => ({
   id: r.id, list: r.list, title: r.title, url: opt(r.url), image: opt(r.image), priceCents: r.priceCents || r.priceCents === 0 ? r.priceCents || undefined : undefined,
   currency: r.currency || 'EUR', store: opt(r.store), size: opt(r.size), color: opt(r.color), priority: r.priority || 2, notes: opt(r.notes), quantity: r.quantity || 1, createdBy: r.createdBy,
+  secret: !!r.secret, removed: !!r.removed,
 });
-const claim = (r: RecordModel): Claim => ({ id: r.id, item: r.item, user: r.user, status: r.status, units: r.units || 1 });
+const claim = (r: RecordModel): Claim => ({
+  id: r.id, item: r.item, user: r.user, kind: r.kind || 'self', status: r.status, units: r.units || 1, paidBy: opt(r.paidBy), paidCents: r.status === 'bought' ? r.paidCents : undefined, boughtAt: r.boughtAt || undefined,
+});
 const contribution = (r: RecordModel): Contribution => ({ id: r.id, item: r.item, user: r.user, amountCents: r.amountCents, paid: !!r.paid });
 const budgetOf = (r: RecordModel): Budget => ({ id: r.id, list: r.list, amountCents: r.amountCents });

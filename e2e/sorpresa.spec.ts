@@ -24,9 +24,9 @@ for (const [id, name] of FAMILY) {
     await page.getByLabel('Ver como').selectOption(id);
     // Su tarjeta en el grupo: sin barra ni cifras.
     const mine = page.locator('.member', { has: page.getByRole('link', { name: 'Tu lista' }) });
-    await expect(mine.getByText('Tu presupuesto y tus reservas son sorpresa')).toBeVisible();
+    await expect(mine.getByText('Lo que te regalan es sorpresa')).toBeVisible();
     await expect(mine.locator('.budget')).toHaveCount(0);
-    await expect(page.locator('.member .budget')).toHaveCount(4);
+    await expect(page.locator('.member .budget')).toHaveCount(5); // las otras 4 plazas + la plaza libre de Tía Loli
     // Su lista: sin sellos, precintos, estados ni presupuesto.
     await page.goto(`/#/l/l-${id}`);
     await expect(page.getByText('Tú no ves quién te regala qué. Los demás sí.')).toBeVisible();
@@ -46,11 +46,18 @@ test('Mamá no ve que Alberto le ha reservado el marco; Samira sí, con su nombr
 test('reservar es un toque y se puede deshacer', async ({ page }) => {
   await page.goto('/#/l/l-juancarlos');
   const card = page.locator('.gift', { hasText: 'Cuchillo de chef' });
-  await card.getByRole('button', { name: 'Reservar' }).click();
+  await card.getByRole('button', { name: 'Me lo reservo' }).click();
   await expect(card.getByText('Lo reservas tú')).toBeVisible();
   await expect(page.getByRole('status')).toContainText('Reservado. Juan Carlos no lo verá.');
   await page.getByRole('status').getByRole('button', { name: 'Deshacer' }).click();
   await expect(card.getByText('Libre')).toBeVisible();
+  // «Ya comprado» en 2 toques, con el precio prerrellenado
+  await card.getByRole('button', { name: 'Para la hucha' }).click();
+  await expect(card.getByText(/Para la hucha · lo apuntaste tú/)).toBeVisible();
+  await card.getByRole('button', { name: 'Ya comprado' }).click(); // 1
+  await expect(page.getByLabel('¿Cuánto costó?')).toHaveValue('79,00');
+  await page.getByRole('button', { name: 'Guardar' }).click(); // 2
+  await expect(card.getByText(/Comprado con la hucha · lo adelantaste tú/)).toBeVisible();
 });
 
 test('añadir un regalo pegando un enlace son dos toques', async ({ page, context, browserName }) => {
@@ -62,4 +69,28 @@ test('añadir un regalo pegando un enlace son dos toques', async ({ page, contex
   await page.getByRole('button', { name: /^Pegar/ }).click(); // 2
   await expect(page.getByRole('heading', { name: 'Añadido a tu lista' })).toBeVisible();
   await expect(page.getByRole('dialog').getByText('Altavoz inteligente compacto')).toBeVisible();
+});
+
+test('entrar con el enlace general: pendiente con código hasta que el admin acepta', async ({ page }) => {
+  await page.goto('/#/g/navidad');
+  await page.getByRole('link', { name: 'Probar a entrar' }).click();
+  await expect(page.getByRole('heading', { name: '¿Quién eres?' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Mamá' })).toHaveCount(0); // ocupada: no se puede elegir
+  await page.getByRole('radio', { name: 'Tía Loli' }).check();
+  await page.getByRole('button', { name: 'Soy Tía Loli' }).click();
+  const code = (await page.locator('.code').textContent())!.trim();
+  expect(code).toMatch(/^\d{4}$/);
+  await page.getByLabel('Ver como').selectOption('alberto');
+  await page.goto('/#/g/navidad');
+  await expect(page.getByText(`código ${code}`)).toBeVisible();
+  await page.getByRole('button', { name: 'Aceptar' }).click();
+  await expect(page.locator('.member', { hasText: 'Tía Loli' }).getByText('Aún no ha entrado')).toHaveCount(0);
+});
+
+test('la hucha de Papá no dice nada de lo que se gasta en él', async ({ page }) => {
+  await page.goto('/#/hucha/navidad');
+  await page.getByLabel('Ver como').selectOption('papa');
+  await expect(page.getByText('Aquí no sale lo que se gasta en ti')).toBeVisible();
+  await expect(page.locator('.rows li', { hasText: /^P/ }).filter({ hasText: 'Papá' })).toHaveCount(0);
+  await expect(page.getByText('Te falta poner')).toBeVisible();
 });

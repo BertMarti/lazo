@@ -10,8 +10,8 @@ beforeEach(() => {
 describe('DemoApi', () => {
   it('una reserva ocupa una unidad y luego se agota', async () => {
     api.setViewer('samira');
-    await api.claim('i7', 'reserved'); // entradas de Papá: 2 unidades, 1 ya reservada
-    await expect(api.claim('i7', 'reserved')).rejects.toThrow(/adelantado/);
+    await api.gift({ action: 'reserve', item: 'i8', kind: 'self' }); // entradas de Papá: 2 unidades, 1 ya para la hucha
+    await expect(api.gift({ action: 'reserve', item: 'i8', kind: 'self' })).rejects.toThrow(/adelantado/);
   });
 
   it('no se editan listas ajenas', async () => {
@@ -19,19 +19,30 @@ describe('DemoApi', () => {
     await expect(api.saveItem('l-papa', { title: 'x', priority: 2, quantity: 1 })).rejects.toThrow();
   });
 
-  it('el presupuesto de Mamá suma reservas y aportaciones', async () => {
+  it('presupuesto de Mamá en modo mixto: cuenta la hucha; lo individual va aparte', async () => {
     api.setViewer('papa');
     const d = await api.listDetail('l-mama');
-    const p = budgetProgress(d.budget!.amountCents, d.items, d.claims, d.contributions);
-    // marco 129 (reservado) + chal 49 (comprado) + robot a medias 100 + 150
-    expect(p).toMatchObject({ target: 40000, committed: 12900 + 4900 + 25000, left: 40000 - 42800, over: true, percent: 100 });
+    const p = budgetProgress(d.budget!.amountCents, d.items, d.claims, d.contributions, d.group.buyMode);
+    // robot comprado con la hucha 339,90 + pañuelo sorpresa para la hucha a precio de lista 35
+    expect(p).toMatchObject({ target: 40000, committed: 33990 + 3500 });
   });
 
-  it('cualquiera menos el destinatario puede fijar el presupuesto', async () => {
+  it('cualquiera menos el destinatario puede fijar el presupuesto, también en una plaza libre', async () => {
     api.setViewer('alberto');
     await api.setBudget('l-papa', 25000);
+    await api.setBudget('l-loli', 6000);
     api.setViewer('samira');
     expect((await api.listDetail('l-papa')).budget?.amountCents).toBe(25000);
+    expect((await api.listDetail('l-loli')).budget?.amountCents).toBe(6000);
+  });
+
+  it('crear grupo con plazas: sin repetidos ni el propio creador', async () => {
+    api.setViewer('alberto');
+    const g = await api.createGroup({ name: 'Boda', occasion: 'boda', currency: 'EUR', buyMode: 'hucha', plazas: ['Lucía', 'lucia ', 'Alberto', '', 'Jorge'] });
+    const d = await api.groupDetail(g.id);
+    expect(d.lists.map((l) => [l.name, l.user ?? null])).toEqual([['Alberto', 'alberto'], ['Lucía', null], ['Jorge', null]]);
+    api.setViewer('papa');
+    await expect(api.groupDetail(g.id)).rejects.toThrow(/No perteneces/);
   });
 
   it('el sorteo solo enseña la propia asignación', async () => {
@@ -42,10 +53,12 @@ describe('DemoApi', () => {
     expect(Object.keys(info)).toEqual(['draw', 'receiver']);
   });
 
-  it('solo los miembros del grupo ven sus listas', async () => {
-    api.setViewer('alberto');
-    const g = await api.createGroup({ name: 'Boda', occasion: 'boda', currency: 'EUR' });
+  it('pagos de la hucha: solo con el tesorero (o el suplente por sus regalos) y solo los ven sus dos partes', async () => {
     api.setViewer('papa');
-    await expect(api.groupDetail(g.id)).rejects.toThrow(/No perteneces/);
+    await expect(api.addPayment('navidad', { from: 'papa', to: 'mama', amountCents: 100, sub: false })).rejects.toThrow();
+    await expect(api.addPayment('navidad', { from: 'papa', to: 'alberto', amountCents: 100, sub: true })).rejects.toThrow();
+    await api.addPayment('navidad', { from: 'papa', to: 'samira', amountCents: 500, sub: true });
+    api.setViewer('alberto');
+    expect((await api.hucha('navidad')).payments.some((p) => p.sub)).toBe(false);
   });
 });

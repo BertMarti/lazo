@@ -5,10 +5,10 @@ import { LIMITS, type Item, type Priority } from '../../core/types';
 import { Button, ButtonGroup } from '../Button';
 import { useApi } from '../ctx';
 import { PRIORITY } from '../Gift';
-import { errorText, Sheet, useToast } from '../kit';
+import { errorText, Sheet, useToast, VisibilityNote } from '../kit';
 
 /** Escribir un regalo a mano o editarlo: 3 campos a la vista; el resto, en «Más detalles». */
-export function ItemForm({ listId, item, initialUrl, hint, onClose, onSaved }: { listId: string; item?: Item; initialUrl?: string; hint?: string; onClose: () => void; onSaved: () => void }) {
+export function ItemForm({ listId, item, initialUrl, hint, surpriseFor, onClose, onSaved }: { listId: string; item?: Item; initialUrl?: string; hint?: string; surpriseFor?: string; onClose: () => void; onSaved: () => void }) {
   const api = useApi();
   const toast = useToast();
   const [title, setTitle] = useState(item?.title ?? '');
@@ -38,9 +38,7 @@ export function ItemForm({ listId, item, initialUrl, hint, onClose, onSaved }: {
     }
     setBusy(true);
     try {
-      await api.saveItem(
-        listId,
-        {
+      const input = {
           title: title.trim().slice(0, LIMITS.title),
           url: url.trim() || undefined,
           priceCents: priceCents ?? undefined,
@@ -51,10 +49,10 @@ export function ItemForm({ listId, item, initialUrl, hint, onClose, onSaved }: {
           priority,
           quantity: Math.min(Math.max(1, quantity), LIMITS.quantity),
           notes: notes.trim().slice(0, LIMITS.notes) || undefined,
-        },
-        item?.id,
-      );
-      toast(item ? 'Regalo guardado.' : 'Añadido a tu lista.');
+      };
+      if (surpriseFor && !item) await api.addSurprise(listId, input);
+      else await api.saveItem(listId, input, item?.id);
+      toast(surpriseFor ? `Sorpresa apuntada. ${surpriseFor} no la verá.` : item ? 'Regalo guardado.' : 'Añadido a tu lista.');
       onSaved();
     } catch (e) {
       setErr(errorText(e));
@@ -64,17 +62,18 @@ export function ItemForm({ listId, item, initialUrl, hint, onClose, onSaved }: {
 
   return (
     <Sheet
-      title={item ? 'Editar regalo' : 'Añadir a tu lista'}
+      title={surpriseFor ? `Sorpresa para ${surpriseFor}` : item ? 'Editar regalo' : 'Añadir a tu lista'}
       onClose={onClose}
       footer={
         <ButtonGroup align="stretch">
           <Button variant="primary" loading={busy} onClick={save}>
-            {item ? 'Guardar' : 'Añadir a mi lista'}
+            {surpriseFor ? 'Apuntar la sorpresa' : item ? 'Guardar' : 'Añadir a mi lista'}
           </Button>
         </ButtonGroup>
       }
     >
       {hint && <p className="notice" role="status">{hint}</p>}
+      {surpriseFor && <VisibilityNote>{surpriseFor} no lo verá en su lista</VisibilityNote>}
       <label className="field">
         <span>Regalo</span>
         <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={LIMITS.title} placeholder="Auriculares, un libro, un taller…" autoFocus />

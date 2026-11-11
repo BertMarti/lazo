@@ -15,10 +15,10 @@ export function Purchases() {
   if (error) return <p className="notice notice-error">{error}</p>;
   if (!data) return <p className="meta">Cargando…</p>;
 
-  const cost = (p: Purchase) => p.contribution?.amountCents ?? (p.item.priceCents ?? 0);
+  const cost = (p: Purchase) => p.contribution?.amountCents ?? (p.claim?.status === 'bought' && p.claim.paidCents !== undefined ? p.claim.paidCents : (p.item.priceCents ?? 0));
   const sum = (f: (p: Purchase) => boolean) => data.filter(f).reduce((s, p) => s + cost(p), 0);
-  const toBuy = sum((p) => p.claim?.status === 'reserved');
-  const bought = sum((p) => p.claim?.status === 'bought');
+  const toBuy = sum((p) => p.claim?.status === 'reserved' && (p.claim.kind ?? 'self') === 'self');
+  const bought = sum((p) => p.claim?.status === 'bought' && p.claim.paidBy === me?.id);
   const pots = sum((p) => !!p.contribution);
   const byPerson = new Map<string, Purchase[]>();
   for (const p of data) byPerson.set(p.list.id, [...(byPerson.get(p.list.id) ?? []), p]);
@@ -26,8 +26,8 @@ export function Purchases() {
   const buy = async (p: Purchase) => {
     setBusy(p.claim!.id);
     try {
-      await api.setClaimStatus(p.claim!.id, 'bought');
-      toast('Apuntado como comprado.', { action: { label: 'Deshacer', run: () => api.setClaimStatus(p.claim!.id, 'reserved').then(reload) } });
+      await api.gift({ action: 'buy', claim: p.claim!.id, paidCents: p.item.priceCents ?? 0, paidBy: me!.id });
+      toast('Apuntado como comprado.', { action: { label: 'Deshacer', run: () => api.gift({ action: 'unbuy', claim: p.claim!.id }).then(reload) } });
       reload();
     } catch (e) {
       toast(errorText(e));
@@ -56,7 +56,7 @@ export function Purchases() {
           <h3>Para {rows[0]!.list.name}</h3>
           <ul className="rows">
             {rows.map((p) => {
-              const kind = p.contribution ? 'partial' : p.claim!.status;
+              const kind = p.contribution ? 'partial' : p.claim!.status === 'reserved' && p.claim!.kind === 'pot' ? 'pot' : p.claim!.status;
               return (
                 <li key={(p.claim?.id ?? p.contribution!.id) + kind}>
                   <Seal status={{ kind, unitsLeft: 0, raised: 0, by: [] }} size={24} />
@@ -65,10 +65,14 @@ export function Purchases() {
                     <p className="meta">
                       <span>{p.item.priceCents !== undefined || p.contribution ? formatMoney(cost(p)) : 'Sin precio'}</span>
                       {' · '}
-                      {p.contribution ? (p.contribution.paid ? 'A medias, pagado' : 'A medias') : p.claim!.status === 'bought' ? 'Comprado' : 'Por comprar'}
+                      {p.contribution
+                        ? p.contribution.paid ? 'A medias, pagado' : 'A medias'
+                        : p.claim!.status === 'bought'
+                          ? p.claim!.kind === 'pot' ? (p.claim!.paidBy === me?.id ? 'Lo adelantaste de la hucha' : 'Comprado con la hucha') : 'Comprado'
+                          : p.claim!.kind === 'pot' ? 'Apuntado para la hucha' : 'Por comprar'}
                     </p>
                   </a>
-                  {p.claim?.status === 'reserved' && (
+                  {p.claim?.status === 'reserved' && (p.claim.kind ?? 'self') === 'self' && (
                     <Button variant="secondary" size="sm" loading={busy === p.claim.id} onClick={() => buy(p)}>
                       Ya lo compré
                     </Button>

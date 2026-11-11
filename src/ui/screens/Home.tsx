@@ -1,6 +1,6 @@
 import { Plus } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
-import type { Occasion } from '../../core/types';
+import type { BuyMode, Occasion } from '../../core/types';
 import { Button, ButtonGroup } from '../Button';
 import { go, useApi } from '../ctx';
 import { daysUntil, errorText, OCCASION, Sheet, useLoad } from '../kit';
@@ -63,13 +63,16 @@ function NewGroup({ onClose, onCreated }: { onClose: () => void; onCreated: (id:
   const [name, setName] = useState('');
   const [occasion, setOccasion] = useState<Occasion>('navidad');
   const [date, setDate] = useState('');
+  const [buyMode, setBuyMode] = useState<BuyMode>('mixto');
+  const [plazas, setPlazas] = useState('');
+  const [allowNew, setAllowNew] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const submit = async () => {
     if (!name.trim()) return setErr('Ponle un nombre al grupo.');
     setBusy(true);
     try {
-      const g = await api.createGroup({ name: name.trim(), occasion, date: date || undefined, currency: 'EUR' });
+      const g = await api.createGroup({ name: name.trim(), occasion, date: date || undefined, currency: 'EUR', buyMode, plazas: plazas.split('\n'), allowNewNames: allowNew });
       onCreated(g.id);
     } catch (e) {
       setErr(errorText(e));
@@ -101,7 +104,34 @@ function NewGroup({ onClose, onCreated }: { onClose: () => void; onCreated: (id:
         <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <small>Para la cuenta atrás. Puedes dejarla vacía.</small>
       </label>
+      <fieldset className="field">
+        <legend>¿Cómo compráis?</legend>
+        <div className="segmented">
+          {(['hucha', 'individual', 'mixto'] as const).map((m) => (
+            <label key={m}>
+              <input type="radio" name="mode" checked={buyMode === m} onChange={() => setBuyMode(m)} />
+              {MODE[m].label}
+            </label>
+          ))}
+        </div>
+        <small>{MODE[buyMode].help}</small>
+      </fieldset>
+      <label className="field">
+        <span>¿Quiénes sois? (opcional)</span>
+        <textarea className="textarea" value={plazas} onChange={(e) => setPlazas(e.target.value)} placeholder={'Mamá\nPapá\nSamira'} />
+        <small>Un nombre por línea. Cada uno tendrá su sitio aunque aún no haya entrado.</small>
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={allowNew} onChange={(e) => setAllowNew(e.target.checked)} />
+        <span>Dejar que alguien entre con un nombre que no esté en la lista <span className="meta">(tendrás que aceptarlo tú)</span></span>
+      </label>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
     </Sheet>
   );
 }
+
+export const MODE: Record<BuyMode, { label: string; help: string }> = {
+  hucha: { label: 'Hucha común', help: 'Ponéis dinero entre todos y los regalos salen de ahí.' },
+  individual: { label: 'Cada uno lo suyo', help: 'Cada regalo lo paga quien lo reserva.' },
+  mixto: { label: 'Mixto', help: 'Se decide regalo a regalo.' },
+};

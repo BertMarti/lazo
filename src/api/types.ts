@@ -1,6 +1,6 @@
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
-import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, Occasion, User } from '../core/types';
+import type { Budget, BuyMode, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Occasion, Payment, Received, User } from '../core/types';
 
 export interface Member extends User {
   role: 'admin' | 'member';
@@ -9,17 +9,19 @@ export interface Member extends User {
 export interface GroupDetail {
   group: Group;
   members: Member[];
+  /** Todas las plazas (también las libres) y las listas de niños. */
   lists: GiftList[];
 }
 
 export interface ListDetail {
   list: GiftList;
   group: Group;
+  /** En la propia lista NO vienen los regalos sorpresa ni los retirados. */
   items: Item[];
   /** Vacíos SIEMPRE si `canSee` es falso: el servidor ni siquiera los envía. */
   claims: Claim[];
   contributions: Contribution[];
-  /** Presupuesto del grupo para esta persona. Siempre undefined si `canSee` es falso. */
+  /** Presupuesto del grupo para esta plaza. Siempre undefined si `canSee` es falso. */
   budget?: Budget;
   canSee: boolean;
   canEdit: boolean;
@@ -41,7 +43,6 @@ export interface Purchase {
 
 export interface DrawInfo {
   draw?: Draw;
-  /** A quién le regalo yo. Solo se conoce la propia asignación. */
   receiver?: User;
 }
 
@@ -50,6 +51,40 @@ export interface NewGroup {
   occasion: Occasion;
   date?: string;
   currency: string;
+  buyMode: BuyMode;
+  /** Nombres previstos: cada uno es una plaza libre. */
+  plazas?: string[];
+  allowNewNames?: boolean;
+}
+
+export interface InviteInfo {
+  group: { id: Id; name: string; occasion: Occasion; date?: string };
+  organizer: string;
+  /** Enlace personal: la plaza a la que da entrada. */
+  personal: { list: Id; name: string } | null;
+  /** Enlace general: plazas libres para elegir. */
+  free: { list: Id; name: string }[];
+  allowNewNames: boolean;
+}
+
+export type JoinResult = { group: Id } | { pending: true; request: Id; code: string; group: Id };
+
+/** Todas las transiciones de un regalo (spec plazas-hucha §3.2). */
+export type GiftAction =
+  | { action: 'reserve'; item: Id; kind: 'self' | 'pot' }
+  | { action: 'release'; claim: Id }
+  | { action: 'move'; claim: Id; kind: 'self' | 'pot' }
+  | { action: 'buy'; item?: Id; claim?: Id; kind?: 'self' | 'pot'; paidCents: Cents; paidBy: Id }
+  | { action: 'unbuy'; claim: Id };
+
+/** Lo que la pantalla «Hucha» necesita: solo filas que quien mira PUEDE ver. */
+export interface HuchaData {
+  group: Group;
+  members: Member[];
+  lists: GiftList[];
+  items: Item[];
+  claims: Claim[];
+  payments: Payment[];
 }
 
 /** Lo que la interfaz necesita del backend. Implementaciones: PocketBaseApi (servidor) y DemoApi (memoria). */
@@ -60,20 +95,32 @@ export interface Api {
   groupDetail(groupId: Id): Promise<GroupDetail>;
   listDetail(listId: Id): Promise<ListDetail>;
   createGroup(input: NewGroup): Promise<Group>;
+  updateGroup(groupId: Id, patch: Partial<Pick<Group, 'name' | 'date' | 'buyMode' | 'allowNewNames'>>): Promise<void>;
   addChildList(groupId: Id, name: string, birthYear?: number): Promise<GiftList>;
+  addPlaza(groupId: Id, name: string): Promise<GiftList>;
+  releasePlaza(listId: Id): Promise<void>;
   saveItem(listId: Id, input: ItemInput, id?: Id): Promise<Item>;
+  /** Regalo sorpresa en la plaza de otra persona: ella no lo verá. */
+  addSurprise(listId: Id, input: ItemInput): Promise<Item>;
   deleteItem(id: Id): Promise<void>;
-  /** Fija o quita (null) el presupuesto para una persona. Nunca sobre la propia lista. */
   setBudget(listId: Id, amountCents: Cents | null): Promise<void>;
   importItems(listId: Id, drafts: ItemDraft[]): Promise<number>;
-  claim(itemId: Id, status: Claim['status']): Promise<void>;
-  setClaimStatus(claimId: Id, status: Claim['status']): Promise<void>;
-  releaseClaim(claimId: Id): Promise<void>;
+  gift(a: GiftAction): Promise<void>;
   contribute(itemId: Id, amountCents: Cents): Promise<void>;
   setContributionPaid(id: Id, paid: boolean): Promise<void>;
   removeContribution(id: Id): Promise<void>;
-  createInvite(groupId: Id): Promise<{ url: string; expires: string }>;
-  join(token: string, name: string): Promise<User>;
+  createInvite(groupId: Id, listId?: Id): Promise<{ url: string; expires: string }>;
+  inviteInfo(token: string): Promise<InviteInfo>;
+  join(token: string, choice: { list?: Id; name?: string }): Promise<JoinResult>;
+  requestStatus(requestId: Id): Promise<JoinRequest['status']>;
+  joinRequests(groupId: Id): Promise<JoinRequest[]>;
+  decideJoin(requestId: Id, accept: boolean): Promise<void>;
+  hucha(groupId: Id): Promise<HuchaData>;
+  setHuchaRoles(groupId: Id, treasurerList: Id, deputyList: Id): Promise<void>;
+  addPayment(groupId: Id, p: { from: Id; to: Id; amountCents: Cents; sub: boolean }): Promise<void>;
+  removePayment(id: Id): Promise<void>;
+  reveal(groupId: Id, action: 'ask' | 'confirm' | 'cancel' | 'close'): Promise<void>;
+  received(groupId: Id): Promise<Received[]>;
   runDraw(groupId: Id, participants: Id[], exclusions: [Id, Id][], budgetCents?: Cents): Promise<void>;
   drawInfo(groupId: Id): Promise<DrawInfo>;
   unfurl(url: string): Promise<PageMeta>;
@@ -81,3 +128,6 @@ export interface Api {
 }
 
 export class ApiError extends Error {}
+
+/** Mismo texto para todo token malo: no se distingue «no existe» de «caducado» ni de «revocado». */
+export const BAD_INVITE = 'Esta invitación no existe o ha caducado. Pide un enlace nuevo.';

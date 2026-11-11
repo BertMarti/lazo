@@ -1,6 +1,7 @@
 import type { Claim, Contribution, Id, Item } from './types';
 
-export type StatusKind = 'free' | 'reserved' | 'bought' | 'partial' | 'covered';
+/** `pot` = «Para la hucha» (apuntado para comprarse con el bote, aún sin comprar). */
+export type StatusKind = 'free' | 'reserved' | 'pot' | 'bought' | 'partial' | 'covered';
 
 export interface ItemStatus {
   kind: StatusKind;
@@ -9,6 +10,8 @@ export interface ItemStatus {
   percent?: number;
   raised: number;
   by: Id[];
+  /** Comprado con la hucha (al menos una unidad). */
+  fromPot?: boolean;
 }
 
 /** Estado de un regalo para quien PUEDE verlo (ver `canSeeStatus`). */
@@ -26,5 +29,10 @@ export function itemStatus(item: Item, claims: Claim[], contributions: Contribut
     return { kind: raised >= item.priceCents ? 'covered' : 'partial', unitsLeft, percent, raised, by };
   }
   if (unitsLeft > 0) return { kind: 'free', unitsLeft, raised, by };
-  return { kind: mine.every((c) => c.status === 'bought') ? 'bought' : 'reserved', unitsLeft, raised, by };
+  const fromPot = mine.some((c) => c.kind === 'pot' && c.status === 'bought');
+  if (mine.every((c) => c.status === 'bought')) return { kind: 'bought', unitsLeft, raised, by, fromPot };
+  return { kind: mine.some((c) => c.kind === 'pot' && c.status === 'reserved') ? 'pot' : 'reserved', unitsLeft, raised, by, fromPot };
 }
+
+/** Lo que cuesta una unidad cogida: el precio real si ya está comprada; si no, el de la lista. */
+export const claimCost = (c: Claim, item?: Item) => (c.status === 'bought' && c.paidCents !== undefined ? c.paidCents : (item?.priceCents ?? 0));

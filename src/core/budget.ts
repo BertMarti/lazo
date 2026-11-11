@@ -1,8 +1,8 @@
-import type { Cents, Claim, Contribution, Item } from './types';
+import { claimCost } from './status';
+import type { BuyMode, Cents, Claim, Contribution, Item } from './types';
 
 export interface BudgetProgress {
   target: Cents;
-  /** Reservas y compras (precio × unidades) + aportaciones de regalos a medias. */
   committed: Cents;
   left: Cents;
   over: boolean;
@@ -10,23 +10,29 @@ export interface BudgetProgress {
   percent: number;
 }
 
-/** Cuánto se ha comprometido ya del presupuesto de una persona. Solo para quien PUEDE verlo (no el destinatario). */
-export function committedOn(items: Item[], claims: Claim[], contributions: Contribution[]): Cents {
-  let total = 0;
-  for (const item of items) {
-    const pot = contributions.filter((c) => c.item === item.id).reduce((s, c) => s + Math.max(0, c.amountCents), 0);
-    if (pot > 0) {
-      total += pot;
-      continue;
-    }
-    const units = claims.filter((c) => c.item === item.id).reduce((s, c) => s + c.units, 0);
-    total += units * (item.priceCents ?? 0);
+/**
+ * Comprometido en una plaza. Solo para quien PUEDE verlo (nunca su destinatario).
+ * - `pot`: «Para la hucha» (a precio de lista) y «Ya comprado» con la hucha (a precio real).
+ * - `own`: lo que cada uno paga por su cuenta («Me lo reservo», comprado individual y regalos a medias).
+ */
+export function committedOn(items: Item[], claims: Claim[], contributions: Contribution[]): { pot: Cents; own: Cents } {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  let pot = 0;
+  let own = 0;
+  for (const c of claims) {
+    const item = byId.get(c.item);
+    if (!item) continue;
+    if (c.kind === 'pot') pot += claimCost(c, item) * c.units;
+    else own += claimCost(c, item) * c.units;
   }
-  return total;
+  for (const c of contributions) if (byId.has(c.item)) own += Math.max(0, c.amountCents);
+  return { pot, own };
 }
 
-export function budgetProgress(target: Cents, items: Item[], claims: Claim[], contributions: Contribution[]): BudgetProgress {
-  const committed = committedOn(items, claims, contributions);
+/** La barra del presupuesto según el modo del grupo. En `individual` cuenta lo de cada uno; si no, la hucha. */
+export function budgetProgress(target: Cents, items: Item[], claims: Claim[], contributions: Contribution[], mode: BuyMode = 'individual'): BudgetProgress {
+  const c = committedOn(items, claims, contributions);
+  const committed = mode === 'individual' ? c.own + c.pot : c.pot;
   return {
     target,
     committed,

@@ -2,16 +2,33 @@ import { amazonInfo } from '../core/amazon';
 import type { ItemDraft } from '../core/columns';
 import { cryptoRand, drawPairs } from '../core/draw';
 import type { PageMeta } from '../core/meta';
-import type { Cents, Claim, GiftList, Id, Item, User } from '../core/types';
+import { joinCode, normName, parsePlazas } from '../core/plazas';
+import type { Cents, Claim, GiftList, Group, Id, Item, JoinRequest, Received, User } from '../core/types';
+import { LIMITS } from '../core/types';
 import { canEditList, canSeeStatus } from '../core/visibility';
-import { DEMO_UNFURL, seed, type DemoData } from './seed';
-import { ApiError, type Api, type DrawInfo, type GroupDetail, type ItemInput, type ListDetail, type NewGroup, type Purchase } from './types';
+import { DEMO_GENERAL_TOKEN, DEMO_UNFURL, seed, type DemoData } from './seed';
+import {
+  ApiError,
+  BAD_INVITE,
+  type Api,
+  type DrawInfo,
+  type GiftAction,
+  type GroupDetail,
+  type HuchaData,
+  type InviteInfo,
+  type ItemInput,
+  type JoinResult,
+  type ListDetail,
+  type NewGroup,
+  type Purchase,
+} from './types';
 
-const KEY = 'lazo-demo-v2';
+const KEY = 'lazo-demo-v3';
+const COLORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'];
 
 /**
  * Backend simulado de la demo pública: todo en memoria y en localStorage del navegador.
- * Aplica las MISMAS reglas que el servidor (sorpresa, permisos de edición), para que la demo sea fiel.
+ * Aplica las MISMAS reglas que el servidor (spec plazas-hucha): sorpresa, plazas, modos, hucha y entrega.
  */
 export class DemoApi implements Api {
   readonly demo = true;
@@ -22,7 +39,6 @@ export class DemoApi implements Api {
     this.db = this.load() ?? seed();
     this.viewer = this.read('viewer') ?? 'alberto';
     if (!this.db.users.some((u) => u.id === this.viewer)) this.viewer = 'alberto';
-    this.db.budgets ??= [];
   }
 
   /** «Ver como…»: solo existe en la demo. */
@@ -37,6 +53,9 @@ export class DemoApi implements Api {
     this.db = seed();
     this.save();
   }
+  generalInviteToken() {
+    return DEMO_GENERAL_TOKEN;
+  }
 
   me(): User {
     return this.user(this.viewer);
@@ -49,18 +68,17 @@ export class DemoApi implements Api {
 
   async groupDetail(groupId: Id): Promise<GroupDetail> {
     const group = this.member(groupId);
-    const members = this.db.memberships
-      .filter((m) => m.group === groupId)
-      .map((m) => ({ ...this.user(m.user), role: m.role }));
+    const members = this.db.memberships.filter((m) => m.group === groupId).map((m) => ({ ...this.user(m.user), role: m.role }));
     return { group, members, lists: this.db.lists.filter((l) => l.group === groupId) };
   }
 
   async listDetail(listId: Id): Promise<ListDetail> {
     const list = this.list(listId);
     const group = this.member(list.group);
-    const items = this.db.items.filter((i) => i.list === listId);
-    const ids = new Set(items.map((i) => i.id));
     const canSee = canSeeStatus(this.viewer, list);
+    // En tu propia plaza no existen las sorpresas ni lo que quitaste: ni siquiera cuentan.
+    const items = this.db.items.filter((i) => i.list === listId && (canSee || (!i.secret && !i.removed)));
+    const ids = new Set(items.map((i) => i.id));
     return {
       list,
       group,
@@ -74,46 +92,101 @@ export class DemoApi implements Api {
   }
 
   async createGroup(input: NewGroup) {
-    const group = { ...input, id: uid(), owner: this.viewer };
+    const { plazas, ...rest } = input;
+    const group: Group = { ...rest, id: uid(), owner: this.viewer, revealedAt: 0 };
     this.db.groups.push(group);
     this.db.memberships.push({ id: uid(), group: group.id, user: this.viewer, role: 'admin' });
-    this.db.lists.push({ id: uid(), group: group.id, name: this.me().name, user: this.viewer, managers: [] });
+    this.db.lists.push({ id: uid(), group: group.id, name: this.me().name, kind: 'person', user: this.viewer, managers: [], via: 'creator', claimedAt: Date.now() });
+    for (const name of parsePlazas(plazas ?? [], this.me().name)) this.db.lists.push({ id: uid(), group: group.id, name, kind: 'person', managers: [] });
     this.save();
     return group;
   }
 
+  async updateGroup(groupId: Id, patch: Partial<Pick<Group, 'name' | 'date' | 'buyMode' | 'allowNewNames'>>) {
+    const g = this.admin(groupId);
+    // Cambiar de modo nunca falla ni mira las listas (una validación así delataría lo de quien la pide).
+    Object.assign(g, patch);
+    this.save();
+  }
+
   async addChildList(groupId: Id, name: string, birthYear?: number) {
     this.admin(groupId);
-    const list: GiftList = { id: uid(), group: groupId, name: name.trim(), managers: [this.viewer], birthYear };
+    const list: GiftList = { id: uid(), group: groupId, name: name.trim(), kind: 'child', managers: [this.viewer], birthYear };
     this.db.lists.push(list);
     this.save();
     return list;
   }
 
+  async addPlaza(groupId: Id, name: string) {
+    this.admin(groupId);
+    const clean = parsePlazas([name])[0];
+    if (!clean) throw new ApiError('Escribe un nombre.');
+    if (this.db.lists.some((l) => l.group === groupId && normName(l.name) === normName(clean))) throw new ApiError('Ya hay una plaza con ese nombre.');
+    const list: GiftList = { id: uid(), group: groupId, name: clean, kind: 'person', managers: [] };
+    this.db.lists.push(list);
+    this.save();
+    return list;
+  }
+
+  async releasePlaza(listId: Id) {
+    const l = this.list(listId);
+    const g = this.admin(l.group);
+    if (l.kind !== 'person' || !l.user || l.user === this.viewer || l.user === g.owner) throw new ApiError('No puedes liberar esa plaza.');
+    this.db.memberships = this.db.memberships.filter((m) => !(m.group === g.id && m.user === l.user));
+    l.prevUser = l.user;
+    l.user = undefined;
+    l.claimedAt = 0;
+    l.via = undefined;
+    this.db.invites = this.db.invites.filter((i) => i.list !== l.id);
+    this.save();
+  }
+
   async saveItem(listId: Id, input: ItemInput, id?: Id) {
-    const list = this.editable(listId);
     if (id) {
-      const idx = this.db.items.findIndex((i) => i.id === id && i.list === list.id);
-      if (idx < 0) throw new ApiError('Ese regalo ya no existe.');
-      this.db.items[idx] = { ...this.db.items[idx]!, ...input };
+      const item = this.db.items.find((i) => i.id === id && i.list === listId);
+      if (!item) throw new ApiError('Ese regalo ya no existe.');
+      const list = this.list(listId);
+      const mayEdit = item.secret ? item.createdBy === this.viewer && list.user !== this.viewer : !item.removed && canEditList(this.viewer, list);
+      if (!mayEdit) throw new ApiError('Solo quien lleva esta lista puede cambiarla.');
+      Object.assign(item, input);
       this.save();
-      return this.db.items[idx]!;
+      return item;
     }
-    const item: Item = { ...input, id: uid(), list: list.id, currency: this.member(list.group).currency, createdBy: this.viewer };
+    const list = this.editable(listId);
+    const item: Item = { ...clip(input), id: uid(), list: list.id, currency: this.member(list.group).currency, createdBy: this.viewer };
+    this.db.items.push(item);
+    this.save();
+    return item;
+  }
+
+  async addSurprise(listId: Id, input: ItemInput) {
+    const list = this.list(listId);
+    this.member(list.group);
+    if (list.kind === 'child' || list.user === this.viewer) throw new ApiError('Las sorpresas se apuntan en la lista de otra persona.');
+    const item: Item = { ...clip(input), id: uid(), list: list.id, currency: this.member(list.group).currency, createdBy: this.viewer, secret: true };
     this.db.items.push(item);
     this.save();
     return item;
   }
 
   async deleteItem(id: Id) {
-    const item = this.item(id);
-    this.editable(item.list);
-    this.db.items = this.db.items.filter((i) => i.id !== id);
-    this.db.claims = this.db.claims.filter((c) => c.item !== id);
-    this.db.contributions = this.db.contributions.filter((c) => c.item !== id);
+    const item = this.db.items.find((i) => i.id === id);
+    if (!item) throw new ApiError('Ese regalo ya no existe.');
+    const list = this.list(item.list);
+    const touched = this.db.claims.some((c) => c.item === id) || this.db.contributions.some((c) => c.item === id);
+    if (item.secret) {
+      if (item.createdBy !== this.viewer || list.user === this.viewer) throw new ApiError('Ese regalo ya no existe.');
+      if (this.db.claims.some((c) => c.item === id && c.status === 'bought')) throw new ApiError('Ya está comprado: deshaz la compra antes.');
+    } else if (!canEditList(this.viewer, list)) throw new ApiError('Solo quien lleva esta lista puede cambiarla.');
+    // Quitar un regalo propio responde SIEMPRE igual: si tenía reservas se oculta, no se borra (D6).
+    if (!item.secret && touched) item.removed = true;
+    else {
+      this.db.items = this.db.items.filter((i) => i.id !== id);
+      this.db.claims = this.db.claims.filter((c) => c.item !== id);
+      this.db.contributions = this.db.contributions.filter((c) => c.item !== id);
+    }
     this.save();
   }
-
 
   async setBudget(listId: Id, amountCents: Cents | null) {
     const list = this.list(listId);
@@ -128,27 +201,80 @@ export class DemoApi implements Api {
     return drafts.length;
   }
 
-  async claim(itemId: Id, status: Claim['status']) {
-    const item = this.visibleItem(itemId);
-    const taken = this.db.claims.filter((c) => c.item === itemId).reduce((s, c) => s + c.units, 0);
-    if (taken >= item.quantity) throw new ApiError('Alguien se te ha adelantado: ya está reservado.');
-    this.db.claims.push({ id: uid(), item: itemId, user: this.viewer, status, units: 1 });
-    this.save();
-  }
+  /** Todas las transiciones de un regalo, con las validaciones de la spec §3.2. */
+  async gift(a: GiftAction) {
+    const claimById = (id: Id) => {
+      const c = this.db.claims.find((x) => x.id === id);
+      if (!c) throw new ApiError('Esa reserva ya no existe.');
+      return c;
+    };
+    const itemId = 'item' in a && a.item ? a.item : claimById((a as { claim: Id }).claim).item;
+    const { item, list, group } = this.giftTarget(itemId);
+    const taken = () => this.db.claims.filter((c) => c.item === item.id).reduce((s, c) => s + c.units, 0);
+    const hasPot = () => this.db.contributions.some((c) => c.item === item.id && c.amountCents > 0);
+    const allowed = (kind: 'self' | 'pot') => (kind === 'self' ? group.buyMode !== 'hucha' : group.buyMode !== 'individual');
+    const payers = this.db.memberships.filter((m) => m.group === group.id && m.user !== list.user).map((m) => m.user);
+    const checkPay = (paidCents: number, paidBy: Id) => {
+      if (!Number.isInteger(paidCents) || paidCents < 0 || paidCents > LIMITS.amount) throw new ApiError('El precio no es válido.');
+      if (!payers.includes(paidBy)) throw new ApiError('Esa persona no puede pagar este regalo.');
+    };
+    const now = Date.now();
 
-  async setClaimStatus(claimId: Id, status: Claim['status']) {
-    this.ownClaim(claimId).status = status;
-    this.save();
-  }
-
-  async releaseClaim(claimId: Id) {
-    this.ownClaim(claimId);
-    this.db.claims = this.db.claims.filter((c) => c.id !== claimId);
+    switch (a.action) {
+      case 'reserve': {
+        if (!allowed(a.kind)) throw new ApiError(a.kind === 'self' ? 'En este grupo todo va a la hucha.' : 'En este grupo cada uno compra lo suyo.');
+        if (item.removed) throw new ApiError(`${list.name} lo ha quitado de su lista.`);
+        if (hasPot()) throw new ApiError('Este regalo va a medias: pon tu parte.');
+        if (taken() >= item.quantity) throw new ApiError('Alguien se te ha adelantado: ya está cogido.');
+        this.db.claims.push({ id: uid(), item: item.id, user: this.viewer, kind: a.kind, status: 'reserved', units: 1 });
+        break;
+      }
+      case 'release': {
+        const c = claimById(a.claim);
+        if (c.status !== 'reserved' || ((c.kind ?? 'self') === 'self' && c.user !== this.viewer)) throw new ApiError('Esa reserva no es tuya.');
+        this.db.claims = this.db.claims.filter((x) => x.id !== c.id);
+        break;
+      }
+      case 'move': {
+        const c = claimById(a.claim);
+        if (c.status !== 'reserved' || !allowed(a.kind)) throw new ApiError('No se puede cambiar ahora.');
+        if ((c.kind ?? 'self') === 'self' && c.user !== this.viewer) throw new ApiError('Esa reserva no es tuya.');
+        c.kind = a.kind;
+        if (a.kind === 'self') c.user = this.viewer;
+        break;
+      }
+      case 'buy': {
+        checkPay(a.paidCents, a.paidBy);
+        if (a.claim) {
+          const c = claimById(a.claim);
+          if (c.status !== 'reserved' || ((c.kind ?? 'self') === 'self' && c.user !== this.viewer)) throw new ApiError('Esa reserva no es tuya.');
+          Object.assign(c, { status: 'bought', paidCents: a.paidCents, paidBy: a.paidBy, boughtAt: now });
+        } else {
+          const kind = group.buyMode === 'hucha' ? 'pot' : group.buyMode === 'individual' ? 'self' : (a.kind ?? 'self');
+          if (taken() >= item.quantity) throw new ApiError('Alguien se te ha adelantado: ya está cogido.');
+          if (hasPot()) {
+            if (kind !== 'self' || !this.db.contributions.some((c) => c.item === item.id && c.user === this.viewer)) throw new ApiError('Lo compra alguien que pone dinero.');
+          }
+          this.db.claims.push({ id: uid(), item: item.id, user: this.viewer, kind, status: 'bought', units: 1, paidCents: a.paidCents, paidBy: a.paidBy, boughtAt: now });
+        }
+        break;
+      }
+      case 'unbuy': {
+        const c = claimById(a.claim);
+        const keeper = this.keeperOf(group, list);
+        const isAdmin = this.isAdmin(group.id);
+        if (c.status !== 'bought' || ![c.user, c.paidBy, keeper].includes(this.viewer) && !isAdmin) throw new ApiError('No puedes deshacer esta compra.');
+        Object.assign(c, { status: 'reserved', paidCents: undefined, paidBy: undefined, boughtAt: undefined });
+        break;
+      }
+    }
     this.save();
   }
 
   async contribute(itemId: Id, amountCents: Cents) {
-    this.visibleItem(itemId);
+    const { group } = this.giftTarget(itemId);
+    if (group.buyMode === 'hucha') throw new ApiError('En este grupo todo va a la hucha.');
+    if (this.db.claims.some((c) => c.item === itemId)) throw new ApiError('Este regalo ya está cogido.');
     const existing = this.db.contributions.find((c) => c.item === itemId && c.user === this.viewer);
     if (existing) existing.amountCents = amountCents;
     else this.db.contributions.push({ id: uid(), item: itemId, user: this.viewer, amountCents, paid: false });
@@ -158,7 +284,7 @@ export class DemoApi implements Api {
   async setContributionPaid(id: Id, paid: boolean) {
     const c = this.db.contributions.find((x) => x.id === id);
     if (!c) throw new ApiError('Esa aportación ya no existe.');
-    this.visibleItem(c.item);
+    this.giftTarget(c.item);
     c.paid = paid;
     this.save();
   }
@@ -170,14 +296,182 @@ export class DemoApi implements Api {
     this.save();
   }
 
-  async createInvite(groupId: Id) {
+  async createInvite(groupId: Id, listId?: Id) {
     this.admin(groupId);
+    let token = DEMO_GENERAL_TOKEN;
+    if (listId) {
+      const l = this.list(listId);
+      if (l.kind !== 'person' || l.user || l.group !== groupId) throw new ApiError('Esa plaza ya está ocupada.');
+      this.db.invites = this.db.invites.filter((i) => i.list !== listId);
+      token = `demo${uid()}${uid()}`.replace(/[^A-Za-z0-9]/g, '');
+      this.db.invites.push({ token, group: groupId, list: listId, uses: 0, maxUses: 1, createdBy: this.viewer });
+      this.save();
+    }
     const expires = new Date(Date.now() + 14 * 86_400_000).toISOString();
-    return { url: `${location.origin}${location.pathname}#/unirse/demo-${groupId}`, expires };
+    return { url: `${location.origin}${location.pathname}#/unirse/${token}`, expires };
   }
 
-  async join(): Promise<User> {
-    throw new ApiError('En la demo no se puede unir nadie nuevo: usa «Ver como…» para cambiar de persona.');
+  async inviteInfo(token: string): Promise<InviteInfo> {
+    const inv = this.invite(token);
+    const g = this.db.groups.find((x) => x.id === inv.group)!;
+    const personal = inv.list ? this.db.lists.find((l) => l.id === inv.list) : undefined;
+    return {
+      group: { id: g.id, name: g.name, occasion: g.occasion, date: g.date },
+      organizer: this.user(inv.createdBy).name,
+      personal: personal ? { list: personal.id, name: personal.name } : null,
+      free: inv.list ? [] : this.db.lists.filter((l) => l.group === g.id && l.kind === 'person' && !l.user).map((l) => ({ list: l.id, name: l.name })),
+      allowNewNames: !!g.allowNewNames && !inv.list,
+    };
+  }
+
+  /** En la demo, entrar crea siempre una cuenta nueva (como abrir el enlace en otro móvil) y pasa a verla. */
+  async join(token: string, choice: { list?: Id; name?: string }): Promise<JoinResult> {
+    const inv = this.invite(token);
+    const g = this.db.groups.find((x) => x.id === inv.group)!;
+    const newUser = (name: string): User => {
+      const user = { id: uid(), name: name.slice(0, 40), color: COLORS[this.db.users.length % COLORS.length]! };
+      this.db.users.push(user);
+      return user;
+    };
+    if (inv.list) {
+      const plaza = this.db.lists.find((l) => l.id === inv.list);
+      if (!plaza || plaza.user) throw new ApiError(BAD_INVITE);
+      const user = newUser(plaza.name);
+      this.claimPlaza(plaza, user.id, 'personal', inv.createdBy);
+      inv.uses++;
+      this.db.invites = this.db.invites.filter((i) => i.uses < i.maxUses);
+      this.setViewer(user.id);
+      this.save();
+      return { group: g.id };
+    }
+    let name: string;
+    if (choice.list) {
+      const plaza = this.db.lists.find((l) => l.id === choice.list && l.group === g.id && l.kind === 'person');
+      if (!plaza || plaza.user) throw new ApiError('Esa plaza ya está ocupada.');
+      name = plaza.name;
+    } else {
+      if (!g.allowNewNames) throw new ApiError('Elige tu nombre en la lista.');
+      name = parsePlazas([choice.name ?? ''])[0] ?? '';
+      if (!name) throw new ApiError('Escribe tu nombre.');
+      if (this.db.lists.some((l) => l.group === g.id && normName(l.name) === normName(name))) throw new ApiError('Ya hay una plaza con ese nombre: elígela en la lista.');
+    }
+    if (this.db.requests.filter((r) => r.group === g.id && r.status === 'pending').length >= 20) throw new ApiError('Hay demasiadas entradas pendientes. Avisa a quien organiza.');
+    const user = newUser(name);
+    const req: JoinRequest = { id: uid(), group: g.id, user: user.id, list: choice.list, name, code: joinCode(), status: 'pending' };
+    this.db.requests.push(req);
+    inv.uses++;
+    this.setViewer(user.id);
+    this.save();
+    return { pending: true, request: req.id, code: req.code, group: g.id };
+  }
+
+  async requestStatus(requestId: Id) {
+    const r = this.db.requests.find((x) => x.id === requestId && x.user === this.viewer);
+    if (!r) throw new ApiError('Esa solicitud ya no existe.');
+    return r.status;
+  }
+
+  async joinRequests(groupId: Id) {
+    this.admin(groupId);
+    return this.db.requests.filter((r) => r.group === groupId && r.status === 'pending');
+  }
+
+  async decideJoin(requestId: Id, accept: boolean) {
+    const r = this.db.requests.find((x) => x.id === requestId && x.status === 'pending');
+    if (!r) throw new ApiError('Esa solicitud ya no existe.');
+    this.admin(r.group);
+    if (accept) {
+      let plaza = r.list ? this.db.lists.find((l) => l.id === r.list) : undefined;
+      if (r.list && (!plaza || plaza.user)) throw new ApiError('Esa plaza ya está ocupada.');
+      if (!plaza) {
+        plaza = { id: uid(), group: r.group, name: r.name, kind: 'person', managers: [] };
+        this.db.lists.push(plaza);
+      }
+      this.claimPlaza(plaza, r.user, 'approved', this.viewer);
+    }
+    r.status = accept ? 'approved' : 'rejected';
+    this.save();
+  }
+
+  async hucha(groupId: Id): Promise<HuchaData> {
+    const d = await this.groupDetail(groupId);
+    const mine = new Set(d.lists.filter((l) => l.user === this.viewer).map((l) => l.id));
+    const items = this.db.items.filter((i) => d.lists.some((l) => l.id === i.list) && (!mine.has(i.list) || (!i.secret && !i.removed)));
+    const visible = new Set(items.filter((i) => !mine.has(i.list)).map((i) => i.id));
+    return {
+      group: d.group,
+      members: d.members,
+      lists: d.lists,
+      items,
+      claims: this.db.claims.filter((c) => visible.has(c.item)),
+      payments: this.db.payments.filter((p) => p.group === groupId && (p.from === this.viewer || p.to === this.viewer)),
+    };
+  }
+
+  async setHuchaRoles(groupId: Id, treasurerList: Id, deputyList: Id) {
+    const g = this.admin(groupId);
+    if (g.treasurer || g.deputy) throw new ApiError('Ya están elegidos y no se pueden cambiar.');
+    const t = this.list(treasurerList);
+    const d = this.list(deputyList);
+    if (t.id === d.id || t.group !== g.id || d.group !== g.id || !t.user || !d.user || t.kind !== 'person' || d.kind !== 'person') throw new ApiError('Elige dos personas distintas que ya estén dentro.');
+    g.treasurer = t.id;
+    g.deputy = d.id;
+    this.save();
+  }
+
+  async addPayment(groupId: Id, p: { from: Id; to: Id; amountCents: Cents; sub: boolean }) {
+    const g = this.member(groupId);
+    const T = this.db.lists.find((l) => l.id === g.treasurer)?.user;
+    const T2 = this.db.lists.find((l) => l.id === g.deputy)?.user;
+    const members = new Set(this.db.memberships.filter((m) => m.group === groupId).map((m) => m.user));
+    const ok =
+      (p.from === this.viewer || p.to === this.viewer) &&
+      p.from !== p.to &&
+      members.has(p.from) &&
+      members.has(p.to) &&
+      Number.isInteger(p.amountCents) &&
+      p.amountCents > 0 &&
+      p.amountCents <= LIMITS.amount &&
+      (p.sub ? (p.from === T2 || p.to === T2) && p.from !== T && p.to !== T : p.from === T || p.to === T);
+    if (!ok) throw new ApiError('Ese pago no se puede apuntar.');
+    this.db.payments.push({ id: uid(), group: groupId, ...p, at: Date.now() });
+    this.save();
+  }
+
+  async removePayment(id: Id) {
+    const p = this.db.payments.find((x) => x.id === id && (x.from === this.viewer || x.to === this.viewer));
+    if (!p) throw new ApiError('Ese pago ya no existe.');
+    this.db.payments = this.db.payments.filter((x) => x.id !== id);
+    this.save();
+  }
+
+  async reveal(groupId: Id, action: 'ask' | 'confirm' | 'cancel' | 'close') {
+    const g = this.member(groupId);
+    const admin = this.isAdmin(groupId);
+    if (action === 'ask' && admin) g.revealAskedBy = this.viewer;
+    else if (action === 'confirm' && g.revealAskedBy && g.revealAskedBy !== this.viewer) {
+      g.revealedAt = Date.now();
+      g.revealAskedBy = undefined;
+    } else if (action === 'cancel' && admin) g.revealAskedBy = undefined;
+    else if (action === 'close' && admin) g.revealedAt = 0;
+    else throw new ApiError('No puedes hacer esto.');
+    this.save();
+  }
+
+  async received(groupId: Id): Promise<Received[]> {
+    const g = this.member(groupId);
+    if (!g.revealedAt) throw new ApiError('La entrega aún no está abierta.');
+    const plaza = this.db.lists.find((l) => l.group === groupId && l.kind === 'person' && l.user === this.viewer);
+    if (!plaza) return [];
+    const items = new Map(this.db.items.filter((i) => i.list === plaza.id).map((i) => [i.id, i]));
+    return this.db.claims
+      .filter((c) => c.status === 'bought' && items.has(c.item))
+      .map((c) => {
+        const it = items.get(c.item)!;
+        const pots = this.db.contributions.filter((x) => x.item === it.id && x.amountCents > 0).map((x) => x.user);
+        const from = c.kind === 'pot' ? [] : (pots.length ? pots : [c.user]).map((id) => ({ id, name: this.user(id).name }));
+        return { title: it.title, image: it.image, url: it.url, from, fromAll: c.kind === 'pot' };
+      });
   }
 
   async runDraw(groupId: Id, participants: Id[], exclusions: [Id, Id][], budgetCents?: Cents) {
@@ -208,30 +502,72 @@ export class DemoApi implements Api {
   async purchases(): Promise<Purchase[]> {
     const out: Purchase[] = [];
     const ctx = (itemId: Id) => {
-      const item = this.item(itemId);
-      const list = this.list(item.list);
+      const item = this.db.items.find((i) => i.id === itemId)!;
+      const list = this.db.lists.find((l) => l.id === item.list)!;
       return { item, list, group: this.db.groups.find((g) => g.id === list.group)! };
     };
-    for (const claim of this.db.claims.filter((c) => c.user === this.viewer)) out.push({ ...ctx(claim.item), claim });
-    for (const contribution of this.db.contributions.filter((c) => c.user === this.viewer))
-      out.push({ ...ctx(contribution.item), contribution });
+    for (const claim of this.db.claims.filter((c) => c.user === this.viewer || c.paidBy === this.viewer)) out.push({ ...ctx(claim.item), claim });
+    for (const contribution of this.db.contributions.filter((c) => c.user === this.viewer)) out.push({ ...ctx(contribution.item), contribution });
     return out;
   }
 
   // — reglas —
-  private user(id: Id): User {
-    return this.db.users.find((x) => x.id === id) ?? { id, name: 'Alguien', color: '#888' };
+  private claimPlaza(plaza: GiftList, user: Id, via: 'personal' | 'approved', by: Id) {
+    plaza.user = user;
+    plaza.claimedAt = Date.now();
+    plaza.via = via;
+    plaza.approvedBy = by;
+    this.db.memberships.push({ id: uid(), group: plaza.group, user, role: 'member' });
+    // La identidad es la plaza: lo que hizo la cuenta anterior pasa a la nueva.
+    if (plaza.prevUser && plaza.prevUser !== user) {
+      const prev = plaza.prevUser;
+      const inGroup = (itemId: Id) => this.db.lists.find((l) => l.id === this.db.items.find((i) => i.id === itemId)?.list)?.group === plaza.group;
+      for (const c of this.db.claims) if (inGroup(c.item)) {
+        if (c.user === prev) c.user = user;
+        if (c.paidBy === prev) c.paidBy = user;
+      }
+      for (const c of this.db.contributions) if (inGroup(c.item) && c.user === prev) c.user = user;
+      for (const p of this.db.payments) if (p.group === plaza.group) {
+        if (p.from === prev) p.from = user;
+        if (p.to === prev) p.to = user;
+      }
+    }
+    plaza.prevUser = undefined;
   }
-  private member(groupId: Id) {
+  private keeperOf(group: Group, list: GiftList) {
+    const t = this.db.lists.find((l) => l.id === group.treasurer)?.user;
+    const t2 = this.db.lists.find((l) => l.id === group.deputy)?.user;
+    return list.id === group.treasurer ? t2 : t;
+  }
+  /** Regalo sobre el que se actúa: 404 si es una sorpresa de tu plaza; 403 si es de tu plaza; antes de mirar su estado. */
+  private giftTarget(itemId: Id) {
+    const item = this.db.items.find((i) => i.id === itemId);
+    const list = item && this.db.lists.find((l) => l.id === item.list);
+    if (!item || !list || (item.secret && list.user === this.viewer)) throw new ApiError('Ese regalo ya no existe.');
+    if (list.user === this.viewer) throw new ApiError('No puedes reservar regalos de tu propia lista.');
+    const group = this.member(list.group);
+    return { item, list, group };
+  }
+  private invite(token: string) {
+    const inv = this.db.invites.find((i) => i.token === token && i.uses < i.maxUses);
+    if (!inv) throw new ApiError(BAD_INVITE);
+    return inv;
+  }
+  private user(id: Id): User {
+    return this.db.users.find((x) => x.id === id) ?? { id, name: 'Alguien', color: 'almendra' };
+  }
+  private isAdmin(groupId: Id) {
+    return this.db.memberships.some((m) => m.group === groupId && m.user === this.viewer && m.role === 'admin');
+  }
+  private member(groupId: Id): Group {
     const g = this.db.groups.find((x) => x.id === groupId);
-    if (!g || !this.db.memberships.some((m) => m.group === groupId && m.user === this.viewer))
-      throw new ApiError('No perteneces a este grupo.');
+    if (!g || !this.db.memberships.some((m) => m.group === groupId && m.user === this.viewer)) throw new ApiError('No perteneces a este grupo.');
     return g;
   }
-  private admin(groupId: Id) {
-    this.member(groupId);
-    if (!this.db.memberships.some((m) => m.group === groupId && m.user === this.viewer && m.role === 'admin'))
-      throw new ApiError('Solo quien organiza el grupo puede hacer esto.');
+  private admin(groupId: Id): Group {
+    const g = this.member(groupId);
+    if (!this.isAdmin(groupId)) throw new ApiError('Solo quien organiza el grupo puede hacer esto.');
+    return g;
   }
   private list(id: Id) {
     const l = this.db.lists.find((x) => x.id === id);
@@ -243,23 +579,6 @@ export class DemoApi implements Api {
     const l = this.list(listId);
     if (!canEditList(this.viewer, l)) throw new ApiError('Solo quien lleva esta lista puede cambiarla.');
     return l;
-  }
-  private item(id: Id) {
-    const i = this.db.items.find((x) => x.id === id);
-    if (!i) throw new ApiError('Ese regalo ya no existe.');
-    this.list(i.list);
-    return i;
-  }
-  /** Reservar o aportar: nunca en la propia lista (ahí no se ve el estado). */
-  private visibleItem(id: Id) {
-    const i = this.item(id);
-    if (!canSeeStatus(this.viewer, this.list(i.list))) throw new ApiError('No puedes reservar regalos de tu propia lista.');
-    return i;
-  }
-  private ownClaim(id: Id) {
-    const c = this.db.claims.find((x) => x.id === id && x.user === this.viewer);
-    if (!c) throw new ApiError('Esa reserva no es tuya o ya no existe.');
-    return c;
   }
 
   // — persistencia —
@@ -294,4 +613,11 @@ export class DemoApi implements Api {
   }
 }
 
-const uid = () => crypto.randomUUID().slice(0, 12);
+const uid = () => crypto.randomUUID().replace(/-/g, '').slice(0, 15);
+const clip = (i: ItemInput): Omit<Item, 'id' | 'list' | 'currency' | 'createdBy'> => ({
+  ...i,
+  title: i.title.trim().slice(0, LIMITS.title),
+  quantity: Math.min(Math.max(1, i.quantity), LIMITS.quantity),
+});
+
+export type { Claim };

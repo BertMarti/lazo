@@ -3,7 +3,7 @@ import type { ItemStatus } from '../core/status';
 import type { Item } from '../core/types';
 import { Button } from './Button';
 import { Seal, type Flavor } from './kit';
-import type { StatusLine } from './statusText';
+import type { CardAction, StatusLine } from './statusText';
 
 export const PRIORITY: Record<1 | 2 | 3, string> = { 1: 'Me encantaría', 2: 'Me gustaría', 3: 'Si sobra' };
 
@@ -11,17 +11,19 @@ export const PRIORITY: Record<1 | 2 | 3, string> = { 1: 'Me encantaría', 2: 'Me
  * Un regalo. Cuerpo = abre la ficha; pie = estado en frase + la acción de UN toque.
  * En la lista propia (`line` undefined) no hay pie, ni sello, ni precinto: la sorpresa no deja rastro.
  */
-export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAction }: {
+export function GiftCard({ item, flavor, status, line, owner, fresh, busy, onOpen, onAction }: {
   item: Item;
   flavor: Flavor;
   status?: ItemStatus;
   line?: StatusLine;
+  /** Nombre del dueño, para «Mamá lo ha quitado de su lista». */
+  owner?: string;
   fresh?: boolean;
-  busy?: boolean;
+  busy?: string | null;
   onOpen: () => void;
-  onAction?: () => void;
+  onAction?: (a: CardAction) => void;
 }) {
-  const taken = status && (status.kind === 'reserved' || status.kind === 'bought' || status.kind === 'covered');
+  const taken = status && (status.kind === 'reserved' || status.kind === 'pot' || status.kind === 'bought' || status.kind === 'covered');
   return (
     <article className="gift" data-tone={line?.tone ?? 'open'} data-flavor={flavor}>
       {taken && !item.image && <span className={`gift-top${status.kind === 'bought' ? ' gift-top-bought' : ''}`} aria-hidden />}
@@ -38,7 +40,8 @@ export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAc
             {item.priceCents !== undefined ? <span className="money">{formatMoney(item.priceCents, item.currency)}</span> : 'Sin precio'}
             {item.store && ` · ${item.store}`}
           </span>
-          {item.priority === 1 && <span className="prio">{PRIORITY[1]}</span>}
+          {item.secret ? <span className="prio">Sorpresa</span> : item.priority === 1 && <span className="prio">{PRIORITY[1]}</span>}
+          {item.removed && <span className="meta">{owner ?? 'Su dueño'} lo ha quitado de su lista</span>}
         </span>
       </button>
       {line && status && (
@@ -47,10 +50,21 @@ export function GiftCard({ item, flavor, status, line, fresh, busy, onOpen, onAc
             <Seal status={status} size={24} animate={fresh} />
             <span className="status-text">{bold(line.text, line.strong)}</span>
           </span>
-          {line.action && onAction && (
-            <Button variant={line.action === 'reserve' ? 'primary' : 'secondary'} size="sm" loading={busy} onClick={onAction}>
-              {line.actionLabel}
-            </Button>
+          {onAction && line.actions.length > 0 && (
+            <span className="gift-actions">
+              {line.actions.map((a, i) => (
+                <Button
+                  key={a.kind}
+                  variant={i === 0 && (a.kind === 'reserve-self' || a.kind === 'reserve-pot') ? 'primary' : 'secondary'}
+                  size="sm"
+                  loading={busy === a.kind}
+                  disabled={!!busy && busy !== a.kind}
+                  onClick={() => onAction(a)}
+                >
+                  {a.label}
+                </Button>
+              ))}
+            </span>
           )}
         </div>
       )}

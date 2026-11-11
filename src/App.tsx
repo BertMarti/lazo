@@ -1,4 +1,4 @@
-import { ArrowLeft, Gear, ShoppingBag, Shuffle, UsersThree, type Icon } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, PiggyBank, ShoppingBag, Shuffle, UsersThree, type Icon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { DemoApi } from './api/demo';
 import type { Api } from './api/types';
@@ -12,6 +12,8 @@ import { Join } from './ui/screens/Join';
 import { ListScreen } from './ui/screens/List';
 import { Purchases } from './ui/screens/Purchases';
 import { Settings } from './ui/screens/Settings';
+import { HuchaScreen } from './ui/screens/Hucha';
+import { ReceivedScreen } from './ui/screens/Received';
 import type { Title } from './ui/title';
 
 export function App({ api }: { api: Api }) {
@@ -20,7 +22,7 @@ export function App({ api }: { api: Api }) {
   const [title, setTitle] = useState<Title>({ name: 'Lazo' });
   const onTitle = useCallback((t: Title) => setTitle(t), []);
   const [section, id, extra] = route;
-  const group = section === 'g' || section === 'sorteo' ? id : lastGroup.get();
+  const group = section === 'g' || section === 'sorteo' || section === 'hucha' ? id : lastGroup.get();
 
   let screen;
   let t: Title = title;
@@ -32,11 +34,17 @@ export function App({ api }: { api: Api }) {
   } else if (section === 'sorteo' && id) {
     screen = <DrawScreen groupId={id} />;
     t = { name: 'Amigo invisible', back: `/g/${id}` };
+  } else if (section === 'hucha' && id) {
+    screen = <HuchaScreen groupId={id} />;
+    t = { name: 'Hucha', back: `/g/${id}` };
+  } else if (section === 'recibido' && id) {
+    screen = <ReceivedScreen groupId={id} />;
+    t = { name: 'Lo que te regalaron', back: `/g/${id}` };
   } else if (section === 'ajustes') {
     screen = <Settings />;
     t = { name: 'Ajustes', back: '/' };
   } else if (section === 'unirse' && id) {
-    screen = <Join token={id} />;
+    screen = <Join token={id} onJoined={() => force((n) => n + 1)} />;
     t = { name: 'Bienvenida' };
   } else {
     screen = <Home />;
@@ -77,8 +85,9 @@ export function App({ api }: { api: Api }) {
               Lazo
             </a>
             <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l'} icon={UsersThree} label="Grupo" />
+            <Tab href={group ? `#/hucha/${group}` : '#/'} current={section === 'hucha'} icon={PiggyBank} label="Hucha" />
             <Tab href="#/compras" current={section === 'compras'} icon={ShoppingBag} label="Mis compras" />
-            <Tab href={group ? `#/sorteo/${group}` : '#/'} current={section === 'sorteo'} icon={Shuffle} label="Amigo invisible" />
+            <Tab href={group ? `#/sorteo/${group}` : '#/'} current={section === 'sorteo'} icon={Shuffle} label="Sorteo" />
           </nav>
         </div>
       </ToastProvider>
@@ -99,11 +108,14 @@ function DemoBar({ api, onChange }: { api: DemoApi; onChange: () => void }) {
   return (
     <div className="demo-bar" role="region" aria-label="Demo">
       <span>
-        <b>Demo</b> · datos ficticios
+        <b>Demo</b>
+        <span className="hide-sm"> · datos ficticios</span>
       </span>
+      <a href={`#/unirse/${api.generalInviteToken()}`}>Probar a entrar</a>
       <label className="row" style={{ gap: 'var(--s-2)' }}>
-        <span>Ver como</span>
+        <span className="hide-sm">Ver como</span>
         <select
+          aria-label="Ver como"
           value={api.me().id}
           onChange={(e) => {
             api.setViewer(e.target.value);
