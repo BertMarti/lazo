@@ -18,3 +18,5 @@ docs/audit/lighthouse/
 
 # Perfiles temporales de Lighthouse cuando WSL hereda el TMP de Windows
 *lighthouse.*/
+.impeccable/review/
+.impeccable/mocks/

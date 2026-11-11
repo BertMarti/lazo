@@ -13,7 +13,7 @@ Lazo es una app para que una familia comparta **listas de regalos** por ocasión
 **Lo que asumo yo:**
 - Lo usan familias de 4 a 30 personas, con picos en noviembre y diciembre y casi nada el resto del año.
 - Hay niños y mayores. Los niños no tienen cuenta: su lista la llevan sus padres. Los mayores necesitan entrar con un toque.
-- Idioma: español (la interfaz lleva todos los textos en un único módulo para traducirla más adelante).
+- Idioma: español. Los textos van junto a cada pantalla; si algún día hace falta traducir, se extraerán (YAGNI).
 
 **Éxito:**
 1. Una abuela entra desde un enlace de WhatsApp y ve las listas en menos de 30 segundos, sin escribir contraseñas.
