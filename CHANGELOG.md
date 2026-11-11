@@ -14,13 +14,32 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 - Vista previa segura de enlaces (servicio `unfurl`, con protección anti-SSRF).
 - Escaneo de secretos (gitleaks) en el pre-commit y en CI.
 
+- **Plazas para cada persona.** Al crear el grupo se pone, si se quiere, quiénes sois (un nombre por línea). Cada uno tiene su sitio aunque no haya entrado, y ya se le puede poner presupuesto o apuntar sorpresas.
+- **Entrar sin líos ni suplantaciones.** Cada persona recibe su enlace personal y entra con un toque («Eres Mamá»). Con el enlace general, eliges tu nombre y esperas a que quien organiza te acepte comprobando un código de 4 cifras.
+- **Hucha común.** Cada grupo elige cómo compra: hucha común, cada uno lo suyo o mixto. Los regalos se marcan como «Me lo reservo», «Para la hucha» o «Ya comprado» (en dos toques, con el precio ya puesto). La pantalla «Hucha» dice en frases cuánto te falta poner y a quién se lo das. Nadie paga sus propios regalos y nadie puede deducir lo que se gasta en él.
+- **Regalos sorpresa:** apunta en la lista de alguien algo que no pidió; esa persona no lo verá.
+- **Día de la entrega:** cuando quien organiza lo propone y otra persona confirma, cada uno puede ver qué le regalaron y de parte de quién, sin precios.
+- **Ideas de regalo** por edad, gustos y presupuesto: del catálogo, o con IA gratuita si la activas en Ajustes (Gemini, Groq, OpenRouter, NVIDIA u Ollama; Claude, de pago).
+- **«Que la IA lo ordene»** al importar un Excel con columnas raras.
+- **App de Android:** la primera vez se pega el enlace de invitación.
+- Cerrar la sesión en todos los dispositivos, anular enlaces y liberar plazas.
+
+### Seguridad
+- Auditoría de Fable aplicada: tiempo real sin opciones, API de administración fuera de Internet, límites por IP real, sorteo que quien organiza no puede amañar, tiempo total en la vista previa de enlaces y bloqueo de más rangos IPv6.
+
 ### Cambiado
 - **Nuevo diseño «La bandeja»:**
   - la familia aparece en tarjetas con su presupuesto;
   - las listas se dividen en «Disponibles» y «Ya cogidos»;
   - el texto es más grande y con mejor contraste;
   - los botones tienen tres alturas fijas.
-- La demo es ahora la familia de Alberto, Juan Carlos, Samira, Mamá y Papá.
+- La demo es ahora una familia de ejemplo (Alberto, Juan Carlos, Samira, Mamá, Papá y una plaza libre, la Tía Loli). Con «Probar a entrar» se prueba el enlace general.
+- Diseño ajustado tras estudiar referencias reales (Zola, Babylist, Elfster):
+  - sin cuadrados vacíos donde iría una foto;
+  - importes sin «,00»;
+  - sombra solo en lo que está libre;
+  - frases con el nombre en negrita;
+  - pestaña «Hucha».
 - «Mis compras» se agrupa por persona, tiene «Ya lo compré» en cada reserva y separa lo que falta por comprar, lo comprado y lo que va a medias.
 - En el amigo invisible, el sobre se abre con un toque y lleva a la lista de la persona que te ha tocado.
 

@@ -31,8 +31,13 @@ Que cada persona tenga su lista de regalos (de Amazon, de cualquier tienda, de u
 
 ## Capabilities and Constraints
 
+- **Plazas dinámicas:** quien crea el grupo pone, si quiere, los nombres previstos. Cada nombre es una plaza que ya admite presupuesto y sorpresas. Quien recibe el enlace entra en su plaza (enlace personal) o la elige o escribe su nombre (enlace general, con aprobación por código). Los nombres de la demo son solo ejemplos.
+- **Modos de compra** por grupo: hucha común, cada uno lo suyo o mixto. Estados de un regalo: Libre, Me lo reservo, Para la hucha, Ya comprado (con precio real y quién lo pagó) y A medias.
+- **Hucha:** nadie paga sus propios regalos. Un tesorero lleva el bote y un suplente las cuentas de los regalos del tesorero. Nada de agregados que permitan deducir lo propio.
+- **Día de la entrega** con dos llaves: cada uno ve qué le regalaron, sin precios.
+
 - Grupos por ocasión, invitación por enlace, listas de niños gestionadas por sus padres, reservas, compras, regalos a medias, amigo invisible, importación de Excel o CSV, extracción de metadatos de enlaces e ideas con IA gratuita opcional.
-- Demo pública sin backend con datos ficticios (la familia Robles).
+- Demo pública sin backend con datos ficticios (una familia de ejemplo y una plaza libre).
 - Terminología fija: «lista», «regalo», «reservar», «comprado», «a medias», «amigo invisible» y «grupo».
 
 ## Brand Commitments

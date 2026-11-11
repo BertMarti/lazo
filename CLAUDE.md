@@ -1,8 +1,14 @@
 # CLAUDE.md
 
-Lee y sigue [AGENTS.md](AGENTS.md): reglas, comandos y mapa del código. Lo esencial:
+Lee y sigue [AGENTS.md](AGENTS.md) (reglas, comandos y mapa del código) y [DESIGN.md](DESIGN.md) (sistema visual):
 
-- **La sorpresa es sagrada:** nadie ve el estado de su propia lista, ni en la interfaz ni por la API.
+@AGENTS.md
+@DESIGN.md
+
+Lo esencial:
+
+- **La sorpresa es sagrada:** sobre la plaza de X, todos menos X ven reservas, compras, aportaciones, presupuesto, sorpresas y hucha. Ni por la API ni **deduciéndolo** (no hay agregados; ver SECURITY.md).
+- Los nombres de la demo (Alberto, Juan Carlos, Samira, Mamá, Papá) son solo ejemplos: las plazas son dinámicas.
 - npm se ejecuta en WSL (`bash scripts/wsl.sh …`).
 - Un único sistema de botones (`src/ui/Button.tsx`) y el diseño fijado en `DESIGN.md`.
 - CHANGELOG en cada cambio visible para el usuario.

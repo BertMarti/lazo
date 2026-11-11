@@ -1,6 +1,6 @@
 # DESIGN.md · Lazo
 
-El sistema visual de Lazo, tal como está construido (`src/styles.css`). La dirección es **«La bandeja»**, una evolución de la caja de confitería navideña elegida por Fable entre tres exploraciones; el razonamiento completo está en [docs/design/FABLE-DIRECCION.md](docs/design/FABLE-DIRECCION.md). Las capturas, en `docs/design/v0.2/`.
+El sistema visual de Lazo, tal como está construido (`src/styles.css`). **Basado en referencias reales** de webs de listas de regalos (Zola, Babylist y Elfster, capturadas en `docs/design/referencias/`), analizadas por Fable en [docs/design/REFERENCIAS.md](docs/design/REFERENCIAS.md): de Zola se toma la disciplina editorial (filetes antes que sombras, pocas negritas) y de Elfster, la claridad de los estados. La dirección es **«La bandeja»**, una evolución de la caja de confitería navideña elegida por Fable entre tres exploraciones; el razonamiento completo está en [docs/design/FABLE-DIRECCION.md](docs/design/FABLE-DIRECCION.md). Las capturas, en `docs/design/v0.2/`.
 
 ## 1. Principios
 
@@ -33,7 +33,8 @@ La cáscara es azul turrón y el fondo, papel de seda frío. Cada persona tiene 
 | `--ground` / `--surface` / `--sunken` | `#f4f3f8` / `#fff` / `#ebeaf2` | `#0d1222` / `#161d36` / `#1d2541` | Fondo, tarjetas, paneles hundidos |
 | `--ink` / `--ink-2` / `--ink-3` | `#1b2242` / `#4a5274` / `#596080` | `#eceaf5` / `#b8bdd6` / `#9198b6` | Texto (todos ≥ 4,5:1 sobre sus fondos) |
 | `--edge` | `#747b9c` | `#7d87b0` | Borde de campos y botón secundario (≥ 3:1) |
-| `--line` | `#dddfea` | `#2a3354` | Filetes decorativos |
+| `--line` | `#dddfea` | `#2a3354` | Filetes decorativos internos |
+| `--line-2` | `#c5c9dc` | `#39436a` | Contorno de tarjetas sin sombra (miembro, panel, fila) |
 | `--danger` / `--ok` | `#a3263a` / `#24614a` | `#f08a99` / `#8fd3b5` | Excedido o quitar / comprado |
 
 **Sabores** (papel y tinta, ≥ 6:1):
@@ -55,8 +56,8 @@ Cada persona tiene un sabor fijo, que se usa en su avatar, en el filo de su tarj
 | Token | Tamaño | Familia | Uso |
 |---|---|---|---|
 | `--t-3xl` | 46 | Bodoni Moda 500 | Cuenta atrás y nombre del amigo invisible |
-| `--t-2xl` | 34 | Bodoni Moda 500 | Título de la cabecera (interletrado −0,01em) |
-| `--t-xl` | 26 | Bodoni Moda 500 | Títulos de sección y de hoja |
+| `--t-2xl` | 28 en móvil / 34 desde 720 | Bodoni Moda 500 | Título de la cabecera, en una línea (interletrado −0,01em) |
+| `--t-xl` | 24 | Bodoni Moda 500 | Títulos de sección y de hoja |
 | `--t-name` | 22 | Bodoni Moda 500 | Nombre en la tarjeta de miembro |
 | `--t-lg` | 20 | Atkinson Hyperlegible Next 700 | Precio en la ficha y botón grande |
 | `--t-md` | 17 | Atkinson 400/700 | Cuerpo, títulos de regalo y botones |
@@ -71,15 +72,17 @@ Cada persona tiene un sabor fijo, que se usa en su avatar, en el filo de su tarj
 
 - **Escala de espacio:** 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 (`--s-*`). No hay valores sueltos.
 - **Radios:**
-  - 8: miniatura;
-  - 12: botón, campo y aviso;
-  - 16: tarjeta;
-  - 20: hoja;
+  - 6: miniatura;
+  - 10: botón, campo y aviso;
+  - 12: tarjeta;
+  - 16: hoja;
   - píldora: solo barra, chip y avatar.
 - **Sombras:**
-  - `--shadow-1`: tarjeta disponible;
-  - `--shadow-2`: hoja, aviso y hover en escritorio.
-  - Lo ya cogido no lleva sombra.
+  - `--shadow-1`, corta y pegada como papel sobre la mesa: **solo** el regalo libre;
+  - `--shadow-2`: hojas y avisos.
+  - Lo demás (tarjetas de miembro, paneles, filas, lo cogido) va con filete `--line-2`.
+- **Pesos:** 400 por defecto. Como mucho dos negritas por tarjeta, sin contar el botón; en las frases de estado, solo el nombre.
+- **Dinero:** sin «,00» si es redondo («349 €»), salvo en la hucha, donde se pintan siempre los céntimos.
 - **Objetivo táctil mínimo:** 44 px.
 - **Retícula:**
 
@@ -102,7 +105,15 @@ Cada persona tiene un sabor fijo, que se usa en su avatar, en el filo de su tarj
 | Precinto (`.band`) | `styles.css` | Banda dorada (o azul si está comprado) que cruza la miniatura. Entra con `clip-path` en 280 ms |
 | VisibilityNote | `src/ui/kit.tsx` | Chip dorado claro con un ojo tachado. Solo para la regla |
 | Sheet | `src/ui/kit.tsx` | `<dialog>` nativo: abajo en móvil, centrado en escritorio |
-| Toast | `src/ui/kit.tsx` | 3 s, o 6 s con «Deshacer» |
+| Toast | `src/ui/kit.tsx` | 3 s, o 6 s con «Deshacer» (enlace dorado subrayado) |
+| Plaza libre | `MemberCard` | Avatar con contorno discontinuo, «Aún no ha entrado» y, para el admin, «Invitar» |
+| Elegir plaza (`.choice`) | `screens/Join.tsx` | Filas de radio de 56 px. El botón dice el nombre («Soy Mamá») para obligar a leerlo |
+| Aviso (`.banner`) | `screens/Group.tsx` | Fondo `--foil-tint` para solicitudes de entrada (con código) y para la entrega |
+| Ya comprado | `screens/BuySheet.tsx` | Dos toques, con el precio prerrellenado y «¿Quién lo pagó?» (Yo / La hucha / Otra persona) |
+| Hucha | `screens/Hucha.tsx` | Frases, no tablas: «Te falta poner 71,22 €», «Ya se lo di a Alberto», «Tu parte, persona a persona». Sin total del bote ni gráficos |
+| Variante `link` | `Button.tsx` | Texto subrayado con 44 px de zona táctil, para acciones terciarias |
+
+Los botones son `primary`, `secondary`, `ghost`, `danger`, `link` y `on-box`, este último sobre azul, con fondo claro y 13,4:1. **No hay dorado relleno en botones.**
 
 **Reglas de colocación de los botones**
 
@@ -123,6 +134,10 @@ Cada persona tiene un sabor fijo, que se usa en su avatar, en el filo de su tarj
 | Tras reservar o aportar | Reservado. {X} no lo verá. / Apuntado. {X} no lo verá. |
 | Presupuesto | Lo ve todo el grupo menos {X}. |
 | Lista de niño | {N} no usa Lazo: esto lo veis todos los mayores |
+| Plaza libre | {X} aún no ha entrado. Cuando entre, dejará de ver todo esto. |
+| Hucha | Aquí no sale lo que se gasta en ti |
+| Sorpresa | {X} no lo verá en su lista |
+| Entrar | Desde aquí no verás lo que te regalan a ti. |
 
 Estados, siempre con sujeto y verbo: «Libre», «Lo reservas tú», «Lo reserva Samira», «Lo compró Papá», «A medias · 71 % · ponen Juan Carlos y Papá», «Cubierto · ponéis Papá y tú». Tú vas siempre al final de la enumeración y, a partir de cuatro personas, se abrevia: «Samira, Papá y 2 más».
 
@@ -168,6 +183,6 @@ La lista completa, con sus 24 reglas, está en el apartado D de FABLE-DIRECCION.
 
 | Modelo | Papel en el diseño |
 |---|---|
-| Claude Fable 5.1 | Dirección de arte: crítica por pantalla, tres exploraciones, elección de «La bandeja», especificación y reglas anti-IA |
+| Claude Fable 5.1 | Dirección de arte: crítica por pantalla, tres exploraciones, elección de «La bandeja», especificación y reglas anti-IA; análisis de referencias reales (REFERENCIAS.md) y diseño de las pantallas de plazas y hucha |
 | Claude Opus 5.5 | Implementación, contrastes verificados en la interfaz, capturas y E2E |
 | `impeccable` (skill) | Proceso: PRODUCT.md, contrato de dirección (`.impeccable/surfaces/`) y detector |

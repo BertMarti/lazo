@@ -11,8 +11,16 @@ Qué skills de agente se han usado en Lazo y para qué, por si alguien quiere re
 | `ponytail` | Siempre | Lo mínimo que funciona; atajos marcados con `ponytail:` |
 | `superpowers:test-driven-development` | Núcleo | `test/core/*` |
 | Revisión de seguridad (Fable) | Antes de cada versión con servidor | `docs/security/AUDIT.md` |
+| Referencias reales (Playwright headless) + Fable | Antes de cerrar la interfaz | `docs/design/referencias/*.png`, `docs/design/REFERENCIAS.md` |
 
-`frontend-design`, `taste-skill` y `ui-ux-pro-max` no estaban instaladas en esta máquina; `impeccable` cubre su función.
+**Skills de terceros que pidió el usuario:** leí su `SKILL.md` antes de usarlas.
+
+| Skill | Estado | Por qué |
+|---|---|---|
+| `pbakaus/impeccable` | Instalada y en uso | Detector de patrones de IA (`impeccable detect`), proceso de dirección y crítica. Se pasa antes de cada versión |
+| `emilkowalski/skills` (`emil-design-eng`) | Instalada y en uso | Curvas, duraciones y microinteracciones |
+| `Leonxlnx/taste-skill` | Evaluada, **no instalada** | Está pensada para webs de empresa (landing pages con fotos y escenas) y al instalarse añade un hook `Stop`. Su criterio útil (bordes iguales, una sola familia de botones, nada de capturas con pie) ya está en DESIGN.md. Instalarla y añadir hooks es decisión del usuario |
+| «Hallmark» / «Pckable» | No existen como detectores de diseño | `pckable` es un plugin de Godot; no se encontró ningún «Hallmark» fiable |
 
 ## Modelos y su función
 
