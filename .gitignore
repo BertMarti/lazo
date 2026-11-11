@@ -20,3 +20,4 @@ docs/audit/lighthouse/
 *lighthouse.*/
 .impeccable/review/
 .impeccable/mocks/
+!.env.example
