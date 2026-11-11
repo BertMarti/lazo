@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+android/app/build/
+android/.gradle/
+.DS_Store
+.superpowers/
+.claude/launch.json
+dist-demo/
+tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+docs/audit/lighthouse/
+
+# Perfiles temporales de Lighthouse cuando WSL hereda el TMP de Windows
+*lighthouse.*/
