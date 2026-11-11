@@ -48,5 +48,6 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
+      # Las dependencias del sistema vía apt fallan a veces por un espejo caído: se reintenta tras refrescar índices.
+      - run: npx playwright install --with-deps chromium || (sudo apt-get update && npx playwright install --with-deps chromium)
       - run: npx playwright test
