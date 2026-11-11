@@ -4,6 +4,10 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [0.3.0] - 2026-11-11 · Más segura y con fotos
+
+Repaso de seguridad completo, fotos de verdad en la demo y una app que se toca bien en cualquier móvil.
+
 ### Seguridad
 - Cerrados los hallazgos bajos de la segunda auditoría (V-8 a V-15): comprobaciones dentro de la transacción, límite de peticiones de «Lo que te regalaron», no se puede borrar la cuenta ocupando una plaza, la plaza de quien lleva la hucha no se borra, sin nombres repetidos y nada se compra sobre un regalo retirado. La demo se comporta igual que el servidor.
 - 22 pruebas contra un PocketBase real, entre ellas 20 reservas simultáneas del mismo regalo (queda una sola) y la comprobación byte a byte de que lo que otros hacen en tu lista no cambia nada de lo que ves.
@@ -84,6 +88,7 @@ Primera versión para probar en la demo pública, con datos ficticios y sin serv
 | 0.2.0 | Fable 5.1: dirección de arte («La bandeja») y auditoría de la regla y de seguridad. Opus 5.5: implementación. OpenCode (`deepseek-v4.1-flash-free`): catálogo de ideas | Gemini (gratis, por defecto), Groq, OpenRouter, NVIDIA u Ollama; Claude Haiku 5.5 de pago. Catálogo de ideas sin IA generado con OpenCode |
 | 0.1.0 | Claude Opus 5.5 | Ninguna todavía: el mapeo de Excel va por sinónimos |
 
-[Sin publicar]: https://github.com/BertMarti/lazo/compare/v0.2.0...HEAD
+[Sin publicar]: https://github.com/BertMarti/lazo/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/BertMarti/lazo/releases/tag/v0.3.0
 [0.2.0]: https://github.com/BertMarti/lazo/releases/tag/v0.2.0
 [0.1.0]: https://github.com/BertMarti/lazo/releases/tag/v0.1.0
