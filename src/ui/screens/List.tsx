@@ -1,4 +1,4 @@
-import { FileXls, Plus, X } from '@phosphor-icons/react';
+import { FileXls, Lightbulb, Plus, X } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import type { ListDetail } from '../../api/types';
 import { budgetProgress } from '../../core/budget';
@@ -14,6 +14,7 @@ import type { Title } from '../title';
 import { AddGift } from './AddGift';
 import { BudgetSheet } from './BudgetSheet';
 import { loadGroup, MemberGrid } from './Group';
+import { IdeasSheet } from './Ideas';
 import { ImportSheet } from './Import';
 import { ItemSheet } from './ItemSheet';
 
@@ -35,6 +36,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
   const [fresh, setFresh] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [ideas, setIdeas] = useState(false);
   const [explained, setExplained] = useState(() => {
     try {
       return !!localStorage.getItem(SEEN_KEY);
@@ -215,11 +217,16 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
           )}
         </>
       )}
-      {d.canEdit && (
-        <Button variant="ghost" size="sm" icon={FileXls} onClick={() => setImporting(true)}>
-          Importar desde Excel
+      <div className="btn-group">
+        <Button variant="ghost" size="sm" icon={Lightbulb} onClick={() => setIdeas(true)}>
+          {d.canEdit ? 'Ideas para la lista' : `Ideas para ${who}`}
         </Button>
-      )}
+        {d.canEdit && (
+          <Button variant="ghost" size="sm" icon={FileXls} onClick={() => setImporting(true)}>
+            Importar desde Excel
+          </Button>
+        )}
+      </div>
     </div>
   );
 
@@ -242,6 +249,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
       )}
       {adding && d.canEdit && <AddGift listId={id} onClose={() => go(`/l/${id}`)} onSaved={reload} onImport={() => { go(`/l/${id}`); setImporting(true); }} />}
       {importing && <ImportSheet listId={id} onClose={() => setImporting(false)} onDone={() => { setImporting(false); reload(); }} />}
+      {ideas && <IdeasSheet list={d.list} canAdd={d.canEdit} onClose={() => setIdeas(false)} onAdded={reload} />}
       {budgetOpen && <BudgetSheet list={d.list} budget={d.budget} onClose={() => setBudgetOpen(false)} onSaved={() => { setBudgetOpen(false); reload(); }} />}
     </div>
   );

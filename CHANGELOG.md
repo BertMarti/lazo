@@ -4,6 +4,26 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Añadido
+- **Presupuesto por persona.** El grupo fija cuánto se gasta en cada uno y una barra muestra lo comprometido (reservas, compras y aportaciones) y lo que queda, o cuánto os pasáis. Lo ve todo el grupo **menos el destinatario**.
+- **Reservar en un toque**, directamente desde la lista y con «Deshacer» durante 6 segundos.
+- **Añadir en dos toques:** «Añadir» y después «Pegar enlace». Lazo lee la tienda y lo guarda. También vale pegar en cualquier punto de la hoja.
+- **Cada regalo dice quién lo tiene** sin abrirlo: «Lo reserva Samira», «Lo compró Papá», «A medias · 71 % · ponen Juan Carlos y Papá».
+- **«Mamá no ve esto»:** la regla de la sorpresa se explica sola donde hace falta.
+- **Servidor para casa** (PocketBase, Docker y Caddy), con guía en `docs/HOMELAB.md`. La regla se impone en el servidor: el destinatario no recibe ni reservas, ni aportaciones, ni presupuesto por ninguna vía de la API.
+- Vista previa segura de enlaces (servicio `unfurl`, con protección anti-SSRF).
+- Escaneo de secretos (gitleaks) en el pre-commit y en CI.
+
+### Cambiado
+- **Nuevo diseño «La bandeja»:**
+  - la familia aparece en tarjetas con su presupuesto;
+  - las listas se dividen en «Disponibles» y «Ya cogidos»;
+  - el texto es más grande y con mejor contraste;
+  - los botones tienen tres alturas fijas.
+- La demo es ahora la familia de Alberto, Juan Carlos, Samira, Mamá y Papá.
+- «Mis compras» se agrupa por persona, tiene «Ya lo compré» en cada reserva y separa lo que falta por comprar, lo comprado y lo que va a medias.
+- En el amigo invisible, el sobre se abre con un toque y lleva a la lista de la persona que te ha tocado.
+
 ## [0.1.0] - 2026-11-11 · Primera caja
 
 Primera versión para probar en la demo pública, con datos ficticios y sin servidor.
@@ -27,7 +47,8 @@ Primera versión para probar en la demo pública, con datos ficticios y sin serv
 
 | Versión | Desarrollo | IA en el producto |
 |---|---|---|
-| 0.1.0 | Claude Opus 5.5 (todo); revisión de diseño pendiente de Fable | Ninguna todavía: el mapeo de Excel va por sinónimos |
+| Sin publicar | Fable 5.1: dirección de arte («La bandeja») y auditoría de la regla y de seguridad. Opus 5.5: implementación. OpenCode (`deepseek-v4.1-flash-free`): catálogo de ideas | Ninguna todavía |
+| 0.1.0 | Claude Opus 5.5 | Ninguna todavía: el mapeo de Excel va por sinónimos |
 
 [Sin publicar]: https://github.com/BertMarti/lazo/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/BertMarti/lazo/releases/tag/v0.1.0

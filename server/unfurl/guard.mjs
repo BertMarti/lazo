@@ -19,7 +19,11 @@ for (const [net, bits] of [
   ['240.0.0.0', 4], // reservada y broadcast
 ]) blocked.addSubnet(net, bits, 'ipv4');
 for (const [net, bits] of [
-  ['::', 128], // sin especificar
+  ['::', 96], // sin especificar e IPv4-compatible (::7f00:1)
+  ['64:ff9b:1::', 48], // NAT64 local
+  ['2001::', 32], // Teredo
+  ['2002::', 16], // 6to4
+  ['fec0::', 10], // site-local (obsoleto)
   ['::1', 128], // loopback
   ['64:ff9b::', 96], // NAT64 (podría apuntar a IPv4 internas)
   ['100::', 64], // descarte

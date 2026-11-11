@@ -1,4 +1,6 @@
-import { FileArrowUp } from '@phosphor-icons/react';
+import { FileArrowUp, Sparkle } from '@phosphor-icons/react';
+import { loadAi } from '../../ai/provider';
+import { mapColumnsAI } from '../../ai/tasks';
 import { useMemo, useState } from 'react';
 import { FIELD_LABEL, guessColumns, rowsToDrafts, type ColumnMap, type Field } from '../../core/columns';
 import { formatMoney } from '../../core/money';
@@ -88,6 +90,27 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
       {rows && (
         <>
           <p className="meta">Hemos adivinado qué es cada columna. Corrige lo que no cuadre.</p>
+          {loadAi().provider !== 'none' && (
+            <Button
+              variant="secondary"
+              icon={Sparkle}
+              loading={busy}
+              onClick={async () => {
+                setBusy(true);
+                setErr('');
+                try {
+                  // Solo cabeceras y 3 filas de muestra: la hoja entera no sale del dispositivo.
+                  setMap(await mapColumnsAI(loadAi(), headers, rows.slice(1, 4)));
+                } catch (e) {
+                  setErr(errorText(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Que la IA lo ordene
+            </Button>
+          )}
           <div className="grid-2">
             {FIELDS.map((f) => (
               <label className="field" key={f}>

@@ -1,27 +1,50 @@
-import { StrictMode } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { DemoApi } from './api/demo';
 import { PocketBaseApi } from './api/pocketbase';
-import type { Api } from './api/types';
+import { Connect } from './ui/screens/Connect';
 import './styles.css';
 
-// Demo (GitHub Pages): todo en el navegador. App real: la sirve PocketBase desde pb_public (mismo origen);
-// en Android, VITE_SERVER_URL apunta a tu Lazo.
-let api: Api;
-if (import.meta.env.VITE_DEMO) api = new DemoApi();
-else {
-  const pb = new PocketBaseApi(import.meta.env.VITE_SERVER_URL || location.origin);
+const SERVER_KEY = 'lazo:server';
+const native = Capacitor.isNativePlatform();
+const read = (k: string) => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+
+// Web: la PWA la sirve PocketBase (mismo origen). Pages: la demo. Android: el servidor sale del enlace de invitación.
+const server = import.meta.env.VITE_DEMO ? 'demo' : import.meta.env.VITE_SERVER_URL || (native ? read(SERVER_KEY) : location.origin);
+const root = createRoot(document.getElementById('root')!);
+const render = (node: ReactNode) => root.render(<StrictMode>{node}</StrictMode>);
+
+async function start(srv: string | null) {
+  if (!srv) {
+    return render(
+      <Connect
+        onReady={(s, token) => {
+          try {
+            localStorage.setItem(SERVER_KEY, s);
+          } catch {
+            /* sin almacenamiento */
+          }
+          if (token) location.hash = `/unirse/${token}`;
+          void start(s);
+        }}
+      />,
+    );
+  }
+  if (srv === 'demo') return render(<App api={new DemoApi()} />);
+  const pb = new PocketBaseApi(srv);
   await pb.resume();
-  api = pb;
+  render(<App api={pb} />);
 }
+void start(server);
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App api={api} />
-  </StrictMode>,
-);
-
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && !native && 'serviceWorker' in navigator) {
   void navigator.serviceWorker.register('sw.js').catch(() => {});
 }

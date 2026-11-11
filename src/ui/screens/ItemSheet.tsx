@@ -140,7 +140,7 @@ export function ItemSheet({ listId, itemId, users, focusPot, onClose, onChanged 
         </p>
       </div>
       {item.notes && <p>{item.notes}</p>}
-      {item.url && (
+      {item.url && /^https?:\/\//i.test(item.url) && (
         <ButtonLink variant="secondary" wide iconEnd={ArrowSquareOut} href={item.url} target="_blank" rel="noopener noreferrer nofollow">
           Ver en la tienda
         </ButtonLink>

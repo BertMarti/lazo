@@ -26,17 +26,19 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 **Lazo lo arregla con una regla muy sencilla:** ves qué está libre, reservado o comprado en las listas de los demás, **pero nunca en la tuya**. Ni en la pantalla ni por detrás: el servidor no se lo envía a tu móvil.
 
 <p align="center">
-  <img src="docs/design/v0.1/movil/grupo.png" width="270" alt="Pantalla del grupo: la familia en filas, cada persona con su color y sus regalos" />
+  <img src="docs/design/v0.2/movil/grupo.png" width="270" alt="La familia en tarjetas, cada una con su presupuesto; la tuya no lo muestra" />
   &nbsp;
-  <img src="docs/design/v0.1/movil/regalo-a-medias.png" width="270" alt="Ficha de un regalo a medias: quién pone cuánto y cuánto falta" />
+  <img src="docs/design/v0.2/movil/lista-de-mama.png" width="270" alt="Lista de Mamá vista por Alberto: presupuesto, «Mamá no ve esto» y reservar en un toque" />
   &nbsp;
-  <img src="docs/design/v0.1/movil/amigo-invisible.png" width="270" alt="Amigo invisible: el sobre con tu persona" />
+  <img src="docs/design/v0.2/movil/regalo-a-medias.png" width="270" alt="Un regalo a medias: quién pone cuánto y cuánto falta" />
 </p>
 
 ## Qué puedes hacer
 
 - **Una lista para cada uno.** Pega un enlace de **Amazon** o de **cualquier tienda** y Lazo rellena el nombre, la foto y el precio. También puedes **subir un Excel** con tu lista o escribirla a mano, con talla, color y cuántas ganas tienes de cada cosa.
-- **Sorpresa garantizada.** En las listas de los demás ves qué está libre y qué está reservado o comprado. En la tuya, nada.
+- **Sorpresa garantizada.** En las listas de los demás ves qué está libre, quién lo ha reservado y quién lo ha comprado. En la tuya, nada.
+- **Un presupuesto para cada uno.** «124,90 € de 200,00 €. Quedan 75,10 €.» Lo ve toda la familia… menos el destinatario.
+- **Reservar es un toque.** Y si te equivocas, «Deshacer».
 - **Regalos a medias.** Para el regalo caro de los abuelos, cada uno apunta lo que pone, Lazo te dice cuánto falta y quién debe qué a quién cuando alguien lo compra.
 - **Amigo invisible.** Un sorteo con exclusiones (que las parejas no se toquen entre sí). Cada persona solo ve su sobre; ni quien organiza ve los demás.
 - **Listas de niños.** Los peques no necesitan cuenta: su lista la llevan sus padres, que sí ven lo reservado para coordinarse.
@@ -56,11 +58,11 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 
 **[bertmarti.github.io/lazo](https://bertmarti.github.io/lazo/)**
 
-Es la familia Robles, con datos inventados. Arriba tienes **«Ver como…»**: cambia de persona y comprueba que Marta no ve que Pablo ya le compró los auriculares, y que Lucía sí lo ve. Todo se guarda en tu navegador; no hay servidor detrás.
+Es una familia de cinco con datos inventados: Alberto, Juan Carlos, Samira, Mamá y Papá. Arriba tienes **«Ver como…»**: cambia a Mamá y comprueba que no ve que Alberto le ha reservado el marco de fotos ni cuánto os gastáis en ella; cambia a Samira y lo verás todo. Todo se guarda en tu navegador; no hay servidor detrás.
 
 ## Instalarlo en casa
 
-Lazo necesita un pequeño servidor para que la familia comparta las listas. Está pensado para un **Raspberry Pi** o cualquier ordenador de casa con Docker, igual que [SHIELD-DNS](https://github.com/BertMarti/SHIELD-DNS) y [HEIMDALL](https://github.com/BertMarti/HEIMDALL). La guía paso a paso está en [docs/HOMELAB.md](docs/HOMELAB.md) (llega en la versión 0.2).
+Lazo necesita un pequeño servidor para que la familia comparta las listas. Está pensado para un **Raspberry Pi** o cualquier ordenador de casa con Docker, igual que [SHIELD-DNS](https://github.com/BertMarti/SHIELD-DNS) y [HEIMDALL](https://github.com/BertMarti/HEIMDALL). La guía paso a paso está en [docs/HOMELAB.md](docs/HOMELAB.md).
 
 - **En el móvil:** abre tu Lazo en el navegador y pulsa «Añadir a pantalla de inicio». También hay **APK de Android** en las [Releases](https://github.com/BertMarti/lazo/releases).
 - **Coste:** cero. Ni cuotas ni anuncios.

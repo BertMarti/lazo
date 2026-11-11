@@ -86,6 +86,9 @@ function once(url, deadline, opts) {
       },
     );
     req.on('timeout', () => req.destroy(new UnfurlError('timeout')));
+    // Tiempo TOTAL (auditoría G-8): `timeout` solo mide inactividad; un byte cada 5 s no debe retenernos.
+    const kill = setTimeout(() => req.destroy(new UnfurlError('timeout')), remaining);
+    req.on('close', () => clearTimeout(kill));
     req.on('error', (e) => reject(e instanceof UnfurlError ? e : new UnfurlError('network')));
     req.end();
   });

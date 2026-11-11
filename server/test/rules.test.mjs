@@ -35,6 +35,34 @@ const ok = async (...a) => {
   return r.json;
 };
 
+
+/** Suscripción en tiempo real: devuelve el estado de la suscripción y los eventos recibidos tras `trigger`. */
+async function realtime(token, subscriptions, trigger, ms = 800) {
+  const ac = new AbortController();
+  const res = await fetch(BASE + '/api/realtime', { signal: ac.signal });
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (!/"clientId":"([^"]+)"/.test(buf)) buf += dec.decode((await reader.read()).value);
+  const clientId = /"clientId":"([^"]+)"/.exec(buf)[1];
+  const sub = await call('POST', '/api/realtime', { clientId, subscriptions }, token);
+  let events = '';
+  if (sub.status < 300) {
+    await trigger();
+    setTimeout(() => ac.abort(), ms);
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        events += dec.decode(value);
+      }
+    } catch {
+      /* abortado */
+    }
+  } else ac.abort();
+  return { status: sub.status, events };
+}
+
 describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (binario de PocketBase)' }, () => {
   before(async () => {
     dir = mkdtempSync(join(tmpdir(), 'lazo-pb-'));
@@ -114,6 +142,26 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
       assert.ok(r.status === 400 || r.status === 403, `reserva propia → ${r.status}`);
       assert.doesNotMatch(r.text, /adelantado|reservado/i);
       assert.ok((await call('POST', '/api/collections/budgets/records', { list: L, amountCents: 1 }, t)).status >= 400);
+      // Tiempo real (auditoría R-1): ninguna variante de opciones con _via_ pasa, ni codificada.
+      const touch = () => ok('PATCH', `/api/collections/items/records/${A}`, { notes: 'x' }, t);
+      const opt = (o, hide) => 'items/*?options=' + hide(encodeURIComponent(JSON.stringify(o)));
+      for (const topic of [
+        opt({ query: { filter: 'claims_via_item.id != ""' } }, (x) => x),
+        opt({ query: { filter: 'claims_via_item.id != ""' } }, (x) => x.replace(/_/g, '%5F')),
+        'items/*?options=' + encodeURIComponent('{"query":{"filter":"claims\\u005fvia\\u005fitem.id != \'\'"}}'),
+      ]) {
+        const r = await realtime(t, [topic], touch);
+        assert.equal(r.status, 403, topic);
+        assert.doesNotMatch(r.events, new RegExp(A), topic);
+      }
+      // Y la suscripción normal a claims no trae nada de su lista cuando otro reserva.
+      const other = FAMILY.find((x) => x !== who);
+      const rt = await realtime(t, ['claims/*'], async () => {
+        const c = await ok('POST', '/api/collections/claims/records', { item: ids[`b-${who}`], user: ids[other], status: 'reserved' }, tok[other]);
+        await ok('DELETE', `/api/collections/claims/records/${c.id}`, null, tok[other]);
+      });
+      assert.equal(rt.status, 204);
+      assert.doesNotMatch(rt.events, new RegExp(ids[`b-${who}`]), 'evento de reserva propia');
     });
 
     test(`${who}: en las listas de los demás lo ve todo`, async () => {

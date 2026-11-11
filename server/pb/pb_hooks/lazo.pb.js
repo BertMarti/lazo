@@ -11,24 +11,40 @@ routerUse((e) => {
   } catch {
     throw new BadRequestError('Consulta no válida.');
   }
-  if (e.request.method === 'POST' && e.request.url.path === '/api/realtime') probe += JSON.stringify(e.requestInfo().body || {});
   if (/_via_|@collection/i.test(probe)) throw new ForbiddenError('Consulta no permitida.');
   return e.next();
 });
 
+// Tiempo real (auditoría R-1): solo «coleccion/*» o «coleccion/id». Sin ?options= no hay filter, sort ni expand
+// que vigilar (PocketBase descodifica las opciones del topic en dos capas que un filtro de texto no ve).
+onRealtimeSubscribeRequest((e) => {
+  if (!(e.auth && e.auth.isSuperuser())) {
+    for (const s of e.subscriptions) {
+      if (!/^[A-Za-z0-9_]+\/(\*|[A-Za-z0-9_]+)$/.test(String(s))) throw new ForbiddenError('Consulta no permitida.');
+    }
+  }
+  e.next();
+});
+
 // ——— Grupos: quien crea es dueño, miembro y admin, y tiene su lista ———
 onRecordCreateRequest((e) => {
-  if (!e.auth) throw new UnauthorizedError('Entra primero.');
+  if (!e.auth || e.auth.collection().name !== 'users') throw new UnauthorizedError('Entra primero.');
   e.record.set('owner', e.auth.id);
   e.record.set('members', [e.auth.id]);
   e.record.set('admins', [e.auth.id]);
   if (!e.record.getString('currency')) e.record.set('currency', 'EUR');
   e.next();
-  const list = new Record($app.findCollectionByNameOrId('lists'));
+}, 'groups');
+
+// La lista del creador, dentro de la misma transacción (auditoría G-10).
+onRecordCreate((e) => {
+  e.next();
+  const owner = e.app.findRecordById('users', e.record.getString('owner'));
+  const list = new Record(e.app.findCollectionByNameOrId('lists'));
   list.set('group', e.record.id);
-  list.set('name', e.auth.getString('name'));
-  list.set('user', e.auth.id);
-  $app.save(list);
+  list.set('name', owner.getString('name'));
+  list.set('user', owner.id);
+  e.app.save(list);
 }, 'groups');
 
 // ——— Reservas: una unidad cada vez y nunca más de las que hay ———
@@ -85,7 +101,10 @@ routerAdd('POST', '/api/lazo/join', (e) => {
 
   const COLORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'];
   let user = e.auth;
+  if (user && user.collection().name !== 'users') throw new ForbiddenError('Entra con una cuenta de la familia.');
   $app.runInTransaction((tx) => {
+    const inv = tx.findRecordById('invites', invite.id); // releer dentro: dos altas simultáneas no pasan del límite
+    if (inv.getBool('revoked') || inv.getInt('expiresAt') < Date.now() || inv.getInt('uses') >= inv.getInt('maxUses')) throw new BadRequestError(invalid);
     const group = tx.findRecordById('groups', invite.getString('group'));
     if (!user) {
       user = new Record(tx.findCollectionByNameOrId('users'));
@@ -103,8 +122,8 @@ routerAdd('POST', '/api/lazo/join', (e) => {
       list.set('name', user.getString('name'));
       list.set('user', user.id);
       tx.save(list);
-      invite.set('uses', invite.getInt('uses') + 1);
-      tx.save(invite);
+      inv.set('uses', inv.getInt('uses') + 1);
+      tx.save(inv);
     }
   });
   return $apis.recordAuthResponse(e, user, 'invite', { group: invite.getString('group') });
@@ -157,6 +176,12 @@ routerAdd(
       .filter((p) => Array.isArray(p) && p.length === 2)
       .map((p) => [String(p[0]), String(p[1])])
       .slice(0, 200);
+    // Auditoría G-5: sin exclusiones que dejen un único reparto (quien organiza no puede fijar el sorteo).
+    const uniq = [...new Set(participants)];
+    const banned = new Set(exclusions.flatMap(([a, b]) => [a + '>' + b, b + '>' + a]));
+    const min = Math.min(3, uniq.length - 1);
+    if (uniq.some((g) => uniq.filter((r) => r !== g && !banned.has(g + '>' + r)).length < min))
+      throw new BadRequestError('Demasiadas exclusiones: cada persona necesita al menos 3 destinatarios posibles.');
     const budget = Number.isInteger(body.budgetCents) && body.budgetCents > 0 ? body.budgetCents : 0;
     const rand = () => parseInt($security.randomStringWithAlphabet(8, '0123456789abcdef'), 16) / 4294967296;
     let pairs;
@@ -173,6 +198,9 @@ routerAdd(
       draw.set('exclusions', exclusions);
       draw.set('participants', participants);
       draw.set('createdBy', e.auth.id);
+      group.set('drawRounds', group.getInt('drawRounds') + 1); // «sorteo n.º 3»: nadie repite en secreto
+      draw.set('round', group.getInt('drawRounds'));
+      tx.save(group);
       tx.save(draw);
       const col = tx.findCollectionByNameOrId('assignments');
       pairs.forEach((receiver, giver) => {
@@ -218,6 +246,60 @@ routerAdd(
       throw new BadRequestError(msg || 'No hemos podido leer esa página. Rellénalo a mano.');
     }
     return e.json(200, res.json);
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Anular enlaces (auditoría G-3) ———
+routerAdd(
+  'POST',
+  '/api/lazo/invite-revoke',
+  (e) => {
+    const group = $app.findRecordById('groups', String(e.requestInfo().body.group || ''));
+    if (!group.getStringSlice('admins').includes(e.auth.id)) throw new ForbiddenError('Solo quien organiza el grupo.');
+    for (const inv of $app.findRecordsByFilter('invites', 'group = {:g} && revoked = false', '', 0, 0, { g: group.id })) {
+      inv.set('revoked', true);
+      $app.save(inv);
+    }
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Expulsar a alguien (auditoría G-3): sus reservas y aportaciones se borran; los enlaces, anulados ———
+routerAdd(
+  'POST',
+  '/api/lazo/expel',
+  (e) => {
+    const body = e.requestInfo().body;
+    const group = $app.findRecordById('groups', String(body.group || ''));
+    const who = String(body.user || '');
+    if (!group.getStringSlice('admins').includes(e.auth.id) || who === group.getString('owner') || who === e.auth.id) throw new ForbiddenError('No puedes expulsar a esa persona.');
+    $app.runInTransaction((tx) => {
+      for (const col of ['claims', 'contributions'])
+        for (const r of tx.findRecordsByFilter(col, 'user = {:u} && item.list.group = {:g}', '', 0, 0, { u: who, g: group.id })) tx.delete(r);
+      for (const l of tx.findRecordsByFilter('lists', 'user = {:u} && group = {:g}', '', 0, 0, { u: who, g: group.id })) tx.delete(l);
+      for (const inv of tx.findRecordsByFilter('invites', 'group = {:g} && revoked = false', '', 0, 0, { g: group.id })) {
+        inv.set('revoked', true);
+        tx.save(inv);
+      }
+      group.set('members-', who);
+      group.set('admins-', who);
+      tx.save(group);
+    });
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Cerrar sesión en todos los dispositivos (auditoría G-4) ———
+routerAdd(
+  'POST',
+  '/api/lazo/logout-all',
+  (e) => {
+    e.auth.refreshTokenKey();
+    $app.save(e.auth);
+    return $apis.recordAuthResponse(e, e.auth, 'rotate');
   },
   $apis.requireAuth('users'),
 );

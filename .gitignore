@@ -25,3 +25,8 @@ server/unfurl/meta.mjs
 server/pb/pb_hooks/lib/
 server/pb/pb_data/
 server/pb/pb_public/
+android/app/build/
+android/.gradle/
+android/build/
+android/app/src/main/assets/public/
+server/data/

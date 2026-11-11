@@ -88,9 +88,11 @@ export class PocketBaseApi implements Api {
 
   importItems = (listId: Id, drafts: ItemDraft[]) =>
     this.run(async () => {
-      const batch = this.pb.createBatch();
-      for (const d of drafts) batch.collection('items').create({ ...d, list: listId, createdBy: this.uid(), currency: 'EUR' });
-      await batch.send();
+      for (let i = 0; i < drafts.length; i += 50) {
+        const batch = this.pb.createBatch();
+        for (const d of drafts.slice(i, i + 50)) batch.collection('items').create({ ...d, list: listId, createdBy: this.uid(), currency: 'EUR' });
+        await batch.send();
+      }
       return drafts.length;
     });
 

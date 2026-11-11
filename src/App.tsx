@@ -1,4 +1,4 @@
-import { ArrowLeft, Gift, ShoppingBag, Shuffle, SquaresFour } from '@phosphor-icons/react';
+import { ArrowLeft, Gear, Gift, ShoppingBag, Shuffle, SquaresFour } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { DemoApi } from './api/demo';
 import type { Api } from './api/types';
@@ -11,6 +11,7 @@ import { Home } from './ui/screens/Home';
 import { Join } from './ui/screens/Join';
 import { ListScreen } from './ui/screens/List';
 import { Purchases } from './ui/screens/Purchases';
+import { Settings } from './ui/screens/Settings';
 import type { Title } from './ui/title';
 
 export function App({ api }: { api: Api }) {
@@ -31,12 +32,15 @@ export function App({ api }: { api: Api }) {
   } else if (section === 'sorteo' && id) {
     screen = <DrawScreen groupId={id} />;
     t = { name: 'Amigo invisible', back: `/g/${id}` };
+  } else if (section === 'ajustes') {
+    screen = <Settings />;
+    t = { name: 'Ajustes', back: '/' };
   } else if (section === 'unirse' && id) {
     screen = <Join token={id} />;
     t = { name: 'Bienvenida' };
   } else {
     screen = <Home />;
-    t = { name: 'Tus grupos', sub: 'Lazo · listas de regalos en familia' };
+    t = { name: 'Tus grupos', sub: 'Lazo · listas de regalos en familia', actions: <IconButton icon={Gear} label="Ajustes" onBox onClick={() => go('/ajustes')} /> };
   }
   const d = daysUntil(t.date);
 

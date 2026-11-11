@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+dist
+dist-demo
+server/data
+test-results
+android
+docs

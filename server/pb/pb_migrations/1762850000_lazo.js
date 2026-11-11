@@ -6,8 +6,9 @@
 const ME = '@request.auth.id';
 const AUTH = `${ME} != ""`;
 // Sobre un regalo: soy del grupo y la lista NO es mía (las de niños, sin user, las ven todos).
-const SEE_ITEM = `item.list.group.members ?= ${ME} && item.list.user != ${ME}`;
-const SEE_LIST = `list.group.members ?= ${ME} && list.user != ${ME}`;
+// Todas las reglas empiezan por AUTH (auditoría G-7: "" y NULL se confunden con visitantes sin sesión).
+const SEE_ITEM = `${AUTH} && item.list.group.members ?= ${ME} && item.list.user != ${ME}`;
+const SEE_LIST = `${AUTH} && list.group.members ?= ${ME} && list.user != ${ME}`;
 
 migrate(
   (app) => {
@@ -18,6 +19,9 @@ migrate(
     users.deleteRule = `id = ${ME}`;
     users.passwordAuth.enabled = false; // sin contraseñas: token de 180 días que se renueva al abrir la app
     users.authToken.duration = 15552000;
+    users.authAlert.enabled = false; // los correos son sintéticos (@lazo.invalid)
+    const nameField = users.fields.getByName('name');
+    if (nameField) nameField.max = 40;
     app.save(users);
 
     const col = (def) => {
@@ -37,12 +41,13 @@ migrate(
         rel('owner', users),
         rel('members', users, { maxSelect: 500 }),
         rel('admins', users, { maxSelect: 50 }),
+        { type: 'number', name: 'drawRounds', onlyInt: true, min: 0 },
       ],
-      listRule: `members ?= ${ME}`,
-      viewRule: `members ?= ${ME}`,
+      listRule: `${AUTH} && members ?= ${ME}`,
+      viewRule: `${AUTH} && members ?= ${ME}`,
       createRule: AUTH, // el hook fija owner, members y admins
-      updateRule: `admins ?= ${ME} && @request.body.members:isset = false && @request.body.admins:isset = false && @request.body.owner:isset = false`,
-      deleteRule: `owner = ${ME}`,
+      updateRule: `${AUTH} && admins ?= ${ME} && @request.body.members:isset = false && @request.body.admins:isset = false && @request.body.owner:isset = false && @request.body.drawRounds:isset = false`,
+      deleteRule: `${AUTH} && owner = ${ME}`,
     });
 
     const lists = col({
@@ -55,16 +60,16 @@ migrate(
         { type: 'number', name: 'birthYear', onlyInt: true, min: 2000, max: 2100 },
         { type: 'text', name: 'notes', max: 500 },
       ],
-      listRule: `group.members ?= ${ME}`,
-      viewRule: `group.members ?= ${ME}`,
+      listRule: `${AUTH} && group.members ?= ${ME}`,
+      viewRule: `${AUTH} && group.members ?= ${ME}`,
       // Las listas de miembros las crea el hook al entrar; desde la API solo listas de niños.
-      createRule: `group.admins ?= ${ME} && user = "" && managers ?= ${ME}`,
-      updateRule: `group.members ?= ${ME} && (user = ${ME} || managers ?= ${ME}) && @request.body.group:isset = false && @request.body.user:isset = false && @request.body.managers:isset = false`,
-      deleteRule: `user = "" && managers ?= ${ME}`,
+      createRule: `${AUTH} && group.admins ?= ${ME} && user = "" && managers ?= ${ME}`,
+      updateRule: `${AUTH} && group.members ?= ${ME} && (user = ${ME} || managers ?= ${ME}) && @request.body.group:isset = false && @request.body.user:isset = false && @request.body.managers:isset = false`,
+      deleteRule: `${AUTH} && group.members ?= ${ME} && user = "" && managers ?= ${ME}`,
       indexes: ['CREATE INDEX idx_lists_group ON lists (`group`)'],
     });
 
-    const EDIT_LIST = `list.group.members ?= ${ME} && (list.user = ${ME} || list.managers ?= ${ME})`;
+    const EDIT_LIST = `${AUTH} && list.group.members ?= ${ME} && (list.user = ${ME} || list.managers ?= ${ME})`;
     const items = col({
       name: 'items',
       fields: [
@@ -82,8 +87,8 @@ migrate(
         { type: 'text', name: 'notes', max: 1000 },
         rel('createdBy', users),
       ],
-      listRule: `list.group.members ?= ${ME}`,
-      viewRule: `list.group.members ?= ${ME}`,
+      listRule: `${AUTH} && list.group.members ?= ${ME}`,
+      viewRule: `${AUTH} && list.group.members ?= ${ME}`,
       createRule: `${EDIT_LIST} && createdBy = ${ME}`,
       updateRule: `${EDIT_LIST} && @request.body.list:isset = false && @request.body.createdBy:isset = false`,
       deleteRule: EDIT_LIST,
@@ -102,7 +107,7 @@ migrate(
       viewRule: SEE_ITEM,
       createRule: `${SEE_ITEM} && user = ${ME}`,
       updateRule: `user = ${ME} && ${SEE_ITEM} && @request.body.item:isset = false && @request.body.user:isset = false && @request.body.units:isset = false`,
-      deleteRule: `user = ${ME}`,
+      deleteRule: `${AUTH} && user = ${ME}`,
       indexes: ['CREATE UNIQUE INDEX idx_claims_item_user ON claims (item, user)'],
     });
 
@@ -119,7 +124,7 @@ migrate(
       createRule: `${SEE_ITEM} && user = ${ME}`,
       // Cualquiera del grupo (menos el destinatario) marca «pagado»; el importe solo lo cambia quien lo puso.
       updateRule: `${SEE_ITEM} && @request.body.item:isset = false && @request.body.user:isset = false && (user = ${ME} || @request.body.amountCents:isset = false)`,
-      deleteRule: `user = ${ME}`,
+      deleteRule: `${AUTH} && user = ${ME}`,
       indexes: ['CREATE UNIQUE INDEX idx_contrib_item_user ON contributions (item, user)'],
     });
 
@@ -143,11 +148,12 @@ migrate(
         rel('group', groups, { required: true, cascadeDelete: true }),
         { type: 'number', name: 'budgetCents', onlyInt: true, min: 0, max: 100000000 },
         { type: 'json', name: 'exclusions', maxSize: 20000 },
+        { type: 'number', name: 'round', onlyInt: true, min: 0 },
         rel('participants', users, { maxSelect: 500 }),
         rel('createdBy', users),
       ],
-      listRule: `group.members ?= ${ME}`,
-      viewRule: `group.members ?= ${ME}`,
+      listRule: `${AUTH} && group.members ?= ${ME}`,
+      viewRule: `${AUTH} && group.members ?= ${ME}`,
       createRule: null, // solo el hook /api/lazo/draw
       updateRule: null,
       deleteRule: null,
@@ -157,8 +163,8 @@ migrate(
       name: 'assignments',
       fields: [rel('draw', draws, { required: true, cascadeDelete: true }), rel('giver', users, { required: true }), rel('receiver', users, { required: true })],
       // Cada uno ve SOLO a quién le regala. Ni quien organiza ve el resto.
-      listRule: `giver = ${ME}`,
-      viewRule: `giver = ${ME}`,
+      listRule: `${AUTH} && giver = ${ME}`,
+      viewRule: `${AUTH} && giver = ${ME}`,
       createRule: null,
       updateRule: null,
       deleteRule: null,
@@ -196,13 +202,21 @@ migrate(
     });
 
     // Ver a otra persona solo si compartimos grupo (nombre y color; el correo es sintético y oculto).
-    users.listRule = `id = ${ME} || groups_via_members.members ?= ${ME}`;
+    users.listRule = `${AUTH} && (id = ${ME} || groups_via_members.members ?= ${ME})`;
     users.viewRule = users.listRule;
     app.save(users);
 
     const s = app.settings();
     s.rateLimits.enabled = true;
+    // Detrás de Caddy (auditoría G-2): la IP real viene en X-Forwarded-For, que Caddy sobrescribe.
+    s.trustedProxy.headers = ['X-Forwarded-For'];
+    s.trustedProxy.useLeftmostIP = false;
+    s.logs.logIP = false; // app familiar: sin IP en los registros (G-16)
+    s.batch.enabled = true; // importar Excel en lotes de 50 (G-15)
+    s.batch.maxRequests = 50;
     s.rateLimits.rules = [
+      { label: '*:auth', maxRequests: 2, duration: 3, audience: '' },
+      { label: 'POST /api/lazo/device-code', maxRequests: 5, duration: 60, audience: '@auth' },
       { label: 'POST /api/lazo/join', maxRequests: 10, duration: 60, audience: '' },
       { label: 'POST /api/lazo/device-claim', maxRequests: 10, duration: 60, audience: '' },
       { label: 'POST /api/lazo/unfurl', maxRequests: 20, duration: 60, audience: '@auth' },

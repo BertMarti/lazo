@@ -6,10 +6,12 @@
 		X-Frame-Options "DENY"
 		Referrer-Policy "no-referrer"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+		Cross-Origin-Opener-Policy "same-origin"
 		-Server
 	}
-	# El panel de administración de PocketBase no se publica: entra por la LAN o por HEIMDALL (VPN).
-	@admin path /_/*
+	# El panel y la API de administración de PocketBase no se publican: entra por la LAN o por HEIMDALL (VPN).
+	@admin path /_ /_/* /api/collections/_superusers /api/collections/_superusers/* /api/settings* /api/logs* /api/backups* /api/crons*
 	respond @admin 404
 	reverse_proxy pocketbase:8090
 }
