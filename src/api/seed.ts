@@ -1,6 +1,6 @@
-import type { Claim, Contribution, Draw, GiftList, Group, Item, Membership, User } from '../core/types';
+import type { Budget, Claim, Contribution, Draw, GiftList, Group, Item, Membership, User } from '../core/types';
 
-/** Datos ficticios de la demo: la familia Robles. Cualquier parecido con una familia real es casualidad. */
+/** Datos ficticios de la demo: una familia de cinco. Productos, tiendas y precios inventados. */
 export interface DemoData {
   users: User[];
   groups: Group[];
@@ -9,84 +9,100 @@ export interface DemoData {
   items: Item[];
   claims: Claim[];
   contributions: Contribution[];
+  budgets: Budget[];
   draws: Draw[];
   assignments: { draw: string; giver: string; receiver: string }[];
 }
 
 const u = (id: string, name: string, color: string): User => ({ id, name, color });
 
+export const FAMILY = ['alberto', 'juancarlos', 'samira', 'mama', 'papa'] as const;
+
 export function seed(): DemoData {
   const users = [
-    u('marta', 'Marta', 'fresa'),
-    u('pablo', 'Pablo', 'menta'),
-    u('lucia', 'Lucía', 'limon'),
-    u('jorge', 'Jorge', 'cielo'),
-    u('carmen', 'Abuela Carmen', 'violeta'),
+    u('alberto', 'Alberto', 'cielo'),
+    u('juancarlos', 'Juan Carlos', 'menta'),
+    u('samira', 'Samira', 'fresa'),
+    u('mama', 'Mamá', 'violeta'),
+    u('papa', 'Papá', 'canela'),
   ];
   const groups: Group[] = [
-    { id: 'navidad', name: 'Navidad en casa de la abuela', occasion: 'navidad', date: '2026-12-24', currency: 'EUR', owner: 'marta' },
-    { id: 'cumple-carmen', name: 'Los 80 de la abuela', occasion: 'cumpleanos', date: '2027-02-03', currency: 'EUR', owner: 'lucia' },
+    { id: 'navidad', name: 'Navidad en familia', occasion: 'navidad', date: '2026-12-24', currency: 'EUR', owner: 'alberto' },
+    { id: 'cumple-mama', name: 'Cumpleaños de Mamá', occasion: 'cumpleanos', date: '2027-03-14', currency: 'EUR', owner: 'samira' },
   ];
   const memberships: Membership[] = [
-    ...users.map((x, i) => ({ id: `m-n-${x.id}`, group: 'navidad', user: x.id, role: i === 0 ? ('admin' as const) : ('member' as const) })),
-    ...users.map((x) => ({ id: `m-c-${x.id}`, group: 'cumple-carmen', user: x.id, role: x.id === 'lucia' ? ('admin' as const) : ('member' as const) })),
+    ...users.map((x) => ({ id: `m-n-${x.id}`, group: 'navidad', user: x.id, role: x.id === 'alberto' ? ('admin' as const) : ('member' as const) })),
+    ...users.map((x) => ({ id: `m-c-${x.id}`, group: 'cumple-mama', user: x.id, role: x.id === 'samira' ? ('admin' as const) : ('member' as const) })),
   ];
   const lists: GiftList[] = [
     ...users.map((x) => ({ id: `l-${x.id}`, group: 'navidad', name: x.name, user: x.id, managers: [] })),
-    { id: 'l-vera', group: 'navidad', name: 'Vera', managers: ['marta', 'pablo'], birthYear: 2020, notes: 'Le encantan los animales y pintar.' },
-    { id: 'l-carmen-80', group: 'cumple-carmen', name: 'Abuela Carmen', user: 'carmen', managers: [] },
+    { id: 'l-mama-cumple', group: 'cumple-mama', name: 'Mamá', user: 'mama', managers: [] },
   ];
   let n = 0;
   const it = (list: string, title: string, o: Partial<Item> = {}): Item => ({
-    id: `i${++n}`, list, title, currency: 'EUR', priority: 2, quantity: 1, createdBy: list.slice(2), ...o,
+    id: `i${++n}`, list, title, currency: 'EUR', priority: 2, quantity: 1, createdBy: list.replace(/^l-|-cumple$/g, ''), ...o,
   });
   const items: Item[] = [
-    it('l-marta', 'Auriculares inalámbricos con cancelación de ruido', { priceCents: 8999, store: 'Amazon', url: 'https://www.amazon.es/s?k=auriculares+cancelacion+ruido', priority: 1, color: 'Negro' }),
-    it('l-marta', 'Novela «La casa de los veranos»', { priceCents: 2190, store: 'Librería del Puerto', notes: 'En tapa dura si puede ser.' }),
-    it('l-marta', 'Taller de cerámica para dos', { priceCents: 6500, store: 'Barro y Fuego', priority: 1 }),
-    it('l-marta', 'Calcetines de lana gruesa', { priceCents: 1200, store: 'Lanas Norte', size: '38–40', quantity: 2, priority: 3 }),
-    it('l-pablo', 'Bicicleta de montaña', { priceCents: 54900, store: 'Bici Norte', size: 'L', priority: 1, notes: 'La gris, no la roja.' }),
-    it('l-pablo', 'Cafetera italiana de 6 tazas', { priceCents: 3495, store: 'Amazon', url: 'https://www.amazon.es/s?k=cafetera+italiana+6+tazas' }),
-    it('l-pablo', 'Guantes de ciclismo de invierno', { priceCents: 2900, store: 'Bici Norte', size: 'M', priority: 2 }),
-    it('l-lucia', 'Lámpara de lectura de pinza', { priceCents: 3990, store: 'Casa Clara', priority: 1 }),
-    it('l-lucia', 'Plantas: monstera mediana', { priceCents: 2800, store: 'Vivero San Juan', priority: 2 }),
-    it('l-lucia', 'Pijama de franela', { priceCents: 3500, store: 'Textil Robles', size: 'S', color: 'Verde', priority: 3 }),
-    it('l-jorge', 'Juego de mesa cooperativo', { priceCents: 4495, store: 'Amazon', url: 'https://www.amazon.es/s?k=juego+de+mesa+cooperativo', priority: 1 }),
-    it('l-jorge', 'Cuchillo de chef', { priceCents: 7900, store: 'Cuchillería Toledo', priority: 2 }),
-    it('l-carmen', 'Marco digital de fotos', { priceCents: 12900, store: 'Amazon', url: 'https://www.amazon.es/s?k=marco+digital+fotos', priority: 1, notes: 'Para ver las fotos de los nietos.' }),
-    it('l-carmen', 'Chal de lana merino', { priceCents: 4900, store: 'Lanas Norte', color: 'Burdeos', priority: 2 }),
-    it('l-vera', 'Caja de acuarelas con 24 colores', { priceCents: 1890, store: 'Papelería Olga', priority: 1, createdBy: 'marta' }),
-    it('l-vera', 'Peluche de zorro grande', { priceCents: 2500, store: 'Juguetes Pompa', priority: 1, createdBy: 'pablo' }),
-    it('l-vera', 'Libro de pegatinas de animales', { priceCents: 990, store: 'Librería del Puerto', priority: 2, createdBy: 'marta' }),
-    it('l-vera', 'Bicicleta sin pedales', { priceCents: 8900, store: 'Bici Norte', priority: 1, createdBy: 'marta', notes: 'Talla para 6 años.' }),
-    it('l-carmen-80', 'Viaje a Lisboa con las hermanas', { priceCents: 60000, store: 'Agencia Brisa', priority: 1, notes: 'Lo que más ilusión le hace.' }),
-    it('l-carmen-80', 'Álbum de fotos de familia', { priceCents: 3900, store: 'Papelería Olga', priority: 2 }),
+    // Mamá
+    it('l-mama', 'Marco digital de fotos', { priceCents: 12900, store: 'Amazon', url: 'https://www.amazon.es/s?k=marco+digital+fotos', priority: 1, notes: 'Para ver las fotos de los nietos.' }), // i1
+    it('l-mama', 'Chal de lana merino', { priceCents: 4900, store: 'Lanas Norte', color: 'Burdeos', priority: 2 }), // i2
+    it('l-mama', 'Robot de cocina', { priceCents: 34900, store: 'Hogar Plaza', priority: 1, notes: 'El que tiene báscula.' }), // i3
+    it('l-mama', 'Novela «La casa de los veranos»', { priceCents: 2190, store: 'Librería del Puerto', priority: 3 }), // i4
+    // Papá
+    it('l-papa', 'Cafetera italiana de 6 tazas', { priceCents: 3495, store: 'Amazon', url: 'https://www.amazon.es/s?k=cafetera+italiana+6+tazas', priority: 1 }), // i5
+    it('l-papa', 'Guantes de piel para conducir', { priceCents: 3900, store: 'Marroquinería Sol', size: 'L', priority: 2 }), // i6
+    it('l-papa', 'Entradas para el fútbol', { priceCents: 9000, store: 'Taquilla', quantity: 2, priority: 1 }), // i7
+    // Alberto
+    it('l-alberto', 'Auriculares inalámbricos con cancelación de ruido', { priceCents: 8999, store: 'Amazon', url: 'https://www.amazon.es/s?k=auriculares+cancelacion+ruido', priority: 1, color: 'Negro' }), // i8
+    it('l-alberto', 'Teclado mecánico compacto', { priceCents: 7900, store: 'Amazon', url: 'https://www.amazon.es/s?k=teclado+mecanico+compacto', priority: 2 }), // i9
+    it('l-alberto', 'Sudadera de algodón orgánico', { priceCents: 4500, store: 'Textil Robles', size: 'M', color: 'Gris', priority: 3 }), // i10
+    // Juan Carlos
+    it('l-juancarlos', 'Juego de mesa cooperativo', { priceCents: 4495, store: 'Amazon', url: 'https://www.amazon.es/s?k=juego+de+mesa+cooperativo', priority: 1 }), // i11
+    it('l-juancarlos', 'Cuchillo de chef', { priceCents: 7900, store: 'Cuchillería Toledo', priority: 2 }), // i12
+    it('l-juancarlos', 'Mochila de senderismo 30 L', { priceCents: 6900, store: 'Montaña Shop', priority: 2 }), // i13
+    // Samira
+    it('l-samira', 'Lámpara de lectura de pinza', { priceCents: 3990, store: 'Casa Clara', priority: 1 }), // i14
+    it('l-samira', 'Monstera mediana', { priceCents: 2800, store: 'Vivero San Juan', priority: 2 }), // i15
+    it('l-samira', 'Taller de cerámica para dos', { priceCents: 6500, store: 'Barro y Fuego', priority: 1 }), // i16
+    it('l-samira', 'Pijama de franela', { priceCents: 3500, store: 'Textil Robles', size: 'S', color: 'Verde', priority: 3 }), // i17
+    // Cumpleaños de Mamá
+    it('l-mama-cumple', 'Escapada a Lisboa con sus hermanas', { priceCents: 60000, store: 'Agencia Brisa', priority: 1 }), // i18
+    it('l-mama-cumple', 'Álbum de fotos de familia', { priceCents: 3900, store: 'Papelería Olga', priority: 2 }), // i19
   ];
   const claims: Claim[] = [
-    { id: 'c1', item: 'i1', user: 'pablo', status: 'bought', units: 1 }, // auriculares de Marta: ¡no debe verlo!
-    { id: 'c2', item: 'i4', user: 'carmen', status: 'reserved', units: 1 },
-    { id: 'c3', item: 'i6', user: 'marta', status: 'reserved', units: 1 },
-    { id: 'c4', item: 'i8', user: 'jorge', status: 'bought', units: 1 },
-    { id: 'c5', item: 'i15', user: 'lucia', status: 'reserved', units: 1 },
-    { id: 'c6', item: 'i13', user: 'marta', status: 'reserved', units: 1 },
+    { id: 'c1', item: 'i1', user: 'alberto', status: 'reserved', units: 1 }, // marco de Mamá: Mamá no lo ve
+    { id: 'c2', item: 'i2', user: 'samira', status: 'bought', units: 1 },
+    { id: 'c3', item: 'i5', user: 'juancarlos', status: 'bought', units: 1 },
+    { id: 'c4', item: 'i7', user: 'alberto', status: 'reserved', units: 1 },
+    { id: 'c5', item: 'i8', user: 'samira', status: 'bought', units: 1 }, // auriculares de Alberto: Alberto no lo ve
+    { id: 'c6', item: 'i14', user: 'mama', status: 'reserved', units: 1 },
+    { id: 'c7', item: 'i11', user: 'papa', status: 'reserved', units: 1 },
   ];
   const contributions: Contribution[] = [
-    { id: 'p1', item: 'i5', user: 'marta', amountCents: 20000, paid: false },
-    { id: 'p2', item: 'i5', user: 'lucia', amountCents: 15000, paid: true },
-    { id: 'p3', item: 'i19', user: 'marta', amountCents: 15000, paid: false },
-    { id: 'p4', item: 'i19', user: 'jorge', amountCents: 15000, paid: false },
+    { id: 'p1', item: 'i3', user: 'juancarlos', amountCents: 10000, paid: false }, // robot de cocina a medias
+    { id: 'p2', item: 'i3', user: 'papa', amountCents: 15000, paid: true },
+    { id: 'p3', item: 'i18', user: 'alberto', amountCents: 15000, paid: false },
+    { id: 'p4', item: 'i18', user: 'samira', amountCents: 15000, paid: false },
+  ];
+  const budgets: Budget[] = [
+    { id: 'b1', list: 'l-mama', amountCents: 40000 },
+    { id: 'b2', list: 'l-papa', amountCents: 20000 },
+    { id: 'b3', list: 'l-alberto', amountCents: 15000 },
+    { id: 'b4', list: 'l-juancarlos', amountCents: 15000 },
+    { id: 'b5', list: 'l-samira', amountCents: 15000 },
+    { id: 'b6', list: 'l-mama-cumple', amountCents: 50000 },
   ];
   const draws: Draw[] = [
-    { id: 'd1', group: 'navidad', budgetCents: 3000, exclusions: [['marta', 'pablo'], ['lucia', 'jorge']], participants: users.map((x) => x.id), createdBy: 'marta' },
+    { id: 'd1', group: 'navidad', budgetCents: 3000, exclusions: [['mama', 'papa']], participants: users.map((x) => x.id), createdBy: 'alberto' },
   ];
   const assignments = [
-    { draw: 'd1', giver: 'marta', receiver: 'jorge' },
-    { draw: 'd1', giver: 'pablo', receiver: 'carmen' },
-    { draw: 'd1', giver: 'lucia', receiver: 'marta' },
-    { draw: 'd1', giver: 'jorge', receiver: 'pablo' },
-    { draw: 'd1', giver: 'carmen', receiver: 'lucia' },
+    { draw: 'd1', giver: 'alberto', receiver: 'samira' },
+    { draw: 'd1', giver: 'samira', receiver: 'papa' },
+    { draw: 'd1', giver: 'papa', receiver: 'juancarlos' },
+    { draw: 'd1', giver: 'juancarlos', receiver: 'mama' },
+    { draw: 'd1', giver: 'mama', receiver: 'alberto' },
   ];
-  return { users, groups, memberships, lists, items, claims, contributions, draws, assignments };
+  return { users, groups, memberships, lists, items, claims, contributions, budgets, draws, assignments };
 }
 
 /** Fichas preparadas para enlaces de ejemplo: la demo no tiene servidor que descargue páginas. */

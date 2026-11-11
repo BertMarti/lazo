@@ -104,3 +104,17 @@ describe('amigo invisible', () => {
     expect(() => drawPairs(['a', 'b', 'c', 'd'], [['b', 'c'], ['b', 'd'], ['c', 'd']], seeded(3))).toThrow(DrawImpossible);
   });
 });
+
+import { budgetProgress, committedOn } from '../../src/core/budget';
+describe('presupuesto', () => {
+  const items = [item({ id: 'a', priceCents: 3000, quantity: 2 }), item({ id: 'b', priceCents: 10000 }), item({ id: 'c' })];
+  it('suma unidades reservadas por precio y, si va a medias, las aportaciones', () => {
+    const claims = [claim({ item: 'a' }), claim({ item: 'a', user: 'x' }), claim({ item: 'c' })];
+    const pot = [{ ...contrib('p', 2500), item: 'b' }];
+    expect(committedOn(items, claims, pot)).toBe(6000 + 2500);
+  });
+  it('restante, exceso y barra', () => {
+    expect(budgetProgress(5000, items, [claim({ item: 'b' })], [])).toMatchObject({ committed: 10000, left: -5000, over: true, percent: 100 });
+    expect(budgetProgress(0, items, [], [])).toMatchObject({ percent: 0, over: false });
+  });
+});

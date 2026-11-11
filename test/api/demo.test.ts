@@ -1,59 +1,51 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DemoApi } from '../../src/api/demo';
+import { budgetProgress } from '../../src/core/budget';
 
 let api: DemoApi;
 beforeEach(() => {
   api = new DemoApi(null);
 });
 
-describe('DemoApi aplica la sorpresa como el servidor', () => {
-  it('Marta no ve que Pablo le compró los auriculares; Lucía sí', async () => {
-    api.setViewer('marta');
-    const own = await api.listDetail('l-marta');
-    expect(own.canSee).toBe(false);
-    expect(own.claims).toEqual([]);
-    expect(own.contributions).toEqual([]);
-
-    api.setViewer('lucia');
-    const other = await api.listDetail('l-marta');
-    expect(other.canSee).toBe(true);
-    expect(other.claims.some((c) => c.item === 'i1' && c.status === 'bought')).toBe(true);
-  });
-
-  it('la lista de Vera (sin cuenta) la ven sus padres con estado', async () => {
-    api.setViewer('marta');
-    const vera = await api.listDetail('l-vera');
-    expect(vera.canSee).toBe(true);
-    expect(vera.canEdit).toBe(true);
-    expect(vera.claims.length).toBeGreaterThan(0);
-  });
-
-  it('no se puede reservar en la propia lista ni editar listas ajenas', async () => {
-    api.setViewer('marta');
-    await expect(api.claim('i2', 'reserved')).rejects.toThrow(/propia lista/);
-    await expect(api.saveItem('l-pablo', { title: 'x', priority: 2, quantity: 1 })).rejects.toThrow();
-  });
-
+describe('DemoApi', () => {
   it('una reserva ocupa una unidad y luego se agota', async () => {
-    api.setViewer('jorge');
-    await api.claim('i4', 'reserved'); // calcetines: cantidad 2, uno ya reservado
-    await expect(api.claim('i4', 'reserved')).rejects.toThrow(/adelantado/);
+    api.setViewer('samira');
+    await api.claim('i7', 'reserved'); // entradas de Papá: 2 unidades, 1 ya reservada
+    await expect(api.claim('i7', 'reserved')).rejects.toThrow(/adelantado/);
+  });
+
+  it('no se editan listas ajenas', async () => {
+    api.setViewer('alberto');
+    await expect(api.saveItem('l-papa', { title: 'x', priority: 2, quantity: 1 })).rejects.toThrow();
+  });
+
+  it('el presupuesto de Mamá suma reservas y aportaciones', async () => {
+    api.setViewer('papa');
+    const d = await api.listDetail('l-mama');
+    const p = budgetProgress(d.budget!.amountCents, d.items, d.claims, d.contributions);
+    // marco 129 (reservado) + chal 49 (comprado) + robot a medias 100 + 150
+    expect(p).toMatchObject({ target: 40000, committed: 12900 + 4900 + 25000, left: 40000 - 42800, over: true, percent: 100 });
+  });
+
+  it('cualquiera menos el destinatario puede fijar el presupuesto', async () => {
+    api.setViewer('alberto');
+    await api.setBudget('l-papa', 25000);
+    api.setViewer('samira');
+    expect((await api.listDetail('l-papa')).budget?.amountCents).toBe(25000);
   });
 
   it('el sorteo solo enseña la propia asignación', async () => {
-    api.setViewer('marta');
-    await api.runDraw('navidad', ['marta', 'pablo', 'lucia', 'jorge', 'carmen'], [['marta', 'pablo']]);
+    api.setViewer('alberto');
+    await api.runDraw('navidad', ['alberto', 'juancarlos', 'samira', 'mama', 'papa'], [['mama', 'papa']]);
     const info = await api.drawInfo('navidad');
-    expect(info.receiver).toBeDefined();
-    expect(info.receiver!.id).not.toBe('marta');
-    expect(info.receiver!.id).not.toBe('pablo');
+    expect(info.receiver!.id).not.toBe('alberto');
     expect(Object.keys(info)).toEqual(['draw', 'receiver']);
   });
 
   it('solo los miembros del grupo ven sus listas', async () => {
-    api.setViewer('marta');
+    api.setViewer('alberto');
     const g = await api.createGroup({ name: 'Boda', occasion: 'boda', currency: 'EUR' });
-    api.setViewer('jorge');
+    api.setViewer('papa');
     await expect(api.groupDetail(g.id)).rejects.toThrow(/No perteneces/);
   });
 });

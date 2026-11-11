@@ -7,7 +7,7 @@ import { canEditList, canSeeStatus } from '../core/visibility';
 import { DEMO_UNFURL, seed, type DemoData } from './seed';
 import { ApiError, type Api, type DrawInfo, type GroupDetail, type ItemInput, type ListDetail, type NewGroup, type Purchase } from './types';
 
-const KEY = 'lazo-demo-v1';
+const KEY = 'lazo-demo-v2';
 
 /**
  * Backend simulado de la demo pública: todo en memoria y en localStorage del navegador.
@@ -20,7 +20,9 @@ export class DemoApi implements Api {
 
   constructor(private storage: Storage | null = typeof localStorage === 'undefined' ? null : localStorage) {
     this.db = this.load() ?? seed();
-    this.viewer = this.read('viewer') ?? 'marta';
+    this.viewer = this.read('viewer') ?? 'alberto';
+    if (!this.db.users.some((u) => u.id === this.viewer)) this.viewer = 'alberto';
+    this.db.budgets ??= [];
   }
 
   /** «Ver como…»: solo existe en la demo. */
@@ -65,6 +67,7 @@ export class DemoApi implements Api {
       items,
       claims: canSee ? this.db.claims.filter((c) => ids.has(c.item)) : [],
       contributions: canSee ? this.db.contributions.filter((c) => ids.has(c.item)) : [],
+      budget: canSee ? this.db.budgets.find((b) => b.list === listId) : undefined,
       canSee,
       canEdit: canEditList(this.viewer, list),
     };
@@ -108,6 +111,15 @@ export class DemoApi implements Api {
     this.db.items = this.db.items.filter((i) => i.id !== id);
     this.db.claims = this.db.claims.filter((c) => c.item !== id);
     this.db.contributions = this.db.contributions.filter((c) => c.item !== id);
+    this.save();
+  }
+
+
+  async setBudget(listId: Id, amountCents: Cents | null) {
+    const list = this.list(listId);
+    if (!canSeeStatus(this.viewer, list)) throw new ApiError('Tu propio presupuesto no lo puedes ver ni cambiar.');
+    this.db.budgets = this.db.budgets.filter((b) => b.list !== listId);
+    if (amountCents !== null) this.db.budgets.push({ id: uid(), list: listId, amountCents });
     this.save();
   }
 

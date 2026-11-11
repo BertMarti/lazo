@@ -73,6 +73,13 @@ export interface Contribution {
   paid: boolean;
 }
 
+/** Presupuesto que el grupo destina a una persona (a su lista). Su destinatario NUNCA lo ve. */
+export interface Budget {
+  id: Id;
+  list: Id;
+  amountCents: Cents;
+}
+
 export interface Draw {
   id: Id;
   group: Id;

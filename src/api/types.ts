@@ -1,6 +1,6 @@
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
-import type { Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, Occasion, User } from '../core/types';
+import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, Occasion, User } from '../core/types';
 
 export interface Member extends User {
   role: 'admin' | 'member';
@@ -19,6 +19,8 @@ export interface ListDetail {
   /** Vacíos SIEMPRE si `canSee` es falso: el servidor ni siquiera los envía. */
   claims: Claim[];
   contributions: Contribution[];
+  /** Presupuesto del grupo para esta persona. Siempre undefined si `canSee` es falso. */
+  budget?: Budget;
   canSee: boolean;
   canEdit: boolean;
 }
@@ -61,6 +63,8 @@ export interface Api {
   addChildList(groupId: Id, name: string, birthYear?: number): Promise<GiftList>;
   saveItem(listId: Id, input: ItemInput, id?: Id): Promise<Item>;
   deleteItem(id: Id): Promise<void>;
+  /** Fija o quita (null) el presupuesto para una persona. Nunca sobre la propia lista. */
+  setBudget(listId: Id, amountCents: Cents | null): Promise<void>;
   importItems(listId: Id, drafts: ItemDraft[]): Promise<number>;
   claim(itemId: Id, status: Claim['status']): Promise<void>;
   setClaimStatus(claimId: Id, status: Claim['status']): Promise<void>;
