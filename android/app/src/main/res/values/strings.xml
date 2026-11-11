@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lazo</string>
+    <string name="title_activity_main">Lazo</string>
+    <string name="package_name">com.bertmarti.lazo</string>
+    <string name="custom_url_scheme">com.bertmarti.lazo</string>
+</resources>

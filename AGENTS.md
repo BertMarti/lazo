@@ -23,6 +23,7 @@ Lazo es una app de listas de regalos en familia: PWA + Android (Capacitor) sobre
 - **Demo:** `npm run dev:demo` y `npm run build:demo` usan `DemoApi`, con la familia Alberto, Juan Carlos, Samira, Mamá y Papá, y sin backend.
 - **Servidor:** `npm run build:server` (genera `meta.mjs` y `pb_hooks/lib/draw.cjs`), `npm run test:server` y, con el binario, `PB_BIN=… node --test server/test/rules.test.mjs`.
 - **APK:** `bash scripts/wsl.sh bash scripts/build-apk.sh`.
+- **IA en vivo (opcional):** con las claves gratuitas en `.env.local` (ignorado por git): `set -a; . ./.env.local; set +a; npm run test:live`. Sin claves, esas pruebas se saltan. Nunca imprimas ni subas las claves; el pre-commit y gitleaks las bloquean.
 - **Secretos:** `git config core.hooksPath .githooks` activa el pre-commit con gitleaks. Las claves van en `.env` (ver `.env.example`), nunca en git.
 - **Versiones:** semver. Cada cambio visible para el usuario va al CHANGELOG (Keep a Changelog, sección «Sin publicar»). Al publicar: subir `package.json`, tag `vX.Y.Z` y GitHub Release con las notas del CHANGELOG.
 - **Commits** pequeños, en español, con la línea `Co-Authored-By` del agente.
