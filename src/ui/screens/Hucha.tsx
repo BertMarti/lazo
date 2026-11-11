@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { HuchaData } from '../../api/types';
-import { collectTable, due, forecast, myShares, type HuchaCtx } from '../../core/hucha';
+import { collectTable, due, forecast, generalProgress, myShares, type HuchaCtx } from '../../core/hucha';
 import { formatMoney, parseAmount } from '../../core/money';
 import type { Id } from '../../core/types';
 import { BudgetBar } from '../BudgetBar';
@@ -31,7 +31,6 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
   const ctx: HuchaCtx = { me: me.id, members: data.members.map((x) => x.id), lists: data.lists, items: data.items, claims: data.claims, payments: data.payments, treasurer: T, deputy: T2, treasurerList: data.group.treasurer };
   const d = due(me.id, ctx);
   const shares = myShares(ctx);
-  const share = shares.reduce((s, x) => s + x.mine, 0);
   const advanced = shares.reduce((s, x) => s + x.advanced, 0);
   const handed = data.payments.filter((p) => p.from === me.id).reduce((s, p) => s + p.amountCents, 0);
   const future = forecast(ctx);
@@ -53,12 +52,15 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
   return (
     <div className="stack-lg" style={{ maxWidth: 744 }}>
       <section className="stack" aria-label="Tu saldo">
-        <p className="meta">La lleva {name(T)}{me.id !== T ? '' : ' (tú)'}</p>
+        <p className="meta">{me.id === T ? 'La llevas tú' : `La lleva ${name(T)}`}</p>
         {d.general > 0 ? (
           <>
             <p style={{ fontWeight: 700 }}>Te falta poner</p>
             <p className="big-money">{m(d.general)}</p>
-            <BudgetBar p={{ target: share - advanced, committed: Math.max(0, share - advanced - d.general), left: d.general, over: false, percent: share - advanced > 0 ? Math.round(((share - advanced - d.general) * 100) / (share - advanced)) : 0 }} label="Lo que has puesto" leftWord="Faltan" />
+            {(() => {
+              const g = generalProgress(ctx);
+              return <BudgetBar p={{ target: g.target, committed: g.put, left: g.target - g.put, over: false, percent: g.target > 0 ? Math.round((g.put * 100) / g.target) : 0 }} label="Lo que has puesto" leftWord="Faltan" />;
+            })()}
             <Button variant="primary" wide onClick={() => setPaying({ from: me.id, to: T, sub: false, amount: d.general, title: `Ya se lo di a ${name(T)}` })}>Ya se lo di a {name(T)}</Button>
           </>
         ) : d.general < 0 ? (
@@ -71,10 +73,10 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
           <p className="h-section">{me.id === T ? 'Llevas la hucha' : 'Estás al día'}</p>
         )}
         {d.aparte > 0 && (
-          <p className="row between wrap">
-            <span>Y {m(d.aparte)} a {name(T2)}, por los regalos de {treasurerName}.</span>
-            <Button variant="secondary" size="sm" onClick={() => setPaying({ from: me.id, to: T2, sub: true, amount: d.aparte, title: `Ya se lo di a ${name(T2)}` })}>Ya se lo di</Button>
-          </p>
+          <>
+            <p>Y {m(d.aparte)} a {name(T2)}, por los regalos de {treasurerName}.</p>
+            <Button variant="secondary" wide onClick={() => setPaying({ from: me.id, to: T2, sub: true, amount: d.aparte, title: `Ya se lo di a ${name(T2)}` })}>Ya se lo di a {name(T2)}</Button>
+          </>
         )}
         {d.aparte < 0 && <p>{name(T2)} te tiene que devolver {m(-d.aparte)} por los regalos de {treasurerName}.</p>}
         <VisibilityNote>Aquí no sale lo que se gasta en ti</VisibilityNote>

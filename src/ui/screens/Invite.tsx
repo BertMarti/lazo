@@ -1,6 +1,6 @@
 import { Baby, Copy, Plus, WhatsappLogo } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Button, ButtonGroup } from '../Button';
+import { Button } from '../Button';
 import { useApi } from '../ctx';
 import { errorText, Sheet, useLoad, useToast } from '../kit';
 
@@ -73,7 +73,7 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
   const free = (data?.lists ?? []).filter((l) => l.kind !== 'child' && !l.user).sort((a, b) => Number(b.id === focusList) - Number(a.id === focusList));
   return (
     <Sheet title="Invitar" onClose={onClose}>
-      <p>Envía a cada uno su enlace. Entra con un toque y nadie puede ocupar su sitio.</p>
+      <p data-autofocus tabIndex={-1} style={{ outline: 'none' }}>Envía a cada uno su enlace. Entra con un toque y nadie puede ocupar su sitio.</p>
       {free.length > 0 ? (
         <ul className="rows">
           {free.map((l) => (
@@ -93,18 +93,19 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
       ) : (
         <p className="meta">Todas las plazas están ocupadas.</p>
       )}
-      <div className="input-row">
-        <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={40} placeholder="Añadir a alguien (nombre)" aria-label="Nombre de la persona" />
+      <label className="field">
+        <span>Añadir a alguien</span>
+        <div className="input-row">
+        <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={40} placeholder="Nombre" />
         <Button variant="secondary" icon={Plus} onClick={add} disabled={!newName.trim()}>Añadir</Button>
-      </div>
+        </div>
+      </label>
 
       <div className="stack" style={{ borderTop: '1px solid var(--line)', paddingTop: 'var(--s-4)' }}>
         <h3 className="h-section">Enlace para todos</h3>
         <p className="meta">Quien lo abra elige su nombre y espera a que le aceptes.</p>
-        <ButtonGroup align="stretch">
-          <Button variant="secondary" icon={Copy} onClick={copy}>Copiar enlace</Button>
-          <Button variant="secondary" icon={WhatsappLogo} loading={busy === 'general'} onClick={() => send()}>Enviar</Button>
-        </ButtonGroup>
+        <Button variant="secondary" wide icon={WhatsappLogo} loading={busy === 'general'} onClick={() => send()}>Enviar el enlace para todos</Button>
+        <Button variant="link" icon={Copy} onClick={copy}>Copiar el enlace</Button>
         {api.demo && <p className="meta">En la demo, el enlace abre la pantalla de entrada de verdad. Pruébalo.</p>}
       </div>
 

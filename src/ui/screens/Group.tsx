@@ -20,6 +20,7 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
   const [inviting, setInviting] = useState<string | boolean>(false);
   const [budgetFor, setBudgetFor] = useState<ListDetail | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [notYet, setNotYet] = useState(false);
 
   const isAdmin = !!data?.detail.members.some((m) => m.id === me?.id && m.role === 'admin');
   useEffect(() => {
@@ -67,11 +68,12 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
           </ButtonGroup>
         </div>
       ))}
-      {!g.revealedAt && g.revealAskedBy && g.revealAskedBy !== me.id && (
+      {!g.revealedAt && g.revealAskedBy && g.revealAskedBy !== me.id && !notYet && (
         <div className="banner">
           <p><b>{nameOf(g.revealAskedBy)} quiere abrir la entrega.</b> Cada uno podrá ver qué le regalaron.</p>
           <ButtonGroup>
             <Button variant="primary" size="sm" loading={busy === 'rv'} onClick={() => run('rv', () => api.reveal(id, 'confirm'), 'Entrega abierta.')}>De acuerdo</Button>
+            <Button variant="link" onClick={() => setNotYet(true)}>Aún no</Button>
           </ButtonGroup>
         </div>
       )}

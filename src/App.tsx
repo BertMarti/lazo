@@ -45,7 +45,7 @@ export function App({ api }: { api: Api }) {
     t = { name: 'Ajustes', back: '/' };
   } else if (section === 'unirse' && id) {
     screen = <Join token={id} onJoined={() => force((n) => n + 1)} />;
-    t = { name: 'Bienvenida' };
+    t = { name: 'Lazo', sub: 'Te han invitado' };
   } else {
     screen = <Home />;
     t = { name: 'Tus grupos', sub: 'Lazo · listas de regalos en familia', actions: <IconButton icon={Gear} label="Ajustes" onBox onClick={() => go('/ajustes')} /> };
@@ -80,7 +80,7 @@ export function App({ api }: { api: Api }) {
             </div>
           </header>
           <main id="contenido">{screen}</main>
-          <nav className="tabbar" aria-label="Principal">
+          <nav className="tabbar" aria-label="Principal" hidden={section === 'unirse'}>
             <a className="brand" href="#/">
               Lazo
             </a>

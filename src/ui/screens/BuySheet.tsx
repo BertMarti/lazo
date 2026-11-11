@@ -66,7 +66,10 @@ export function BuySheet({ item, list, group, members, claim, keeper, onClose, o
       <p style={{ fontWeight: 700 }}>{item.title}</p>
       <label className="field">
         <span>¿Cuánto costó?</span>
-        <input className="input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29,90" autoFocus={!item.priceCents} data-autofocus={item.priceCents ? undefined : true} />
+        <span className="input-row" style={{ alignItems: 'center' }}>
+          <input className="input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29,90" data-autofocus={item.priceCents ? undefined : true} />
+          <span aria-hidden style={{ fontWeight: 700 }}>€</span>
+        </span>
       </label>
       {!claim && group.buyMode === 'mixto' && (
         <fieldset className="field">

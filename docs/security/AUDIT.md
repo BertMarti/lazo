@@ -518,3 +518,245 @@ No he encontrado ninguna llamada mal usada: `routerUse`, `e.request.url.rawQuery
 3. R-2 y G-3: usos, caducidad, revocar, expulsar.
 4. R-3, G-7, G-6.
 5. El resto.
+
+---
+
+## Revisión v0.3 (plazas, hucha, entrega)
+
+Fecha: 2026-11-11 · Alcance: `1762850000_lazo.js`, `1762860000_plazas_hucha.js`, `lazo.pb.js`, `lib/lazo.cjs`, `src/core/hucha.ts`, `Hucha.tsx`, `List.tsx`, `src/api/demo.ts`, `src/api/pocketbase.ts`, `server/test/rules.test.mjs`, contra la spec `2026-11-11-plazas-hucha-design.md`.
+
+**Método y límites.** Revisión estática, igual que la primera: **no he ejecutado PocketBase** (Smart App Control) ni las pruebas. V-1 se deduce solo del código. V-2 y V-4 dependen de semántica de PocketBase que conozco por su código fuente (difusión de tiempo real y filtros por relación) pero no he confirmado con una petición: cada uno lleva su prueba. No se ha tocado código.
+
+### Estado de los hallazgos de la primera auditoría
+
+| Id | Estado | Verificado en |
+|---|---|---|
+| R-1 | **Corregido** | `lazo.pb.js:18-27` (lista blanca de topics) y pruebas `rules.test.mjs:170-190` |
+| R-2 | **Corregido por rediseño** | Enlace personal de 1 uso (`lazo.pb.js:124`); el general ya no da acceso, solo una solicitud (`:184-211`). Queda el riesgo declarado R1 de la spec. Ver V-5 |
+| R-3 | **Pendiente (mitigado)** | `lists.user`, `claims.user`, `contributions.user` siguen sin cascada (`1762850000_lazo.js:58,102,118`). Ahora la plaza queda libre y volver exige enlace o aprobación; ver V-10 |
+| R-4 | **Parcial** | Hay pruebas de tiempo real; siguen faltando `sort=claims_via_item.id` y el filtro con `%5F` en la URL |
+| R-5 | **Corregido** | El hook de `claims` ya no existe; `gift` comprueba dueño y grupo y cuenta dentro de la transacción (`lazo.pb.js:308-335`) |
+| R-6 | **Pendiente (aceptado)** | `index.html:8` sigue con `img-src https:` |
+| G-1 | **Corregido** | `Caddyfile:14-15`; regla `*:auth` en `1762850000_lazo.js:218` |
+| G-2 | **Corregido** | `1762850000_lazo.js:212-213` |
+| G-3 | **Corregido** | `invite-revoke` (`lazo.pb.js:609-622`), `plaza-release` (`:254-280`); `SECURITY.md:60` ya dice 190 bits |
+| G-4 | **Parcial** | `logout-all` (`:625-634`) y límite de `device-code` hechos. Los códigos caducados siguen sin borrarse (no hay `cronAdd`) |
+| G-5 | **Corregido** | `lazo.pb.js:535-539` y contador `drawRounds` (`:556-557`) |
+| G-6 | **Corregido** | `.gitignore` (`server/data/`) y `.dockerignore` |
+| G-7 | **Corregido** | Todas las reglas empiezan por `AUTH`; `lists.deleteRule` exige grupo (`1762860000_plazas_hucha.js:41`) |
+| G-8 | **Corregido** | `server/unfurl/fetch.mjs:89-90` |
+| G-9 | **Corregido** | `server/unfurl/guard.mjs` (los cinco rangos) |
+| G-10 | **Parcial** | Transacción, superusuario, `name` ≤ 40 y plaza del creador en `onRecordCreate`: hechos. Las plazas libres de «¿Quiénes sois?» se crean tras `e.next()` (`lazo.pb.js:40-50`): fuera de transacción; si una falla, el grupo queda a medias |
+| G-11 | **Parcial** | `authAlert` apagado. Siguen: la baja falla con error genérico si hay reservas, y el dueño puede darse de baja y dejar el grupo sin admin (no hay hook en `users`) |
+| G-12 | **Pendiente** | Sin `cap_drop`, PocketBase sin `read_only`, zip sin `sha256sum`, `node:24-alpine`/`alpine:3.22` y acciones de GitHub por etiqueta |
+| G-13 | **Parcial** | Cabecera CSP con `frame-ancestors` y COOP en `Caddyfile:9-10`. `ItemSheet.tsx:152` sigue pintando `href={item.url}` sin comprobar `^https?://` |
+| G-14 | **Corregido** | `package.json:11` (`prepare`) y patrón ampliado en `.githooks/pre-commit` |
+| G-15 | **Corregido** | Lotes activados (`1762850000_lazo.js:215-216`) y troceo de 50 (`pocketbase.ts:91`). Falta la prueba PB-14 |
+| G-16 | **Parcial** | `logIP = false`. El resto era documentación |
+
+### Resumen de la revisión
+
+| Severidad | N.º | Hallazgos |
+|---|---|---|
+| Crítico | 0 | — |
+| Alto | 2 | V-1, V-2 |
+| Medio | 5 | V-3, V-4, V-5, V-6, V-7 |
+| Bajo | 8 | V-8 … V-15 |
+
+**Veredicto.** Las reglas de `claims`, `contributions`, `budgets`, `payments` y la de sorpresas (`VIS`) están bien escritas y cumplen la spec; `gift` es transaccional y responde 403/404 antes de leer estado; las cuentas de `core/hucha.ts` no dependen de la plaza de quien mira. LA REGLA se rompe en un solo punto, por dos canales: **quitar un regalo propio delata si estaba cogido** (V-1 y V-2). Lo demás son bordes del modelo de plazas y pruebas que faltan.
+
+### Lo que he comprobado y está bien
+
+- **Reglas de la migración.** `new Field({...})` existe en JSVM y crea el campo por `type`. `managers:length = 0` es válido en un campo múltiple y `birthYear = 0` pasa (el mínimo 2000 solo se aplica a valores no nulos). `group.treasurer.user` encadena dos relaciones simples y resuelve bien; con roles sin fijar da vacío y, como `from`/`to` son obligatorios, no casa nunca. El índice parcial `WHERE user != ''` es correcto (las listas de niños y las plazas libres quedan fuera). La migración de datos (`buyMode`, `kind`, `paidBy`, `paidCents`) es correcta e idempotente.
+- **I1 se mantiene.** No hay relación directa desde algo visible para X hacia algo oculto para X (sorpresas y retirados incluidos): solo se llega por `_via_`, cortado en URL y en tiempo real.
+- **`gift`.** Orden correcto: regalo → `list.user = yo` (404 si es sorpresa, 403 si no) → grupo → transacción. `runInTransaction` usa la conexión de escritura única, así que «contar y luego insertar» es atómico: 20 reservas simultáneas dan 1 fila. `paidBy` se valida contra pagadores (nunca el ocupante). Los errores lanzados dentro de la transacción conservan su código (goja relanza la misma excepción).
+- **API de JSVM.** `e.noContent(204)`, `e.request.pathValue('group')`, `findRecordsByFilter(col, filtro, sort, limit, offset, params)` con límite 1 o 0, `set('members-', id)`, `recordAuthResponse(e, user, 'invite', meta)` y `e.subscriptions`: todos bien usados. Dentro de las transacciones se usa siempre `tx`, nunca `$app`.
+- **Entrada.** Token revalidado dentro de la transacción; mismo mensaje para token falso, caducado, revocado, agotado y plaza personal ya ocupada (también en `invite-info`). Un pendiente no es miembro. `reclamar` comprueba plaza libre y no-miembro, y el índice único cierra la carrera.
+- **`plaza-release`, `hucha-roles`, `reveal`, `received`.** Mismas respuestas para todos los rechazos; `received` comprueba grupo y `revealedAt` antes de leer listas y no devuelve precios, `paidBy`, reservas ni aportaciones.
+- **Cliente.** `ledger` solo se llama en `List.tsx:137` con `d.canSee`, y la línea «Hucha de … sale a … por persona» (`:157-162`) está en la rama `!mine`. `due`, `myShares` y `forecast` excluyen la plaza propia de forma explícita además de no recibir sus filas. `collectTable` del tesorero excluye su plaza (`treasurerList`) y la del suplente solo usa L_T. «Mis compras» sale de `claims`/`contributions` filtradas por regla. `Group.tsx:147-148` pone `freeCount` y presupuesto a nulo si `!canSee`. Ningún número que vea X depende de su plaza.
+
+### V-1 · Alto · `gift` distingue un regalo propio «retirado» de uno borrado (403 frente a 404)
+
+`server/pb/pb_hooks/lazo.pb.js:308-311` · igual en `src/api/demo.ts:546-547`
+
+Al quitar un regalo propio, si tenía reservas, compras o aportaciones se marca `removed`; si no, se borra. La respuesta al borrado es la misma (204), pero después `gift` lo delata: para el dueño, un regalo `removed` sigue existiendo y devuelve **403** «No puedes reservar regalos de tu propia lista.»; uno borrado de verdad devuelve **404**.
+
+**Ataque.** Mamá quiere saber si ya le han cogido la batidora (id `A`, lo ve en su lista):
+
+```
+DELETE /api/collections/items/records/A                      → 204 (siempre)
+POST   /api/lazo/gift {"action":"reserve","item":"A"}        → 403 = estaba cogida · 404 = estaba libre
+```
+
+Luego vuelve a apuntarla. Un bit por regalo, con `curl` o desde la consola del navegador. Rompe LA REGLA por deducción (D6 de la spec).
+
+**Corrección.** Para su dueño, un retirado no existe:
+
+```js
+if (list.getString('user') === me) {
+  if (item.getBool('secret') || item.getBool('removed')) throw notFound();
+  throw new ForbiddenError('No puedes reservar regalos de tu propia lista.');
+}
+```
+
+y en `demo.ts:546`: `if (!item || !list || ((item.secret || item.removed) && list.user === this.viewer)) throw …`.
+
+**Prueba (PB-10).** Como dueño: borrar un regalo libre y otro reservado; `gift` sobre ambos ids y sobre uno inventado debe dar el mismo código y cuerpo; lo mismo con `GET`, `PATCH` y `DELETE`.
+
+### V-2 · Alto · El borrado real emite un evento de tiempo real al dueño; el «retirado» no
+
+`server/pb/pb_hooks/lazo.pb.js:80-91`
+
+PocketBase emite `delete` a quien podía ver el registro antes de borrarlo. En la rama «retirado» se guarda `removed = true`: es un `update` que se evalúa con el estado nuevo, y el dueño ya no cumple `VIS`, así que no recibe nada.
+
+**Ataque.** X se suscribe a `items/*` (el topic pasa la lista blanca) y borra su regalo. Llega `delete` → nadie lo había cogido. Silencio → estaba cogido. Mismo bit que V-1 por otro canal; corregir uno sin el otro no sirve.
+
+**Corrección.** Ocultar siempre antes de decidir, para que el dueño nunca reciba evento:
+
+```js
+const touched = …;                       // igual que hoy
+e.record.set('removed', true);           // el dueño deja de cumplir la viewRule
+$app.save(e.record);                     // los demás reciben «update»; el dueño, nada
+if (!touched) return e.next();           // el «delete» posterior tampoco le llega: la comprobación de acceso ve removed = true
+return e.noContent(204);
+```
+
+**Prueba.** Con la función `realtime` que ya existe: dueño suscrito a `items/*`, borra un regalo libre y otro reservado; `events` debe ser igual (vacío) en los dos casos. **Ejecutarla antes de corregir**: confirma o descarta el hallazgo.
+
+### V-3 · Medio · La entrega, una vez abierta, sigue revelando las compras posteriores
+
+`server/pb/pb_hooks/lazo.pb.js:475` · `src/api/demo.ts:468`
+
+`received` calcula al vuelo sobre todo lo `bought`. Si nadie pulsa `close`, la entrega queda abierta para siempre.
+
+**Escenario.** Se abre el 24 de diciembre. El 3 de enero Papá compra el regalo de Reyes de Mamá. Mamá abre «Ver qué me regalaron» y lo ve con título y «de parte de Papá». Tras la primera apertura, X tiene un canal permanente sobre las compras de su plaza.
+
+**Corrección.** Revelar solo lo comprado antes de abrir:
+
+```js
+$app.findRecordsByFilter('claims', 'item.list = {:l} && status = "bought" && boughtAt <= {:t}', '', 0, 0, { l: plaza.id, t: group.getInt('revealedAt') })
+```
+
+(`boughtAt = 0` en las filas migradas: entran). Para enseñar lo nuevo hay que cerrar y volver a abrir con dos llaves. En la demo: `&& (c.boughtAt ?? 0) <= g.revealedAt`.
+
+### V-4 · Medio · Quien no es miembro conserva un sondeo a ciegas del grupo a través de `joinRequests` y `payments`
+
+`server/pb/pb_migrations/1762860000_plazas_hucha.js:84-88, 111` · `1762850000_lazo.js:127, 166`
+
+PocketBase no aplica la regla de la colección de destino cuando un filtro atraviesa una relación **directa**. `joinRequests` es la primera colección que un **no miembro** puede listar y tiene relaciones directas a `groups` y `lists`.
+
+**Ataque.** Alguien con el enlace general pide entrar (queda pendiente, o es rechazado: su fila sigue siendo suya) y pregunta sí/no:
+
+```
+GET /api/collections/joinRequests/records?filter=group.members.name ?~ "Sam"
+GET /api/collections/joinRequests/records?filter=group.treasurer.user.name ~ "Alb" || group.revealedAt > 0
+```
+
+Si la respuesta trae su solicitud, es cierto. Saca nombres de los miembros, quién es tesorero, modo, estado de la entrega y qué plazas están ocupadas. **No** llega a regalos, reservas, presupuestos ni pagos ajenos (solo se alcanzan por `_via_`). La spec dice «no lee nada». Lo mismo le queda a una cuenta **expulsada** a través de sus `payments` (`group.…`) y de su `assignments` (`draw.group.…`); además puede seguir **borrando** sus pagos y aportaciones y descuadrar la hucha desde fuera.
+
+**Corrección.**
+
+```js
+// joinRequests: listar (y por tanto filtrar) solo los admins; el solicitante consulta la suya por id (ya lo hace: requestStatus → getOne)
+listRule: `${AUTH} && status = "pending" && group.admins ?= ${ME}`,
+viewRule: `${AUTH} && (user = ${ME} || (status = "pending" && group.admins ?= ${ME}))`,
+// payments: las tres reglas de lectura y borrado
+`${AUTH} && group.members ?= ${ME} && (from = ${ME} || to = ${ME})`
+// contributions.deleteRule
+`${SEE_ITEM} && user = ${ME}`
+// assignments list/view
+`${AUTH} && giver = ${ME} && draw.group.members ?= ${ME}`
+```
+
+**Prueba.** Pendiente: `joinRequests?filter=group.name != ""` → 0 filas. Expulsado: `payments` → 0 filas y `DELETE` → 404.
+
+### V-5 · Medio · Volver con otra plaza: ve su plaza antigua y el traspaso mezcla historiales
+
+`server/pb/pb_hooks/lib/lazo.cjs:35-64` · `src/api/demo.ts:515-536`
+
+Nada impide que la cuenta P, liberada de «Papá» (`prevUser = P`), entre después en **otra** plaza del mismo grupo. Hace falta enlace personal o aprobación, así que cae dentro del riesgo R1 de la spec, pero aquí el admin puede actuar de buena fe («me he liado, acéptame como Tío Paco») y las consecuencias van más allá de R1:
+
+1. P es miembro y no ocupa «Papá», que está libre: ve reservas, compras, sorpresas y presupuesto de su plaza de siempre.
+2. Si P era el tesorero y entra en la plaza del suplente, hereda los pagos `sub = true`: las cuentas de sus propios regalos.
+3. Cuando otra cuenta reclame «Papá», el traspaso (`:50-63`) le pasa **todo** lo que P tenga en el grupo, también lo que hizo como «Tío Paco»: quedan reservas de Papá sobre regalos de Papá, visibles para todos.
+
+**Corrección.** Una cuenta solo puede volver a su plaza. En `reclamar`, tras la comprobación de `members`:
+
+```js
+if (tx.findRecordsByFilter('lists', 'group = {:g} && prevUser = {:u} && id != {:l}', '', 1, 0, { g: group.id, u: userId, l: plaza.id }).length)
+  throw new BadRequestError('Tu sitio en este grupo es otro. Pide tu enlace a quien organiza.');
+```
+
+Mismo control en `DemoApi.claimPlaza`.
+
+### V-6 · Medio (funcional) · No se pueden crear listas de niño con el servidor real
+
+`src/api/pocketbase.ts:70` frente a `1762860000_plazas_hucha.js:38`
+
+`addChildList` no envía `kind`, y la `createRule` exige `kind = "child"` o `kind = "person"`: PocketBase responde 400. La demo sí funciona, por eso no se ve. **Corrección:** `create({ group: groupId, name, birthYear, kind: 'child', managers: [this.uid()] })` y una prueba que cree una lista de niño.
+
+### V-7 · Medio · Faltan los casos críticos de §9.3; dos de los que hay son vacíos
+
+`server/test/rules.test.mjs`
+
+| Caso | Estado | Qué falta |
+|---|---|---|
+| PB-1 | Parcial | `sort`, `fields`, filtro con `%5F` en URL; tiempo real de **compra y borrado** y de `contributions`, `budgets` y sorpresas; regalos retirados |
+| **PB-2** | **Falta** | No interferencia byte a byte ∀X. Es la prueba que habría cazado V-1 y V-2 |
+| **PB-3** | **Vacío** | `:236` comprueba 0 `claims` en la plaza «Tía Loli», que no tiene regalos, reservas ni presupuesto. Hay que sembrarla (presupuesto, sorpresa, reserva, compra de hucha) **antes** de reclamarla y repetir PB-1 con la cuenta nueva |
+| PB-4 | Falta | Segundo uso del enlace personal; regenerar revoca el anterior; no se genera para plaza ocupada |
+| PB-5 | Parcial | `users` y `joinRequests` del pendiente; camino de rechazo |
+| PB-6 | Parcial | (b) dos solicitudes a la misma plaza; (c) dos `join` personales simultáneos; (d) `invite` y `plaza-release` por no admin; (e) `kind`, `via`, `claimedAt` |
+| PB-7 | Falta | `plaza-release` del dueño por otro admin; `PATCH groups` con `treasurer`, `deputy`, `revealedAt`, `members` |
+| PB-8 | Parcial | Solo libre y reservado. Faltan comprado, con aportaciones, **retirado** y la vía `claim` |
+| **PB-9** | **Falta** | Tabla de transiciones por modo y 20 `reserve` concurrentes → 1 fila |
+| **PB-10** | **Falta** | `DELETE items` 204 con y sin reservas, queda `removed`, 404 después (V-1, V-2) |
+| PB-11 | Parcial | Solo `>= 400`; comparar cuerpo con y sin presupuesto previo |
+| PB-12 | Parcial | Un tercero no borra; `view` por id; tiempo real del tesorero |
+| **PB-13** | **Falta** | Agregados de `core/hucha` sobre lo que el servidor entrega a X, invariantes a lo de X |
+| **PB-14** | **Falta** | `/api/batch` con `expand`/`filter` que lleven `_via_` (el lote está activado) |
+| PB-15 | Parcial y frágil | `:258` traga el fallo de la compra con `.catch(() => null)`: si falla, `received` es `[]` y la prueba pasa. Afirmar `r.json.length === 1`, `from`, que lo reservado no sale, `ask` por no admin → 403 |
+| PB-16 | Parcial | Plazas iguales, libres, de otro grupo; no admin |
+| PB-17 | Falta | `invite-info` no se prueba |
+
+Orden: PB-10, PB-2, PB-3, PB-9, PB-14.
+
+### Bajos
+
+**V-8 · `gift` usa `list` e `item` leídos fuera de la transacción** (`lazo.pb.js:303-313`, usados en `:322, 333, 335`). Entre la lectura de `list` y la de `group0` puede confirmarse un `join` de la misma cuenta sobre esa plaza: pasaría las dos comprobaciones y reservaría en su propia plaza. No es explotable hoy (habría que conocer el id de un regalo sin haber sido miembro), pero cuesta dos líneas: releer `lists` e `items` con `tx` y repetir `if (list.getString('user') === me)` dentro. La misma ventana existe en el hook de `contributions` (`:69-77`, comprobar y crear sin transacción) y en el borrado de regalos (`:86-87`).
+
+**V-9 · El límite de `received` no se aplica** (`1762860000_plazas_hucha.js:149`). Las etiquetas de límite casan por igualdad, o por prefijo solo si acaban en `/`. `GET /api/lazo/received` no casa con `/api/lazo/received/<id>`. Corrección: `'GET /api/lazo/received/'`.
+
+**V-10 · Baja de cuenta con plaza** (R-3, G-11). Al borrarse la cuenta, la plaza queda con `user = ""` pero con `via` y `claimedAt` antiguos y sin `prevUser`; si era el dueño, el grupo queda sin admin. Corrección: `onRecordDeleteRequest` en `users` que responda 400 «Pide a quien organiza que libere tu sitio antes de borrar tu cuenta.» si ocupa alguna plaza, y que impida la baja del dueño mientras exista el grupo.
+
+**V-11 · Los roles de la hucha sí se pueden cambiar** (D14). Un admin libera la plaza del tesorero, la borra (si no tiene compras) y PocketBase vacía `groups.treasurer`: `hucha-roles` vuelve a aceptar. No filtra nada, pero contradice «se fijan una vez». Corrección: en el hook de borrado de `lists` (`:94-97`), 400 si la plaza es `treasurer` o `deputy` de su grupo.
+
+**V-12 · Campos menos estrictos que la spec.** `groups.buyMode` no es `required` (`:22`): un admin puede dejarlo vacío con `PATCH`; `gift` lo trata como `individual` y el hook de aportaciones como «no hucha». Marcarlo `required` tras rellenar los datos. `drawRounds` no se reinicia al crear el grupo (`lazo.pb.js:32-38`): fijarlo a 0 con el resto.
+
+**V-13 · Bordes de plazas.** (a) `plaza-release` no limpia `approvedBy` (`:267-270`). (b) El traspaso no mueve `items.createdBy`: las sorpresas de la cuenta anterior quedan sin nadie que pueda editarlas o quitarlas. (c) El índice único de `joinRequests (group, user)` y la comprobación de `:201` impiden volver a pedir entrada a quien fue rechazado o liberado tras entrar por el enlace general: borrar la solicitud resuelta al rechazar y al liberar. (d) `join-decide` no vuelve a mirar si el nombre nuevo ya existe (`:236-240`), y `lists.createRule` no impide dos plazas con el mismo nombre (la demo sí, `demo.ts:124`). (e) Compra directa y aportación sobre un regalo `removed` no se rechazan (`:367-381`, `:69-77`); `reserve` sí.
+
+**V-14 · Diferencias con la spec sin impacto de seguridad.** No existe la acción `edit` (precio / quién pagó) de §3.2: hoy es `unbuy` + `buy`. `gift` devuelve `{ok: true}` en vez de la fila. `invite-info` devuelve además `group.id`.
+
+**V-15 · Discrepancias de la demo con el servidor** (`src/api/demo.ts`).
+
+| Dónde | Demo | Servidor |
+|---|---|---|
+| `giftTarget` `:546-547` | Retirado propio → «No puedes reservar…» | Igual (V-1): corregir en los dos |
+| `saveItem` `:146-150` | Editar una sorpresa o un retirado de la propia plaza → «Solo quien lleva esta lista…» (distinto de «ya no existe») | 404 idéntico a inexistente |
+| `deleteItem` `:172-189` | Borrar otra vez un retirado propio → éxito | 404 |
+| `purchases` `:509-510` | Sin filtro de visibilidad | La regla quita lo de la propia plaza. Añadir `canSeeStatus(this.viewer, list)` |
+| `inviteInfo` `:314-325` | Enlace personal de una plaza ya ocupada → devuelve la plaza | Mensaje genérico |
+| `addPlaza` `:124` | Rechaza nombres repetidos | Los admite (V-13 d) |
+| `claimPlaza` `:515` | No comprueba plaza libre ni miembro (lo hacen quienes la llaman) | `reclamar` lo comprueba dentro |
+| `received` `:461-475` | Igual que el servidor | V-3 en los dos |
+| `join` | Siempre cuenta nueva; sin caducidad ni «una solicitud por cuenta» | Documentado en el comentario; aceptable |
+
+Las reglas de `gift` (modos, unidades, aportaciones, `paidBy`, `unbuy`), `contribute`, `setBudget`, `addPayment`, `hucha`, `reveal`, `releasePlaza` y `setHuchaRoles` coinciden con el servidor.
+
+### Orden de trabajo propuesto (v0.3)
+
+1. V-1 y V-2 con su prueba (PB-10) y PB-2.
+2. V-6 (una línea, funcionalidad rota en producción).
+3. V-4, V-5, V-3.
+4. PB-3, PB-9, PB-14 y arreglar PB-15.
+5. V-8 … V-15 y los pendientes de la primera auditoría (G-12, G-11/V-10, G-4, G-13, R-4).

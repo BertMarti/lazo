@@ -62,3 +62,18 @@ describe('DemoApi', () => {
     expect((await api.hucha('navidad')).payments.some((p) => p.sub)).toBe(false);
   });
 });
+
+import { generalProgress, type HuchaCtx } from '../../src/core/hucha';
+describe('hucha en la demo', () => {
+  it('P0 de Fable: la barra de Papá cuenta solo la cuenta general (lo del suplente va aparte)', async () => {
+    const api = new DemoApi(null);
+    api.setViewer('papa');
+    const d = await api.hucha('navidad');
+    const user = (id?: string) => d.lists.find((l) => l.id === id)?.user;
+    const ctx: HuchaCtx = { me: 'papa', members: d.members.map((m) => m.id), lists: d.lists, items: d.items, claims: d.claims, payments: d.payments, treasurer: user(d.group.treasurer), deputy: user(d.group.deputy), treasurerList: d.group.treasurer };
+    // Mamá 339,90 entre 4 (mayor resto: a Papá le tocan 84,97) + Juan Carlos 65/4 = 16,25 → 101,22; ha dado 30 al tesorero
+    const g = generalProgress(ctx);
+    expect(g.put).toBe(3000);
+    expect(g.target).toBe(10122);
+  });
+});

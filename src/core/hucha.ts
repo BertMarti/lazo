@@ -67,6 +67,18 @@ export function due(j: Id, ctx: HuchaCtx): { general: Cents; aparte: Cents } {
   return { general, aparte };
 }
 
+/**
+ * Barra «Has puesto X de Y» de la cuenta general (con el tesorero): Y = mi parte neta de todas las plazas
+ * menos la mía y la del tesorero (esa va aparte, con el suplente); X = Y − lo que me falta.
+ */
+export function generalProgress(ctx: HuchaCtx): { target: Cents; put: Cents } {
+  if (ctx.me === ctx.treasurer) return { target: 0, put: 0 };
+  const target = myShares(ctx)
+    .filter((s) => s.list.id !== ctx.treasurerList)
+    .reduce((s, x) => s + x.mine - x.advanced, 0);
+  return { target, put: Math.max(0, target - due(ctx.me, ctx).general) };
+}
+
 /** «Tu parte, persona a persona»: todas las plazas menos la mía. */
 export function myShares(ctx: HuchaCtx) {
   return ctx.lists

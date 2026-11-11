@@ -26,7 +26,6 @@ export function GiftCard({ item, flavor, status, line, owner, fresh, busy, onOpe
   const taken = status && (status.kind === 'reserved' || status.kind === 'pot' || status.kind === 'bought' || status.kind === 'covered');
   return (
     <article className="gift" data-tone={line?.tone ?? 'open'} data-flavor={flavor}>
-      {taken && !item.image && <span className={`gift-top${status.kind === 'bought' ? ' gift-top-bought' : ''}`} aria-hidden />}
       <button type="button" className="gift-open" onClick={onOpen} aria-label={`${item.title}${line ? `. ${line.text}` : ''}. Ver detalles`}>
         {item.image && (
           <span className="gift-thumb" aria-hidden>
