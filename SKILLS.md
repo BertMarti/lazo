@@ -19,7 +19,7 @@ Qué skills de agente se han usado en Lazo y para qué, por si alguien quiere re
 |---|---|---|
 | `pbakaus/impeccable` | Instalada y en uso | Detector de patrones de IA (`impeccable detect`), proceso de dirección y crítica. Se pasa antes de cada versión |
 | `emilkowalski/skills` (`emil-design-eng`) | Instalada y en uso | Curvas, duraciones y microinteracciones |
-| `Leonxlnx/taste-skill` | Evaluada, **no instalada** | Está pensada para webs de empresa (landing pages con fotos y escenas) y al instalarse añade un hook `Stop`. Su criterio útil (bordes iguales, una sola familia de botones, nada de capturas con pie) ya está en DESIGN.md. Instalarla y añadir hooks es decisión del usuario |
+| `Leonxlnx/taste-skill` 2.5.1 | **Aplicada sin instalar el hook** | Se leyó su SKILL.md entero. Su puerta (`gate.mjs`, un hook `Stop` que corre en todas las sesiones) mide webs de empresa —héroe, una sección por pantalla, efectos— y no tiene sentido en una app de listas, así que no se instaló. Sí se aplicaron sus reglas que valen para una app: controles de 44 px como mínimo fuera del texto, nada se sale de la pantalla a 320 px, respuesta al pulsar en cada botón, movimiento reducido, fotos reales con licencia y los créditos en una sola línea (la barra de la demo). Quedan como prueba en `e2e/tactil.spec.ts`. Se aparta a propósito en un punto: entre los sabores de color por persona hay un lila (identidad de la persona, no acento de la interfaz) |
 | «Hallmark» / «Pckable» | No existen como detectores de diseño | `pckable` es un plugin de Godot; no se encontró ningún «Hallmark» fiable |
 
 ## Modelos y su función

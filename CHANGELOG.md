@@ -12,6 +12,7 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 - **La demo tiene fotos de verdad:** 19 regalos con foto de Wikimedia Commons con licencia libre, guardadas en el repo y con sus créditos en `public/demo/fotos/CREDITOS.md` (enlace en la barra de la demo).
 
 ### Cambiado
+- **Todo se toca bien con el dedo:** en el móvil, cada botón y enlace mide al menos 44 px y nada se sale de la pantalla ni a 320 px de ancho (antes «Mis compras» se desbordaba con títulos largos). Lo comprueba una prueba nueva en cada pantalla.
 - **La IA viene apagada y Ollama es la opción recomendada.** Tras revisar las condiciones de los proveedores, para el uso diario en la UE solo valen Ollama en casa o una clave de pago (Claude, o Gemini con facturación). Gemini gratuito, Groq, OpenRouter y NVIDIA quedan marcados «solo pruebas». Lazo funciona entero sin IA. Detalles en `docs/legal/proveedores.md`.
 
 ## [0.2.0] - 2026-11-11 · La hucha y las plazas

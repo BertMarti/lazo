@@ -144,7 +144,9 @@ input, select, textarea, button { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
   min-height: 44px; padding: var(--s-1) var(--gutter); background: var(--sunken); color: var(--ink); font-size: var(--t-sm);
 }
-.demo-bar select { min-height: 36px; padding: 0 var(--s-3); border-radius: var(--r-sm); border: 1.5px solid var(--edge); background: var(--surface); color: var(--ink); font-weight: 700; }
+.demo-bar > * { min-width: 0; }
+.demo-bar a { display: inline-flex; align-items: center; min-height: 44px; }
+.demo-bar select { min-width: 0; max-width: 8.5rem; min-height: 44px; padding: 0 var(--s-3); border-radius: var(--r-sm); border: 1.5px solid var(--edge); background: var(--surface); color: var(--ink); font-weight: 700; }
 .topbar { background: var(--box); color: var(--on-box); padding: calc(var(--s-4) + env(safe-area-inset-top)) var(--gutter) var(--s-5); }
 .topbar-inner { max-width: var(--max); margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-4); }
 .topbar-title { display: flex; align-items: flex-end; gap: var(--s-2); min-width: 0; }
@@ -467,7 +469,7 @@ dialog.sheet::backdrop { background: rgb(13 18 34 / 0.45); animation: fade 200ms
 .groups { display: grid; gap: var(--s-2); grid-template-columns: 1fr; max-width: 720px; }
 .purchase-group { display: grid; gap: var(--s-2); }
 .purchase-group h3 { display: flex; align-items: center; gap: var(--s-2); font-weight: 700; font-size: var(--t-md); }
-.rows { list-style: none; margin: 0; padding: 0 var(--s-4); display: grid; border: 1px solid var(--line-2); border-radius: var(--r-lg); background: var(--surface); }
+.rows { list-style: none; margin: 0; padding: 0 var(--s-4); display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--line-2); border-radius: var(--r-lg); background: var(--surface); }
 .rows > li { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: var(--s-3) 0; border-bottom: 1px solid var(--line); }
 .rows > li:last-child { border-bottom: 0; }
 
