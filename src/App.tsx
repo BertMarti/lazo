@@ -2,6 +2,7 @@ import { CaretLeft, Gear, PiggyBank, ShoppingBag, Shuffle, UsersThree, type Icon
 import { useCallback, useRef, useState } from 'react';
 import { DemoApi } from './api/demo';
 import type { Api } from './api/types';
+import { Avisos } from './ui/Avisos';
 import { IconButton } from './ui/Button';
 import { ApiCtx, go, lastGroup, useRoute } from './ui/ctx';
 import { Brand } from './ui/Bow';
@@ -71,6 +72,7 @@ export function App({ api }: { api: Api }) {
                 </nav>
               )}
               <div className="masthead-end">
+                {section !== 'unirse' && <Avisos key={api.me()?.id} refresh={routeKey} />}
                 {section !== 'ajustes' && section !== 'unirse' && <IconButton icon={Gear} label="Ajustes" onClick={() => go('/ajustes')} />}
               </div>
             </div>
