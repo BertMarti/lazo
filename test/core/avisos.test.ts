@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DemoApi } from '../../src/api/demo';
-import { collectFacts, notices, withBaseline } from '../../src/core/avisos';
+import { collectFacts, notices, seenFacts, withBaseline } from '../../src/core/avisos';
 
 const TODAY = new Date(2026, 11, 14); // faltan 10 días para el 24 de diciembre
 const as = async (api: DemoApi, who: string) => {
@@ -85,5 +85,30 @@ describe('avisos: nunca dependen de la propia lista', () => {
     api.setViewer('mama');
     const tomorrow = await collectFacts(api, new Date(2026, 11, 23));
     expect(notices(now, tomorrow).map((n) => n.text)).toContain('Navidad en familia es mañana');
+  });
+});
+
+describe('V-19: lo visto muere con la sesión', () => {
+  it('forget borra lo de otras personas, y todo sin sesión', () => {
+    const store = new Map<string, string>();
+    const fake = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    const ls = new Proxy(fake, { ownKeys: () => [...store.keys()], getOwnPropertyDescriptor: (_t, k) => (store.has(String(k)) ? { enumerable: true, configurable: true, value: store.get(String(k)) } : undefined) });
+    const prev = globalThis.localStorage;
+    Object.defineProperty(globalThis, 'localStorage', { value: ls, configurable: true });
+    try {
+      seenFacts.set('papa', []);
+      seenFacts.set('mama', []);
+      store.set('otra-cosa', '1');
+      seenFacts.forget('mama');
+      expect([...store.keys()].sort()).toEqual(['lazo:avisos:mama', 'otra-cosa']);
+      seenFacts.forget();
+      expect([...store.keys()]).toEqual(['otra-cosa']);
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', { value: prev, configurable: true });
+    }
   });
 });

@@ -31,14 +31,15 @@ const NOT_A_PRODUCT = /^(amazon\.[a-z.]+|robot check|access denied|acceso denega
 export function parseMeta(html: string, pageUrl: string): PageMeta {
   const page = html.slice(0, 2_000_000);
   const metas = new Map<string, string>();
-  for (const tag of page.match(/<meta\b[^>]*>/gi) ?? []) {
+  // Etiquetas acotadas: sin retroceso cuadrático con una página hostil (V-18).
+  for (const tag of page.match(/<meta\b[^>]{0,1000}>/gi) ?? []) {
     const key = attr(tag, 'property') ?? attr(tag, 'name');
     const content = attr(tag, 'content');
     if (key && content && !metas.has(key.toLowerCase())) metas.set(key.toLowerCase(), decode(content));
   }
   const micro = microdata(page);
   const ld = jsonLdProduct(page);
-  const titleTag = page.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const titleTag = page.match(/<title[^>]{0,200}>([^<]{0,1000})/i)?.[1];
 
   let url = absHttps(metas.get('og:url'), pageUrl) ?? pageUrl;
   const amazon = amazonInfo(pageUrl) ?? amazonInfo(url);
@@ -152,7 +153,7 @@ function knownStore(pageUrl: string): string | undefined {
  */
 function microdata(html: string): Partial<Record<'price' | 'priceCurrency' | 'name' | 'image', string>> {
   const out: Partial<Record<'price' | 'priceCurrency' | 'name' | 'image', string>> = {};
-  const re = /<([a-z][a-z0-9]*)\b[^>]*\bitemprop\s*=\s*["']?(pricecurrency|price|name|image)(?=["'\s>])[^>]*>([^<]{0,200})/gi;
+  const re = /<([a-z][a-z0-9]*)\b[^>]{0,500}\bitemprop\s*=\s*["']?(pricecurrency|price|name|image)(?=["'\s>])[^>]{0,500}>([^<]{0,200})/gi;
   for (const m of html.matchAll(re)) {
     const tag = m[0].slice(0, m[0].indexOf('>') + 1);
     const prop = m[2]!.toLowerCase() === 'pricecurrency' ? 'priceCurrency' : (m[2]!.toLowerCase() as 'price' | 'name' | 'image');
@@ -172,11 +173,15 @@ interface LdProduct {
 }
 
 function jsonLdProduct(html: string): LdProduct | undefined {
-  const blocks = html.match(/<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi) ?? [];
-  for (const block of blocks) {
-    const body = block
-      .replace(/^<script\b[^>]*>/i, '')
-      .replace(/<\/script>$/i, '')
+  // Apertura acotada y cierre con indexOf: lineal aunque la página no cierre nada (V-18).
+  const lower = html.toLowerCase();
+  const open = /<script\b[^>]{0,300}\btype\s*=\s*["']?application\/ld\+json["']?[^>]{0,300}>/gi;
+  while (open.exec(html)) {
+    const end = lower.indexOf('</script', open.lastIndex);
+    if (end === -1) break;
+    const raw = html.slice(open.lastIndex, end);
+    open.lastIndex = end;
+    const body = raw
       .replace(/^\s*(<!--|\/\/\s*<!\[CDATA\[)/, '')
       .replace(/(-->|\/\/\s*\]\]>)\s*$/, '')
       .trim()

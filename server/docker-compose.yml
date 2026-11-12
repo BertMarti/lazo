@@ -48,7 +48,8 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./data/caddy:/data
-    networks: [publica]
+    # «tunel»: la única red desde la que Caddy acepta CF-Connecting-IP (la de cloudflared, IP fija; V-17).
+    networks: [publica, tunel]
 
   # Copia diaria de pb_data con rotación. Sin red. Restaurar: docs/HOMELAB.md.
   backup:
@@ -97,10 +98,16 @@ services:
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
-    networks: [publica]
+    # Red propia con IP fija: Caddy solo se fía de esta IP, y desde aquí PocketBase no es alcanzable.
+    networks:
+      tunel: { ipv4_address: 172.31.253.3 }
 
 networks:
   interna:
     internal: true
   publica: {}
   salida: {}
+  tunel:
+    ipam:
+      config:
+        - subnet: 172.31.253.0/29

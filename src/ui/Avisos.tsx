@@ -2,6 +2,7 @@ import { Bell } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { collectFacts, notices, seenFacts, withBaseline, type Facts, type Notice } from '../core/avisos';
 import { IconButton } from './Button';
+import { DemoApi } from '../api/demo';
 import { useApi } from './ctx';
 import { Sheet } from './kit';
 
@@ -11,6 +12,12 @@ export function Avisos({ refresh }: { refresh: string }) {
   const me = api.me()?.id;
   const [state, setState] = useState<{ now: Facts[]; list: Notice[] } | null>(null);
   const [shown, setShown] = useState<Notice[] | null>(null);
+
+  // Lo visto muere con la sesión: nada de otra persona se queda en este navegador (V-19). La demo cambia de
+  // persona a propósito y no es frontera.
+  useEffect(() => {
+    if (!(api instanceof DemoApi)) seenFacts.forget(me);
+  }, [api, me]);
 
   useEffect(() => {
     if (!me) return;

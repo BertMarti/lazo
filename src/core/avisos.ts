@@ -132,4 +132,15 @@ export const seenFacts = {
       /* sin almacenamiento: los avisos vuelven a salir */
     }
   },
+  /**
+   * Borra lo visto de cualquier otra persona (de todas, sin sesión). Lo guardado incluye lo que te toca poner
+   * en la hucha, y en un navegador compartido eso dejaría deducir lo gastado en la plaza de otro (V-19).
+   */
+  forget(keep?: Id) {
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('lazo:avisos:') && k !== (keep ? KEY(keep) : '')) localStorage.removeItem(k);
+    } catch {
+      /* sin almacenamiento */
+    }
+  },
 };

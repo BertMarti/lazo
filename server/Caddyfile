@@ -1,9 +1,9 @@
 {
-	# Solo se fía de cabeceras de IP que lleguen desde redes privadas (Cloudflare Tunnel corre en Docker).
-	# Así PocketBase limita intentos por persona y no por «todo el que entra por el túnel».
+	# Solo se fía de la IP que manda cloudflared (red «tunel», IP fija). Nadie más, ni la wifi de casa,
+	# puede inventarse su IP con CF-Connecting-IP para saltarse los límites por IP (V-17).
 	servers {
-		trusted_proxies static private_ranges
-		client_ip_headers CF-Connecting-IP X-Forwarded-For
+		trusted_proxies static 172.31.253.3/32
+		client_ip_headers CF-Connecting-IP
 	}
 }
 
@@ -25,7 +25,12 @@
 	# El panel y la API de administración de PocketBase no se publican: entra por túnel SSH, la LAN o HEIMDALL (VPN).
 	# Incluye la gestión de colecciones (/api/collections, /api/collections/{c}, …/truncate, import), que no tiene «/records».
 	@admin path /_ /_/* /api/settings* /api/logs* /api/backups* /api/crons* /api/collections/_* /api/collections/import* /api/collections/meta/*
-	@adminCollections path_regexp ^/api/collections/?$|^/api/collections/[^/]+/?$|^/api/collections/[^/]+/truncate
+	# Lista blanca (V-16): solo las colecciones y rutas que usa la app. PocketBase acepta la colección por nombre
+	# o por id, y el id de _superusers (pbc_3142635823) es fijo: bloquear por nombre no bastaba.
+	@adminCollections {
+		path /api/collections /api/collections/*
+		not path_regexp ^/api/collections/(users|groups|lists|items|claims|contributions|budgets|payments|draws|assignments|joinRequests)/(records(/[A-Za-z0-9_]+)?|auth-refresh)$
+	}
 	respond @admin 404
 	respond @adminCollections 404
 	reverse_proxy pocketbase:8090 {

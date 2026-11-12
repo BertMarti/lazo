@@ -775,3 +775,255 @@ Las reglas de `gift` (modos, unidades, aportaciones, `paidBy`, `unbuy`), `contri
 - **V-14:** se mantiene como diferencia documentada con la spec (sin impacto de seguridad).
 - `server/test/rules.test.mjs`: **22/22 en verde contra PocketBase 0.40.6**, con PB-2 (no interferencia byte a byte para Mamá), PB-3 (plaza con historial antes de reclamarla), PB-9 (20 reservas simultáneas → 1 fila), PB-14 (lotes con `expand` y `_via_`), PB-17 (enlace usado ≡ falso) y una prueba de V-9/V-10/V-11/V-13.
 - PB-13 (2026-11-11): las cuentas de la hucha (`core/hucha`) de cada miembro, calculadas con lo que el servidor le entrega, coinciden con las esperadas y no cambian por lo que pasa en su plaza. **23/23 en verde.** No queda ninguna prueba pendiente.
+
+## Auditoría v0.5 (Fable 5.2)
+
+Fecha: 2026-11-12 · Alcance: `git diff 8a469ee..HEAD` (avisos, sorteo, importación y metadatos, homelab, `flujo.test.mjs`).
+
+**Método y límites.** Revisión estática del diff y dos comprobaciones ejecutadas: V-16 contra un PocketBase 0.40.6 real (instancia desechable en WSL) y V-18 midiendo `server/unfurl/meta.mjs` con Node 24. **No he ejecutado** Caddy, Docker, cloudflared ni las suites de pruebas: lo que digo de Caddy y de Docker sale de leer la configuración y de su comportamiento documentado. `server/unfurl/fetch.mjs` y `guard.mjs` no cambian en la v0.5: el anti-SSRF está como en la revisión anterior. No se ha tocado código.
+
+### Resumen
+
+| Severidad | N.º | Hallazgos |
+|---|---|---|
+| Crítico | 0 | — |
+| Alto | 1 | V-16 |
+| Medio | 3 | V-17, V-18, V-19 |
+| Bajo | 6 | V-20 … V-25 |
+
+### Lo que he comprobado y está bien
+
+- **Avisos, la regla.** `buildFacts` descarta las plazas propias antes de calcular nada (`mine`, `foreign`) y solo guarda regalos ajenos que no son sorpresa, ni retirados, ni apuntados por quien mira. `due` solo suma plazas ajenas (`r.user !== j`) y pagos en los que quien mira es parte; para el tesorero es 0. La cuenta de «ha añadido N regalos» sale solo de listas ajenas, y la regla de `items` impide que alguien apunte algo no secreto en la plaza de otro adulto. Ningún aviso, ni su ausencia, ni el contador, ni el orden (el de `api.groups()`) depende de la plaza propia. Los textos se pintan con React, sin HTML.
+- **Sorteo.** `navigator.share` y el portapapeles solo se llaman desde el `onClick` de «Enviármelo» / «Copiar». El mensaje lleva el nombre del grupo, la persona que te ha tocado y el enlace a su lista: nada de otras asignaciones, exclusiones ni presupuesto. Tapado, el contenido queda `inert` y `aria-hidden`.
+- **Importación.** SheetJS 0.20.3 desde su CDN con `integrity` en el lock (sin las CVE de 0.18.5). Nada evalúa fórmulas y las celdas se pintan como texto. `safeUrl` solo deja `http(s)`. **No existe exportación**, así que hoy no hay inyección de fórmulas; si se añade, anteponer `'` a las celdas que empiecen por `=`, `+`, `-`, `@`, tabulador o retorno.
+- **JSON-LD.** `JSON.parse` dentro de `try`, recorrido con tope de profundidad (6 y 3) y lineal en el tamaño. Imagen y `og:url` solo `https:`.
+- **Homelab.** Sin secretos en el diff ni en el historial (`.env.example` solo trae marcadores). `umask 077` en las copias, `sqlite3 .backup` con `integrity_check`, contenedor de copias sin red, PocketBase solo en `127.0.0.1:8090`. Caddy limpia `//` y `%5F` antes de comparar rutas y `path` no distingue mayúsculas, así que `/api/collections/_SUPERUSERS/…` (que PocketBase sí acepta) queda bloqueado.
+
+### V-16 · Alto · El login de superusuario sigue en Internet: Caddy bloquea por nombre y PocketBase acepta el id
+
+`server/Caddyfile:26-27` · `docs/HOMELAB.md:100` · `SECURITY.md:62`
+
+`@admin` tapa `/api/collections/_*`, pero PocketBase resuelve la colección **por nombre o por id**, y el id de `_superusers` es fijo en todas las instalaciones: `pbc_3142635823`. Esa ruta no empieza por `_` y `@adminCollections` solo casa rutas sin subruta.
+
+**Comprobado** en PocketBase 0.40.6: `POST /api/collections/pbc_3142635823/auth-with-password` responde 200 con la clave buena y 400 con la mala.
+
+**Escenario.** Cualquiera en Internet (o X, que quiere ver su lista) lanza un diccionario contra `https://tu-dominio/api/collections/pbc_3142635823/auth-with-password`. Solo le frena `*:auth` (2 cada 3 s por IP), que con V-17 o con varias IP no frena nada. Con el token de superusuario se lee todo: la regla entera, las asignaciones del sorteo y los datos de los niños. La documentación afirma que esa API «no está publicada».
+
+**Arreglo.** Lista blanca en vez de lista negra. En `server/Caddyfile`, sustituir la línea de `@adminCollections` por:
+
+```
+	@adminCollections {
+		path /api/collections /api/collections/*
+		not path_regexp ^/api/collections/(users|groups|lists|items|claims|contributions|budgets|payments|draws|assignments|joinRequests)/(records(/[A-Za-z0-9_]+)?|auth-refresh)$
+	}
+```
+
+Son las únicas rutas de colección que usa `src/api/pocketbase.ts`. Validar con `caddy validate` (no lo he ejecutado). Segunda capa opcional en `lazo.pb.js`: rechazar el login de `_superusers` si la petición trae `X-Forwarded-For` (Caddy siempre lo pone; el túnel SSH a `127.0.0.1:8090`, no).
+
+**Prueba.** (1) `server/test/caddyfile.test.mjs`: leer la expresión del Caddyfile y afirmar que **no** casa `/api/collections/pbc_3142635823/auth-with-password`, `/api/collections/_superusers/records`, `/api/collections/users/impersonate/x`, `/api/collections/users/truncate` ni `/api/collections/users`, y que **sí** casa `items/records`, `items/records/abc123` y `users/auth-refresh`. (2) En `docs/HOMELAB.md` §7: `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://tu-dominio/api/collections/pbc_3142635823/auth-with-password` → 404.
+
+### V-17 · Medio · Caddy se fía de las cabeceras de IP de cualquier red privada, y el túnel comparte red con PocketBase
+
+`server/Caddyfile:5-6` · `server/docker-compose.yml:20, 51, 101`
+
+`trusted_proxies static private_ranges` no confía solo en cloudflared: confía en todo el que llegue desde una IP privada. Eso incluye la wifi de casa (`192.168.x`) y la pasarela de Docker, que es lo que ve Caddy cuando la conexión entra por `docker-proxy` (IPv6 sin NAT de Docker, Docker sin root). Además `cloudflared` y `pocketbase` comparten la red `publica`.
+
+**Escenario.** X, desde la wifi de casa, manda `CF-Connecting-IP: 203.0.113.N` con un N distinto en cada petición: ningún límite por IP le cuenta (`*:auth`, `device-claim`, `join`, `/api/`). O pone la IP del móvil de Mamá y le agota `POST /api/lazo/join` (10 por minuto): Mamá no puede entrar. Aparte: quien controle el panel de Cloudflare puede apuntar el túnel a `pocketbase:8090` y saltarse todos los bloqueos de Caddy.
+
+**Arreglo.** Confiar en una sola IP, la de cloudflared, en una red propia.
+
+`server/docker-compose.yml`:
+
+```yaml
+  caddy:
+    networks: [publica, tunel]
+  cloudflared:
+    networks:
+      tunel: { ipv4_address: 172.31.253.3 }
+networks:
+  tunel:
+    ipam: { config: [{ subnet: 172.31.253.0/29 }] }
+```
+
+`server/Caddyfile`:
+
+```
+		trusted_proxies static 172.31.253.3/32
+		client_ip_headers CF-Connecting-IP
+```
+
+Así PocketBase deja de ser alcanzable desde el túnel.
+
+**Prueba.** En `docs/HOMELAB.md` §7, desde la LAN: doce `curl -X POST -H "CF-Connecting-IP: 203.0.113.$i" -d '{"token":"x"}' https://tu-dominio/api/lazo/join` seguidos; las dos últimas respuestas deben ser 429. Hoy son las doce 400.
+
+### V-18 · Medio · ReDoS: una página hostil bloquea `unfurl` durante minutos
+
+`src/core/meta.ts:34, 41, 155, 175` (compilado a `server/unfurl/meta.mjs`) · `server/unfurl/index.mjs:22-25`
+
+Cuatro expresiones son cuadráticas cuando la etiqueta no se cierra: `<meta\b[^>]*>`, la de microdatos (`[^>]*\bitemprop…[^>]*>`), `<title[^>]*>([\s\S]*?)</title>` y la de `<script … ld+json>…</script>`. El análisis es síncrono en el único hilo de `unfurl`, y el tope de 6 s solo cubre la descarga.
+
+**Medido** (Node 24.19, `'<meta '`, `'<a '` y `'<title>'` repetidos):
+
+| Tamaño | `<meta` | microdatos | `<title>` |
+|---|---|---|---|
+| 50 KB | 0,5 s | 0,65 s | 0,1 s |
+| 100 KB | 2,0 s | 2,7 s | 0,5 s |
+| 200 KB | 9,6 s | 10,9 s | 1,8 s |
+
+Con los 1,5 MB que deja pasar `fetch.mjs` salen unos 9 y 10 minutos (extrapolado).
+
+**Escenario.** Un miembro pega (o le mandan «mira este regalo») un enlace a una página de 1,5 MB de `<meta ` sin cerrar. PocketBase se rinde a los 10 s, pero `unfurl` sigue con un núcleo de la Raspberry al 100 % y no atiende a nadie más. Con 20 enlaces por minuto, «añadir por enlace» queda caído para toda la familia. No filtra datos.
+
+**Arreglo** en `src/core/meta.ts`: acotar las etiquetas y buscar el cierre con `indexOf`.
+
+```ts
+page.match(/<meta\b[^>]{0,1000}>/gi)
+page.match(/<title[^>]{0,200}>([^<]{0,1000})/i)?.[1]
+/<([a-z][a-z0-9]*)\b[^>]{0,500}\bitemprop\s*=\s*["']?(pricecurrency|price|name|image)(?=["'\s>])[^>]{0,500}>([^<]{0,200})/gi
+
+function jsonLdProduct(html: string): LdProduct | undefined {
+  const lower = html.toLowerCase();
+  const open = /<script\b[^>]{0,300}\btype\s*=\s*["']?application\/ld\+json["']?[^>]{0,300}>/gi;
+  while (open.exec(html)) {
+    const end = lower.indexOf('</script', open.lastIndex);
+    if (end === -1) break;
+    const body = html.slice(open.lastIndex, end) /* … mismos replace de comentarios, CDATA, «;» y control … */;
+    open.lastIndex = end;
+    // JSON.parse + findProduct, igual que hoy
+  }
+  return undefined;
+}
+```
+
+He probado esta variante en una copia (con topes de 2000 y 1000): los seis ficheros de `test/fixtures/tiendas` dan el mismo resultado que hoy y el peor caso de 1,5 MB baja a 2,7 s (`<meta`), 2,0 s (microdatos) y 10 ms (`<title>` y JSON-LD). Con los topes de arriba debería quedar en torno a la mitad (sin medir).
+
+**Prueba.** En `test/core/meta.test.ts`: para `'<meta '`, `'<a '`, `'<a itemprop '`, `'<title>'` y `'<script type="application/ld+json">'` repetidos hasta 1,5 MB, `parseMeta` termina en menos de 3 s.
+
+### V-19 · Medio · Los avisos dejan en `localStorage` lo que debe otra persona, y de ahí se deduce el gasto de la hucha en la plaza propia
+
+`src/core/avisos.ts:117-135` · `src/ui/Avisos.tsx:22-23, 35`
+
+`seenFacts` guarda `Facts` en `lazo:avisos:<id>`, con `due` en céntimos, y nadie lo borra: no hay cierre de sesión, y cuando el token caduca o se anula (`resume()`), la clave se queda. Hasta la v0.4 `localStorage` no guardaba nada derivado de respuestas (tabla de vías de fuga, fila «`localStorage` del cliente real»).
+
+**Escenario.** Papá usó Lazo en el ordenador del salón; su sesión ya no vale (pulsó «cerrar sesión en todos los dispositivos» desde el móvil). Mamá abre su enlace personal en ese navegador y entra con su cuenta. En las herramientas del navegador lee `lazo:avisos:<id de Papá>` → `due`. Lo que debe Papá es la suma de sus partes en todas las plazas menos la suya, **incluida la de Mamá**. Mamá conoce las demás plazas, resta y obtiene cuánto se ha gastado con la hucha en sus regalos (exacto si Papá aún no ha pagado nada o si Mamá es la tesorera). Rompe la regla por deducción. Hace falta navegador compartido: por eso no es alto.
+
+**Arreglo.** Que lo visto muera con la sesión. En `src/core/avisos.ts`, dentro de `seenFacts`:
+
+```ts
+  /** Borra lo visto de cualquier otra persona (de todas, si no hay sesión). */
+  forget(keep?: Id) {
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('lazo:avisos:') && k !== (keep ? KEY(keep) : '')) localStorage.removeItem(k);
+    } catch {
+      /* sin almacenamiento */
+    }
+  },
+```
+
+y en `src/App.tsx`, al montar y cada vez que cambie `api.me()?.id`: `if (!api.demo) seenFacts.forget(api.me()?.id);` (la demo cambia de persona a propósito y no es frontera). Actualizar la fila de `localStorage` en la tabla de vías de fuga.
+
+**Prueba.** En `test/core/avisos.test.ts`, con un `localStorage` falso: `seenFacts.set('papa', …)`, `seenFacts.forget('mama')` → no queda ninguna clave `lazo:avisos:papa`; `seenFacts.forget()` → no queda ninguna.
+
+### V-20 · Bajo · `flujo.test.mjs` no cubre la regla entera, y la prueba de avisos solo corre contra la demo
+
+`server/test/flujo.test.mjs:43-55, 91` · `test/core/avisos.test.ts` · `SECURITY.md:40`
+
+Lo que sí prueba, y bien: lecturas directas de `claims`, `contributions`, `budgets` y sorpresas de la dueña, que su lista no cambia byte a byte, quién ve cada pago y que las cuentas cuadran. Lo que no:
+
+- `blind()` solo mira listados HTTP. No hay tiempo real, `_via_`, `expand`, entrega (`received`), quitar un regalo reservado (V-1 y V-2) ni sorteo. Eso vive en `rules.test.mjs`; `SECURITY.md` dice «en cada paso… no ve nada de lo suyo».
+- `accounts()` no detecta fugas: `core/hucha` ya excluye la plaza propia, así que una fila filtrada no cambia las sumas. Prueba que las cuentas son correctas, no que son secretas.
+- `contributions` y `budgets` solo se piden con filtro; `groups`, `lists` y `payments` de la dueña no se comparan antes y después.
+- Sin `PB_BIN` la suite se salta y sale en verde.
+- `avisos.test.ts` usa `DemoApi`, que ya filtra: el descarte de `buildFacts` no se prueba con filas sin filtrar, ni con lo que entrega el servidor real.
+
+**Escenario.** Una regla nueva deja pasar a la dueña los eventos o un campo de `lists` que cambia al reservar: `flujo.test.mjs` sigue en verde y la documentación lo cita como garantía.
+
+**Arreglo y prueba.** En `flujo.test.mjs`:
+
+```js
+const view = async (t) => JSON.stringify(await Promise.all(['groups', 'lists', 'items', 'claims', 'contributions', 'budgets', 'payments', 'draws', 'assignments'].map((c) => get(c, t))));
+// paso 4 (todo lo que ocurre es sobre la plaza de Bea): const antes = await view(tok.bea) al empezar; assert.equal(await view(tok.bea), antes) al acabar
+// al principio del describe: if (process.env.CI && !BIN) throw new Error('Falta PB_BIN en CI');
+```
+
+Compilar también `src/core/avisos.ts` con esbuild y afirmar en el paso 4 que `buildFacts(ids.bea, …)` no cambia. En `avisos.test.ts`, un caso que pase a `buildFacts` filas de la plaza propia (reservas, sorpresas) y espere los mismos `Facts`. Añadir dos pasos (entrega y quitar un regalo reservado) o corregir la frase de `SECURITY.md`.
+
+### V-21 · Bajo · La página enlazada decide el enlace y la tienda que se guardan
+
+`src/core/meta.ts:43, 46` · `src/ui/screens/AddGift.tsx:53`
+
+`og:url` se acepta con cualquier host `https` y `og:site_name` gana a la tienda reconocida por dominio. `AddGift` guarda `meta.url` y `meta.store` sin enseñarlos antes.
+
+**Escenario.** La abuela pega un enlace de una tienda dudosa. La página declara `og:url` a una web de phishing y `og:site_name` «Amazon»: en su lista queda un regalo «Amazon» cuyo botón lleva a la familia a otro sitio.
+
+**Arreglo.** `og:url` solo si es del mismo host que la página, y el dominio conocido primero:
+
+```ts
+const og = absHttps(metas.get('og:url'), pageUrl);
+let url = og && new URL(og).hostname === new URL(pageUrl).hostname ? og : pageUrl;
+const store = knownStore(pageUrl) ?? clean(metas.get('og:site_name')) ?? clean(ld?.seller) ?? hostLabel(pageUrl);
+```
+
+**Prueba.** `test/core/meta.test.ts`: página en `https://tienda.example/p` con `og:url` a otro host y `og:site_name` «Amazon» → `url` es la de la página; página en `amazon.es` con `og:site_name` «Otra» → `store` es «Amazon».
+
+### V-22 · Bajo · Los datos vivos y `.env` los lee cualquier usuario del servidor; las copias van sin cifrar
+
+`docs/HOMELAB.md:59-61, 134-139` · `server/backup/lazo-backup.sh:18` · `server/docker-compose.yml:55-66`
+
+Las copias salen con `umask 077` (solo root), pero la guía crea `data/pb` y `.env` con los permisos por defecto: lo normal es 755 y 644, con `data.db` legible por todos (no lo he comprobado en una instalación). `.env` lleva las claves del túnel, de DuckDNS y de `unfurl`. `antes-de-restaurar-*.tar.gz` no entra en la rotación. La guía manda las copias al NAS en claro. El contenedor `backup` es el único sin `no-new-privileges`.
+
+**Escenario.** Otra cuenta de la Raspberry (o un servicio comprometido que comparte máquina con SHIELD-DNS y HEIMDALL) hace `sqlite3 server/data/pb/data.db` y lee reservas, sorteo y datos de los niños sin tocar las copias protegidas.
+
+**Arreglo.** `docs/HOMELAB.md` §2: añadir `chmod 700 data/pb data/backups data/caddy && chmod 600 .env`. `lazo-backup.sh`: rotar también `antes-de-restaurar-*` (`ls -1t "$DST"/antes-de-restaurar-*.tar.gz | tail -n +4 | xargs -r rm -f`). `docker-compose.yml`, servicio `backup`: `security_opt: [no-new-privileges:true]`. En «Fuera de casa», cifrar antes de sacar la copia (`age -r <clave pública>`).
+
+**Prueba.** §7 de la guía: `stat -c '%a' data/pb .env` → `700` y `600`. Prueba de shell del script: tras cinco `restore`, quedan tres `antes-de-restaurar-*`.
+
+### V-23 · Bajo · Cloudflare Tunnel: HTTP en el borde, imagen antigua y `LAZO_BIND` abierto por defecto
+
+`docs/HOMELAB.md:47-51` · `server/docker-compose.yml:47-48, 93` · `server/.env.example:12`
+
+- Con el túnel, Caddy sirve HTTP y el HTTPS lo pone Cloudflare, pero la guía no pide activar «Always Use HTTPS»: si la zona no lo tiene, `http://lazo.tudominio.es` responde en claro y el token viaja sin cifrar.
+- `cloudflare/cloudflared:2025.1.0` tiene casi dos años y va sin digest (Caddy sí lo lleva); `alpine:3.22` de `duckdns` y `backup`, igual. Sigue G-12.
+- `LAZO_BIND` vale `0.0.0.0` si se olvida: en la opción C, Lazo queda además en HTTP en la LAN.
+- El token de DuckDNS va en la línea de órdenes de `wget` (visible con `ps` en el servidor).
+
+**Escenario.** El tío abre `http://lazo.tudominio.es` en la wifi de un bar: su token de 180 días pasa en claro y quien escucha entra como él.
+
+**Arreglo.** Guía, opción C: «SSL/TLS → Edge Certificates → Always Use HTTPS: activado». Fijar `cloudflared` a una versión actual con `@sha256:…`. En `docker-compose.yml`, `${LAZO_BIND:-127.0.0.1}` (quien abre puertos ya pone `0.0.0.0` en su `.env`, como dice la tabla del paso 3).
+
+**Prueba.** §7: `curl -sI http://tu-dominio | head -1` → 301; `docker compose config | grep -c '@sha256'` igual al número de imágenes.
+
+### V-24 · Bajo · Importar: un `.xlsx` comprimido puede colgar la pestaña
+
+`src/ui/screens/Import.tsx:38-47`
+
+El tope es de 5 MB **comprimidos**. Un `.xlsx` de ese tamaño puede inflarse a cientos de MB y SheetJS lo lee entero.
+
+**Escenario.** Alguien manda al grupo «plantilla de regalos.xlsx»; quien la importa se queda con el navegador colgado. No filtra nada y no afecta a los demás.
+
+**Arreglo.** `const opts = { cellDates: false, dense: true, sheetRows: LIMITS.importRows + 1 } as const;`: SheetJS deja de leer filas pasado el límite que la importación ya impone.
+
+**Prueba.** `e2e/importar.spec.ts` o una unitaria: una hoja de 100 000 filas se lee en menos de 2 s y devuelve 301 filas.
+
+### V-25 · Bajo · El mensaje del sorteo no dice de qué sorteo es
+
+`src/ui/screens/Draw.tsx:73-76`
+
+No es una fuga: el mensaje solo lleva lo tuyo. Pero si quien organiza repite el sorteo, el mensaje que te reenviaste sigue diciendo el nombre antiguo y nada lo distingue.
+
+**Escenario.** Papá se envía «te toca regalar a Juan Carlos». Se repite el sorteo y ahora le toca Samira. Papá mira su chat, compra para Juan Carlos y Samira se queda sin regalo: se descubre que hubo dos sorteos y quién tenía a quién.
+
+**Arreglo.** Pasar `drawRounds` a `shareMessage` y empezar por «Amigo invisible de {grupo} (sorteo n.º {n}): …». El aviso «Han hecho el sorteo» ya salta con cada sorteo nuevo.
+
+**Prueba.** `test/ui/draw.test.ts`: `shareMessage('G', 'Ana', undefined, 2).text` contiene «sorteo n.º 2».
+
+### Orden de trabajo propuesto (v0.5)
+
+1. V-16 (tres líneas de Caddyfile y su prueba).
+2. V-17 y V-19.
+3. V-18.
+4. V-20 y el resto.
+
+### Veredicto
+
+**No se puede publicar** tal como está. V-16 deja el login de superusuario accesible desde Internet, y la documentación dice lo contrario: quien adivine esa contraseña lee todas las listas. El arreglo es pequeño. Con V-16 corregido y probado **se puede publicar**; V-17, V-18 y V-19 deberían ir en la misma versión, y los bajos pueden esperar. En lo nuevo de la v0.5 no he encontrado ninguna vía por la que la dueña de una lista vea o deduzca lo suyo desde su propia sesión: la única deducción (V-19) exige compartir navegador con otro miembro.

@@ -91,3 +91,13 @@ describe('precios', () => {
     expect(parseMeta(html, 'https://tienda.example/t')).toMatchObject({ title: 'Taza', priceCents: 990, currency: 'EUR' });
   });
 });
+
+describe('V-18: páginas hostiles sin cerrar no bloquean', () => {
+  for (const unit of ['<meta ', '<a ', '<a itemprop ', '<title>', '<script type="application/ld+json">'])
+    it(`${unit.trim()} repetido hasta 1,5 MB termina en menos de 3 s`, () => {
+      const html = unit.repeat(Math.ceil(1_500_000 / unit.length));
+      const t = performance.now();
+      parseMeta(html, 'https://ejemplo.es/x');
+      expect(performance.now() - t).toBeLessThan(3000);
+    });
+});
