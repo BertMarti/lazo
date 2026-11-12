@@ -21,16 +21,29 @@ Cola priorizada. Cada tarea indica quién la hace y con qué modelo. Las que no 
 | 6 | Merge a `main` y release v0.4.0 con el APK | implementador | Opus 5.5 | hecha |
 | 7 | Demo v0.4 publicada en GitHub Pages (https://bertmarti.github.io/lazo/), con el bundle nuevo comprobado. Alternativa en Cloudflare Pages lista en `scripts/pages-deploy.sh` (`lazo-demo.pages.dev`): el control de seguridad deniega crear esa superficie pública, así que la lanza el usuario si la quiere | implementador / usuario | Opus 5.5 | hecha (Cloudflare: bloqueada: usuario) |
 
-## Siguiente (v0.5)
+## Ahora: v0.5 «Lista para Navidad»
 
-| # | Tarea | Responsable | Modelo | Paralelo con |
-|---|---|---|---|---|
-| 8 | Avatares de la familia en la entrada por enlace: `inviteInfo` devuelve nombres y colores, y se revisa que no filtre nada a quien tiene un enlace usado | revisor-seguridad → implementador | Fable 5.2 → Opus 5.5 | 9, 10 |
-| 9 | Selector propio de claro u oscuro en Ajustes (hoy sigue al sistema) | implementador | Opus 5.5 | 8, 10 |
-| 10 | Regenerar `e2e/capturas.spec.ts` con las pantallas v0.4 (selectores nuevos) | OpenCode | `deepseek-v4.1-flash-free` | 8, 9 |
-| 11 | Hoja de detalle del regalo con foto 4:3 y estados de la tabla de DESIGN.md | implementador | Opus 5.5 | 12 |
-| 12 | Auditoría de seguridad de la v0.4 (lo que muestra el grupo en «Lo más deseado») | revisor-seguridad | Fable 5.2 | 11 |
-| 13 | Ilustraciones propias para los estados vacíos (el lazo deshecho) | revisor-diseno → implementador | Fable 5.2 → Opus 5.5 | — |
+Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparten archivos, salvo `docs/TAREAS.md`, que solo actualiza Opus al integrar.
+
+| # | Tarea | Responsable | Modelo | Rama | Estado |
+|---|---|---|---|---|---|
+| A | **Puesta en marcha real.** Guía `docs/HOMELAB.md` y `server/docker-compose.yml` de PocketBase en el homelab (al estilo de SHIELD-DNS y HEIMDALL): copias de seguridad, HTTPS con Caddy y acceso desde fuera para la familia. E2E contra PocketBase real del flujo completo: crear grupo → invitar → reclamar plaza → reservar → hucha → ajuste de cuentas | implementador | Opus 5.5 | `v05-homelab` | en curso |
+| B | **Importación robusta.** Enlaces de Amazon.es, El Corte Inglés, PcComponentes, Zara y Decathlon (metadatos públicos, fallback manual, tests con fixtures HTML) y Excel o CSV con mapeo de columnas asistido sin IA | implementador | Opus 5.5 | `v05-importar` | en curso |
+| C | **Avisos del grupo.** «Papá ha añadido 3 regalos», «faltan 10 días»… respetando la regla de la sorpresa, con un test que garantiza que ningún aviso filtra datos de la propia lista | implementador | Opus 5.5 | `v05-avisos` | en curso |
+| D | **Amigo invisible.** Animación de revelado y opción de reenviar el resultado en privado | implementador | Opus 5.5 | `v05-sorteo` | en curso |
+| E | Integrar A a D en `main` y pasar todas las pruebas | Opus | Opus 5.5 | — | pendiente |
+| F | Revisión de seguridad y de UX de todo lo nuevo, accesibilidad (axe) y capturas | revisor-seguridad + revisor-diseno | Fable 5.2 | — | pendiente |
+| G | Release v0.5.0: CHANGELOG, APK, demo, README y CI mínimo | implementador | Opus 5.5 | — | pendiente |
+
+## Después
+
+| # | Tarea | Responsable | Modelo |
+|---|---|---|---|
+| 8 | Avatares de la familia en la entrada por enlace (`inviteInfo` con nombres y colores, revisado por seguridad) | revisor-seguridad → implementador | Fable 5.2 → Opus 5.5 |
+| 9 | Selector propio de claro u oscuro en Ajustes | implementador | Opus 5.5 |
+| 10 | Regenerar `e2e/capturas.spec.ts` con las pantallas v0.4 | OpenCode | `deepseek-v4.1-flash-free` |
+| 11 | Hoja de detalle del regalo con foto 4:3 | implementador | Opus 5.5 |
+| 13 | Ilustraciones propias para los estados vacíos | revisor-diseno → implementador | Fable 5.2 → Opus 5.5 |
 
 ## Cómo se encadena
 
