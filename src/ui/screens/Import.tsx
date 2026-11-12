@@ -2,19 +2,46 @@ import { FileArrowUp, Sparkle } from '@phosphor-icons/react';
 import { loadAi } from '../../ai/provider';
 import { mapColumnsAI } from '../../ai/tasks';
 import { useMemo, useState } from 'react';
-import { FIELD_LABEL, guessColumns, rowsToDrafts, type ColumnMap, type Field } from '../../core/columns';
+import { assignColumn, fieldForColumn, FIELD_LABEL, guessColumns, rowsToDrafts, type ColumnMap, type Field, type ItemDraft } from '../../core/columns';
 import { formatMoney } from '../../core/money';
 import { Button, ButtonGroup, FileButton } from '../Button';
 import { useApi } from '../ctx';
+import { PRIORITY } from '../Gift';
 import { errorText, Sheet, useToast } from '../kit';
 
 const FIELDS = Object.keys(FIELD_LABEL) as Field[];
+const PREVIEW = 5;
+
+function decodeText(buf: ArrayBuffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder('windows-1252').decode(buf);
+  }
+}
+
+/** Primer valor no vacío de la columna (en las 5 primeras filas), para reconocerla de un vistazo. */
+function example(rows: unknown[][], col: number): string {
+  const v = rows.slice(1, 6).map((r) => String(r[col] ?? '').trim()).find(Boolean);
+  return v ? (v.length > 40 ? `${v.slice(0, 39)}…` : v) : '—';
+}
+
+function previewCell(d: ItemDraft, f: Field): string {
+  if (f === 'price') return d.priceCents ? formatMoney(d.priceCents) : '—';
+  if (f === 'url') return d.url ? new URL(d.url).hostname.replace(/^www\./, '') : '—';
+  if (f === 'priority') return PRIORITY[d.priority];
+  if (f === 'quantity') return String(d.quantity);
+  return d[f] ?? '—';
+}
 
 /** Lee la primera hoja de un .xlsx/.xls/.ods/.csv. SheetJS se carga solo aquí (carga diferida). */
 async function readSheet(file: File): Promise<unknown[][]> {
   if (file.size > 5 * 1024 * 1024) throw new Error('El archivo pesa más de 5 MB. Prueba con uno más pequeño.');
   const XLSX = await import('xlsx');
-  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false, dense: true });
+  const buf = await file.arrayBuffer();
+  const opts = { cellDates: false, dense: true } as const;
+  // Un CSV es texto: lo decodificamos nosotros (UTF-8 con o sin BOM o, si no lo es, el ANSI de Excel en Windows).
+  const wb = /\.csv$/i.test(file.name) || file.type === 'text/csv' ? XLSX.read(decodeText(buf), { ...opts, type: 'string' }) : XLSX.read(buf, { ...opts, type: 'array' });
   const first = wb.SheetNames[0];
   if (!first) throw new Error('El archivo no tiene hojas.');
   return XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[first]!, { header: 1, blankrows: false, defval: '' });
@@ -29,6 +56,7 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
   const [err, setErr] = useState('');
   const headers = (rows?.[0] ?? []).map((h) => String(h ?? ''));
   const drafts = useMemo(() => (rows ? rowsToDrafts(rows.slice(1), map) : []), [rows, map]);
+  const shown = FIELDS.filter((f) => map[f] !== undefined);
 
   const onFile = async (f?: File) => {
     if (!f) return;
@@ -38,7 +66,7 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
       const r = await readSheet(f);
       if (r.length < 2) throw new Error('La hoja está vacía o solo tiene la cabecera.');
       setRows(r);
-      setMap(guessColumns(r[0]!.map((h) => String(h ?? ''))));
+      setMap(guessColumns(r[0]!.map((h) => String(h ?? '')), r.slice(1, 6)));
     } catch (e) {
       setErr(errorText(e));
     } finally {
@@ -89,7 +117,7 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
       )}
       {rows && (
         <>
-          <p className="meta">Hemos adivinado qué es cada columna. Corrige lo que no cuadre.</p>
+          <p className="meta">Hemos adivinado qué es cada columna. Corrige lo que no cuadre y mira abajo cómo quedará antes de importar.</p>
           {loadAi().provider !== 'none' && (
             <Button
               variant="secondary"
@@ -111,34 +139,49 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
               Que la IA lo ordene
             </Button>
           )}
-          <div className="grid-2">
-            {FIELDS.map((f) => (
-              <label className="field" key={f}>
-                <span>{FIELD_LABEL[f]}</span>
-                <select
-                  className="select"
-                  value={map[f] ?? ''}
-                  onChange={(e) => setMap((m) => ({ ...m, [f]: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                >
-                  <option value="">—</option>
-                  {headers.map((h, i) => <option key={i} value={i}>{h || `Columna ${i + 1}`}</option>)}
-                </select>
-              </label>
-            ))}
+          <div className="table-wrap">
+            <table className="preview map-table" aria-label="Qué es cada columna">
+              <thead><tr><th scope="col">Columna</th><th scope="col">Ejemplo</th><th scope="col">Se importa como</th></tr></thead>
+              <tbody>
+                {headers.map((h, i) => {
+                  const name = h.trim() || `Columna ${i + 1}`;
+                  return (
+                    <tr key={i}>
+                      <th scope="row">{name}</th>
+                      <td>{example(rows, i)}</td>
+                      <td>
+                        <select
+                          className="select"
+                          aria-label={`Columna «${name}»`}
+                          value={fieldForColumn(map, i) ?? ''}
+                          onChange={(e) => setMap((m) => assignColumn(m, i, (e.target.value || undefined) as Field | undefined))}
+                        >
+                          <option value="">No importar</option>
+                          {FIELDS.map((f) => <option key={f} value={f}>{FIELD_LABEL[f]}</option>)}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
           {drafts.length > 0 && (
-            <div className="table-wrap">
-              <table className="preview">
-                <thead><tr><th>Regalo</th><th>Precio</th><th>Talla</th><th>Cantidad</th></tr></thead>
-                <tbody>
-                  {drafts.slice(0, 8).map((d, i) => (
-                    <tr key={i}><td>{d.title}</td><td>{d.priceCents ? formatMoney(d.priceCents) : '—'}</td><td>{d.size ?? '—'}</td><td>{d.quantity}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <h3 className="map-title">Así quedarán los primeros</h3>
+              <div className="table-wrap">
+                <table className="preview" aria-label="Vista previa">
+                  <thead><tr>{shown.map((f) => <th key={f} scope="col">{FIELD_LABEL[f]}</th>)}</tr></thead>
+                  <tbody>
+                    {drafts.slice(0, PREVIEW).map((d, i) => (
+                      <tr key={i}>{shown.map((f) => <td key={f}>{previewCell(d, f)}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
-          {drafts.length > 8 && <p className="meta">…y {drafts.length - 8} más.</p>}
+          {drafts.length > PREVIEW && <p className="meta">…y {drafts.length - PREVIEW} más.</p>}
         </>
       )}
       {err && <p className="notice notice-error" role="alert">{err}</p>}

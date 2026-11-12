@@ -613,3 +613,9 @@ table.preview th { background: var(--hundido); font-weight: 800; }
 .avisos a { display: grid; gap: 2px; min-height: 44px; padding: var(--s-3) 0; color: var(--tinta); text-decoration: none; }
 .avisos .aviso-text { font-weight: 700; font-size: var(--t-md); }
 .avisos .aviso-group { color: var(--tinta-2); font-size: var(--t-meta); }
+
+/* v05-importar */
+table.map-table td { white-space: normal; vertical-align: middle; }
+table.map-table th[scope='row'] { background: none; font-weight: 700; }
+table.map-table .select { min-width: 10rem; }
+.map-title { font-size: var(--t-md); font-weight: 800; }
