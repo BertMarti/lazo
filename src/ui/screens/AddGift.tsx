@@ -8,7 +8,7 @@ import { useApi } from '../ctx';
 import { PRIORITY } from '../Gift';
 import { errorText, Sheet, useToast } from '../kit';
 import { listaId, parseListaPegada, soloEnlace } from '../../core/amazonLista';
-import { leeCompartido } from '../compartido';
+import { leeCompartido, olvidaCompartido } from '../compartido';
 import { AmazonLista } from './AmazonLista';
 import { ItemForm } from './ItemForm';
 
@@ -21,14 +21,16 @@ type Step =
   | { kind: 'reading' }
   | { kind: 'added'; item: Item }
   | { kind: 'manual'; url?: string; hint?: string }
-  | { kind: 'amazon'; aviso?: string; pegado?: Pegado };
+  | { kind: 'amazon'; aviso?: string; pegado?: Pegado; deOtraApp?: boolean };
 
 const ENLACE_DE_LISTA = 'Es el enlace de una lista de Amazon. Lazo no entra en Amazon por ti, así que necesita el texto de la página: sigue estos pasos.';
 
 /** ¿Lo pegado es una lista de Amazon (su enlace, o la página copiada entera)? */
 function comoLista(p: Pegado): Step | null {
-  if (soloEnlace(p.text) || (listaId(p.text) && !parseListaPegada(p.text, p.html).length)) return { kind: 'amazon', aviso: ENLACE_DE_LISTA };
-  return parseListaPegada(p.text, p.html).length >= 2 ? { kind: 'amazon', pegado: p } : null;
+  if (soloEnlace(p.text)) return { kind: 'amazon', aviso: ENLACE_DE_LISTA };
+  const n = parseListaPegada(p.text, p.html).length; // V11-1: una sola pasada
+  if (listaId(p.text) && !n) return { kind: 'amazon', aviso: ENLACE_DE_LISTA };
+  return n >= 2 ? { kind: 'amazon', pegado: p } : null;
 }
 
 /**
@@ -38,10 +40,14 @@ function comoLista(p: Pegado): Step | null {
 export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId: string; onClose: () => void; onSaved: () => void; onImport: () => void; amazon?: boolean }) {
   const api = useApi();
   const toast = useToast();
-  const [step, setStep] = useState<Step>(() => {
+  // Lo compartido desde otra app: una lista va a la vista previa; el enlace de un producto suelto, al alta normal.
+  const [[compartido, suelto]] = useState(() => {
     const text = amazon ? leeCompartido() : null;
-    return amazon ? { kind: 'amazon', pegado: text ? { text } : undefined } : { kind: 'idle' };
+    return [text, text && !comoLista({ text }) ? firstUrl(text) : null] as const;
   });
+  const [step, setStep] = useState<Step>(() =>
+    !amazon || suelto ? { kind: 'idle' } : { kind: 'amazon', pegado: compartido ? { text: compartido } : undefined, deOtraApp: !!compartido },
+  );
   const [manualUrl, setManualUrl] = useState('');
   const [peek, setPeek] = useState<string | null>(null);
   const busyRef = useRef(false);
@@ -99,6 +105,12 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
     }
   };
 
+  useEffect(() => {
+    if (!suelto) return;
+    olvidaCompartido();
+    void fromUrl(suelto);
+  }, []);
+
   // Pegar en cualquier punto de la hoja.
   useEffect(() => {
     const on = (e: ClipboardEvent) => {
@@ -120,7 +132,7 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
   });
 
   if (step.kind === 'amazon') {
-    return <AmazonLista listId={listId} aviso={step.aviso} compartido={step.pegado} onClose={onClose} onSaved={onSaved} />;
+    return <AmazonLista listId={listId} aviso={step.aviso} compartido={step.pegado} deOtraApp={step.deOtraApp} onClose={onClose} onSaved={onSaved} />;
   }
 
   if (step.kind === 'manual') {

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { esDuplicado, fotoSegura, limpiaTitulo, listaId, parseListaHtml, parseListaPegada, parseListaTexto, soloEnlace } from '../../src/core/amazonLista';
 import { DEMO_AMAZON_HTML, DEMO_AMAZON_LISTA } from '../../src/api/seed';
+import { hostilAnidadas, hostilAsin, hostilEnlaces } from '../fixtures/amazon-lista/grande';
 
 // Fixtures escritas a mano (ficticias): test/fixtures/amazon-lista/*.
 const fx = (name: string) => readFileSync(`test/fixtures/amazon-lista/${name}`, 'utf8');
@@ -9,21 +10,21 @@ const URL_OK = /^https:\/\/www\.amazon\.es\/dp\/[A-Z0-9]{10}$/;
 
 describe('enlace de lista', () => {
   it('reconoce las listas de amazon.es, con o sin www, con parámetros y dentro del texto de compartir', () => {
-    expect(listaId('https://www.amazon.es/hz/wishlist/ls/3PG8NYLSV7ERC?ref_=wl_share')).toBe('3PG8NYLSV7ERC');
-    expect(listaId('amazon.es/hz/wishlist/ls/3PG8NYLSV7ERC')).toBeNull(); // sin esquema no es un enlace
-    expect(listaId('https://amazon.es/hz/wishlist/ls/3pg8nylsv7erc/')).toBe('3PG8NYLSV7ERC');
+    expect(listaId('https://www.amazon.es/hz/wishlist/ls/LAZOPRUEBA01?ref_=wl_share')).toBe('LAZOPRUEBA01');
+    expect(listaId('amazon.es/hz/wishlist/ls/LAZOPRUEBA01')).toBeNull(); // sin esquema no es un enlace
+    expect(listaId('https://amazon.es/hz/wishlist/ls/lazoprueba01/')).toBe('LAZOPRUEBA01');
     expect(listaId('https://www.amazon.es/registry/wishlist/1A2B3C4D5E6F')).toBe('1A2B3C4D5E6F');
-    expect(listaId('¡Mira mi lista de Amazon! https://www.amazon.es/hz/wishlist/ls/3PG8NYLSV7ERC?ref_=wl_share.')).toBe('3PG8NYLSV7ERC');
+    expect(listaId('¡Mira mi lista de Amazon! https://www.amazon.es/hz/wishlist/ls/LAZOPRUEBA01?ref_=wl_share.')).toBe('LAZOPRUEBA01');
   });
 
   it('no se deja engañar por otros hosts ni otras rutas', () => {
     for (const u of [
-      'https://www.amazon.es@evil.example/hz/wishlist/ls/3PG8NYLSV7ERC',
-      'https://www.amazon.es.evil.example/hz/wishlist/ls/3PG8NYLSV7ERC',
-      'https://evil.example/www.amazon.es/hz/wishlist/ls/3PG8NYLSV7ERC',
-      'https://www.amazon.es:8443/hz/wishlist/ls/3PG8NYLSV7ERC',
-      'https://www.amazon.com/hz/wishlist/ls/3PG8NYLSV7ERC',
-      'https://smile.amazon.es/hz/wishlist/ls/3PG8NYLSV7ERC',
+      'https://www.amazon.es@evil.example/hz/wishlist/ls/LAZOPRUEBA01',
+      'https://www.amazon.es.evil.example/hz/wishlist/ls/LAZOPRUEBA01',
+      'https://evil.example/www.amazon.es/hz/wishlist/ls/LAZOPRUEBA01',
+      'https://www.amazon.es:8443/hz/wishlist/ls/LAZOPRUEBA01',
+      'https://www.amazon.com/hz/wishlist/ls/LAZOPRUEBA01',
+      'https://smile.amazon.es/hz/wishlist/ls/LAZOPRUEBA01',
       'https://www.amazon.es/dp/B000000000',
       'https://www.amazon.es/hz/wishlist/ls/..%2F..%2Fx',
       'https://amzn.eu/d/abc123', // corto: no sabemos qué es, y no lo seguimos
@@ -32,7 +33,7 @@ describe('enlace de lista', () => {
   });
 
   it('distingue «solo el enlace» de la página copiada', () => {
-    expect(soloEnlace('Echa un vistazo a mi lista https://www.amazon.es/hz/wishlist/ls/3PG8NYLSV7ERC?ref_=wl_share')).toBe(true);
+    expect(soloEnlace('Echa un vistazo a mi lista https://www.amazon.es/hz/wishlist/ls/LAZOPRUEBA01?ref_=wl_share')).toBe(true);
     expect(soloEnlace(fx('escritorio.txt'))).toBe(false);
   });
 });
@@ -129,7 +130,21 @@ describe('AMZ-15: entradas hostiles y topes', () => {
   ])('%s: termina rápido y con ≤ 100 filas', (_n, s) => {
     const t = performance.now();
     expect(parseListaPegada(s, s).length).toBeLessThanOrEqual(100);
-    expect(performance.now() - t).toBeLessThan(3000);
+    expect(performance.now() - t).toBeLessThan(500);
+  });
+
+  // V11-1: antes era cuadrático (4 000 enlaces tardaban 30 s). Los 500 ms con 2 MB se miden en Chromium
+  // (e2e/amazon-lista.spec.ts): aquí happy-dom tarda ~500 ms solo en construir el documento.
+  const enlaces = (n: number) => Array.from({ length: n }, (_, i) => `<a href="/gp/product/${hostilAsin(i)}">Producto de prueba ${i}</a>`).join('');
+  it.each([
+    ['4 000 enlaces a /gp/product/ sueltos', enlaces(4000), 500],
+    ['4 000 enlaces a /gp/product/ en un mismo contenedor', `<div><section>${enlaces(4000)}</section></div>`, 500],
+    ['2 MB de enlaces a /gp/product/', hostilEnlaces(), 1500],
+    ['2 MB de fichas anidadas', hostilAnidadas(), 1500],
+  ])('%s: rápido y como mucho 100 filas', (_n, html, ms) => {
+    const t = performance.now();
+    expect(parseListaHtml(html).length).toBeLessThanOrEqual(100);
+    expect(performance.now() - t).toBeLessThan(ms);
   });
 
   it('como mucho 100 productos', () => {
@@ -137,6 +152,15 @@ describe('AMZ-15: entradas hostiles y topes', () => {
     expect(parseListaHtml(many)).toHaveLength(100);
     const text = Array.from({ length: 150 }, (_, i) => `Producto de texto ${i}\n${i + 1},00 €`).join('\n');
     expect(parseListaTexto(text)).toHaveLength(100);
+  });
+});
+
+describe('enmienda a AMZ-10: prioridad y cantidad sí, «Tiene» y «Comprado» nunca', () => {
+  it('«Necesita 2 · Tiene 1» da quantity 2 y ningún otro campo', () => {
+    expect(parseListaTexto('Lámpara de escritorio articulada\nAñadido el 3 de noviembre de 2026\nNecesita 2 · Tiene 1')).toEqual([{ title: 'Lámpara de escritorio articulada', quantity: 2 }]);
+    expect(parseListaTexto('Lámpara de escritorio articulada\nAñadido el 3 de noviembre de 2026\nTiene 3\nComprado 2')).toEqual([{ title: 'Lámpara de escritorio articulada' }]);
+    const html = '<li data-itemid="1"><a id="itemName_1" title="Lámpara de escritorio articulada" href="/dp/B0LAZOLAMP"></a><span>Tiene 4</span><span>Comprado: 3</span></li>';
+    expect(parseListaHtml(html)).toEqual([{ title: 'Lámpara de escritorio articulada', asin: 'B0LAZOLAMP', url: 'https://www.amazon.es/dp/B0LAZOLAMP' }]);
   });
 });
 

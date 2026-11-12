@@ -604,4 +604,25 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.equal((await ok('GET', '/api/collections/groups/records', null, fresh)).totalItems, 1);
     assert.equal((await call('POST', '/api/collections/users/auth-refresh', null, fresh)).status, 200);
   });
+
+  test('AMZ-11 (V11-6): reimportar de Amazon un regalo quitado responde igual esté cogido o no; el servidor no deduplica', async () => {
+    const t = tok.mama;
+    const amz = (k) => ({ list: ids['l-mama'], title: `Producto de Amazon ${k}`, url: `https://www.amazon.es/dp/B0LAZOPRU${k}`, store: 'Amazon', priceCents: 1999, priority: 2, quantity: 1, createdBy: ids.mama, currency: 'EUR' });
+    const A = (await ok('POST', '/api/collections/items/records', amz('A'), t)).id;
+    const B = (await ok('POST', '/api/collections/items/records', amz('B'), t)).id;
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: A, kind: 'self' }, tok.papa); // A cogido, B libre
+    for (const id of [A, B]) assert.equal((await call('DELETE', `/api/collections/items/records/${id}`, null, t)).status, 204);
+    // Lo mismo que hace importItems: un lote de POST sin id, con los dos productos.
+    const imp = await call('POST', '/api/batch', { requests: ['A', 'B'].map((k) => ({ method: 'POST', url: '/api/collections/items/records', body: amz(k) })) }, t);
+    assert.equal(imp.status, 200, imp.text);
+    const sin = (r) => Object.fromEntries(Object.entries(r).filter(([k]) => !['id', 'created', 'updated', 'title', 'url'].includes(k)));
+    const [ra, rb] = imp.json;
+    assert.equal(ra.status, rb.status);
+    assert.deepEqual(sin(ra.body), sin(rb.body));
+    const nuevos = [ra.body.id, rb.body.id];
+    assert.ok(nuevos.every((id) => id && id !== A && id !== B), 'dos filas nuevas');
+    const mias = (await ok('GET', `/api/collections/items/records?perPage=500&filter=${encodeURIComponent(`list = "${ids['l-mama']}" && store = "Amazon"`)}`, null, t)).items;
+    assert.deepEqual(mias.map((i) => i.id).sort(), [...nuevos].sort(), 'Mamá ve las dos nuevas y ninguna de las quitadas');
+    assert.deepEqual(sin(mias.find((i) => i.id === nuevos[0])), sin(mias.find((i) => i.id === nuevos[1])));
+  });
 });

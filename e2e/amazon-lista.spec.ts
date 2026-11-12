@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { DEMO_AMAZON_HTML, DEMO_AMAZON_LISTA } from '../src/api/seed';
+import { hostilAnidadas, hostilEnlaces } from '../test/fixtures/amazon-lista/grande';
 
 // Importar una lista de Amazon copiando y pegando (camino b). Lazo no hace ninguna petición a Amazon.
 test.beforeEach(async ({ page }) => {
@@ -42,7 +43,7 @@ test('pegar el enlace de la lista abre el modo manual; la página copiada da la 
   await expect(sheet.getByText('1 ya está en tu lista')).toBeVisible();
   await expect(sheet.getByRole('checkbox', { name: /Teclado mecánico compacto/ })).not.toBeChecked();
   await expect(sheet.getByRole('checkbox', { name: /Termo de acero/ })).toBeChecked();
-  await sheet.getByRole('button', { name: 'Añadir 7 a tu lista' }).click();
+  await sheet.getByRole('button', { name: 'Añadir 7', exact: true }).click();
   await expect(page.getByText('7 regalos añadidos.')).toBeVisible();
   const termo = page.locator('.gift', { hasText: 'Termo de acero inoxidable de 750 ml' });
   await expect(termo).toContainText('24,95');
@@ -61,7 +62,7 @@ test('la lista de ejemplo de la demo y las pestañas por dispositivo', async ({ 
   await sheet.getByRole('button', { name: 'Probar con una lista de ejemplo' }).click();
   await expect(sheet.getByText('He encontrado 8 productos.')).toBeVisible();
   await sheet.getByRole('checkbox', { name: /Termo de acero/ }).uncheck();
-  await sheet.getByRole('button', { name: 'Añadir 6 a tu lista' }).click();
+  await sheet.getByRole('button', { name: 'Añadir 6', exact: true }).click();
   await expect(page.getByText('6 regalos añadidos.')).toBeVisible();
 });
 
@@ -89,7 +90,7 @@ test('AMZ-9, AMZ-10 y AMZ-16: lo pegado hostil no ejecuta nada, no pide nada fue
   await paste(page, 'x', readFileSync('test/fixtures/amazon-lista/hostil.html', 'utf8'));
   await expect(sheet.getByText('He encontrado 3 productos.')).toBeVisible();
   await expect(sheet.getByText('<img src=x onerror=alert(1)> Taza')).toBeVisible(); // como texto
-  await sheet.getByRole('button', { name: 'Añadir 3 a tu lista' }).click();
+  await sheet.getByRole('button', { name: 'Añadir 3', exact: true }).click();
   await expect(page.getByText('3 regalos añadidos.')).toBeVisible();
   await expect(page.locator('img[src="x"], .gifts script, .gifts b')).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __hostil?: number }).__hostil)).toBeUndefined();
@@ -97,4 +98,50 @@ test('AMZ-9, AMZ-10 y AMZ-16: lo pegado hostil no ejecuta nada, no pide nada fue
   expect(stored).not.toContain('onerror="alert(2)"'); // el HTML pegado no se guarda (el título, como texto, sí)
   expect(stored).not.toContain('javascript:');
   expect(fuera).toEqual([]);
+});
+
+/** «Compartir → Lazo» en Android: lo mismo que hace main.tsx con el texto del intent. */
+const compartir = (page: Page, text: string) =>
+  page.evaluate(async ([m, t]) => {
+    (await import(m!)).guardaCompartido(t);
+    location.hash = '/amazon';
+  }, ['/src/ui/compartido.ts', text] as const);
+
+test('V11-2: lo que llega de otra app se dice y no crea nada sin pulsar «Añadir»', async ({ page }) => {
+  await page.goto('/#/l/l-alberto');
+  await expect(page.locator('.gift').first()).toBeVisible();
+  await compartir(page, readFileSync('test/fixtures/amazon-lista/escritorio.txt', 'utf8'));
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('status')).toHaveText(/Texto recibido de otra app/);
+  await expect(sheet.getByText(/He encontrado \d+ productos/)).toBeVisible();
+  await expect(sheet.getByText('2 unidades')).toBeVisible(); // arreglo 6: la cantidad se ve antes de añadir
+  await sheet.getByRole('button', { name: 'Cerrar' }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(page.locator('.gift', { hasText: 'Lámpara de escritorio con brazo articulado' })).toHaveCount(0);
+  expect(await page.evaluate(async (m) => (await import(m)).leeCompartido(), '/src/ui/compartido.ts')).toBeNull();
+});
+
+test('compartir el enlace de un producto suelto lo añade como siempre, sin pasar por la lista de Amazon', async ({ page }) => {
+  await page.goto('/#/l/l-alberto');
+  await expect(page.locator('.gift').first()).toBeVisible();
+  await compartir(page, 'Mira esto en Amazon https://www.amazon.es/dp/B0LAZOPRU1?ref=x');
+  await expect(page.getByText('Añadido a tu lista.')).toBeVisible();
+  await expect(page.getByText(/No encuentro productos/)).toHaveCount(0);
+});
+
+test('V11-1: 2 MB de HTML preparado se analizan en menos de 500 ms en el navegador', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Se mide en Chromium');
+  await page.goto('/#/l/l-alberto');
+  for (const html of [hostilEnlaces(), hostilAnidadas()]) {
+    const r = await page.evaluate(async ([m, h]) => {
+      const { parseListaHtml } = await import(m!);
+      parseListaHtml('<a href="/dp/B0LAZOPRU1">Calentar el analizador</a>');
+      const t = performance.now();
+      const n = parseListaHtml(h).length;
+      return { n, ms: performance.now() - t };
+    }, ['/src/core/amazonLista.ts', html] as const);
+    console.log(`V11-1 en Chromium: ${html.length} caracteres, ${r.n} filas, ${Math.round(r.ms)} ms`);
+    expect(r.n).toBeLessThanOrEqual(100);
+    expect(r.ms).toBeLessThan(500);
+  }
 });

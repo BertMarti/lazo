@@ -1,5 +1,6 @@
 import PocketBase, { ClientResponseError, type RecordModel, type RecordSubscription } from 'pocketbase';
 import { seenFacts } from '../core/avisos';
+import { olvidaCompartido } from '../ui/compartido';
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
@@ -156,6 +157,7 @@ export class PocketBaseApi implements Api {
       if (everywhere) await this.pb.send('/api/lazo/logout-all', { method: 'POST' });
       this.pb.authStore.clear();
       seenFacts.forget();
+      olvidaCompartido(); // V11-4: lo compartido desde otra app tampoco se queda en memoria
       try {
         for (const k of Object.keys(localStorage)) if (/^lazo:(pendiente:|last-group$|ia$)/.test(k)) localStorage.removeItem(k);
       } catch {

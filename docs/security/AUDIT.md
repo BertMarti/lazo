@@ -1500,3 +1500,78 @@ Vale para el HTML del camino (a) y para lo pegado en el (b). Expresiones con cua
 
 1. Camino (b) con AMZ-9, AMZ-10, AMZ-11, AMZ-15 y AMZ-16, comprobando de paso el `href` de G-13.
 2. Decidir si (a) hace falta a la vista del uso real de (b). Si se hace: AMZ-1 a AMZ-8 y AMZ-12 a AMZ-14, con las pruebas escritas antes que el código y `AMAZON_IMPORT` apagado en el `.env` de ejemplo.
+
+## Verificación v1.1 Amazon (Fable 5.2)
+
+Revisado el 2026-11-12 sobre `main` (`9697929`). Alcance: el modo manual (camino b) y «Compartir → Lazo» en Android. Leídos `src/core/amazonLista.ts`, `src/core/amazon.ts`, `src/ui/screens/AmazonLista.tsx`, `AddGift.tsx`, `src/ui/compartido.ts`, `src/main.tsx`, `SharePlugin.java`, `MainActivity.java`, `AndroidManifest.xml`, `index.html`, los hooks de `items` y `e2e/amazon-lista.spec.ts`. Ejecutado `test/core/amazonLista.test.ts`: 20 de 20 en verde. No se ha probado en un Android real ni se ha ejecutado Playwright en esta revisión.
+
+**Resultado:** ningún hallazgo crítico ni alto. LA REGLA se mantiene: la importación no añade ninguna vía de lectura y el servidor no deduplica. Un requisito queda a medias (AMZ-15) y hay cinco hallazgos bajos más.
+
+### Estado de cada requisito
+
+| Requisito | Estado | Comprobación |
+|---|---|---|
+| AMZ-1 a AMZ-8, AMZ-12 | No aplica | El camino (a) no existe: no hay ruta `amazon-import` ni `/wishlist` en `server/` (búsqueda sin resultados). Si se añade, siguen siendo condición previa |
+| AMZ-9 títulos | Cumplido | `limpiaTitulo` quita controles y marcas de dirección, colapsa y corta a 200, en HTML y en texto. La vista previa pinta nodos de texto; `src/` sigue sin `innerHTML` ni `dangerouslySetInnerHTML`. Prueba unitaria con `hostil.html` y e2e |
+| AMZ-10 enlaces, fotos, precios | Cumplido, con una enmienda | El enlace es siempre `https://www.amazon.es/dp/<ASIN>` (`conAsin`); ningún `href` se copia. Foto solo `https:` de los tres hosts, sin puerto ni credenciales. G-13 cerrado (`ItemSheet.tsx` exige `^https?://`; `Printable.tsx` usa `webUrl`). En texto plano las filas no llevan enlace ni foto, que es más estricto que lo pedido. **Enmienda:** prioridad y cantidad sí se importan (ver abajo) |
+| AMZ-11 duplicados y LA REGLA | Cumplido | `esDuplicado` compara en el cliente con `listDetail` de la propia plaza (lo que la dueña ve). El alta va por `importItems`: lotes de `POST` de 50, sin ids. No hay hook de creación de `items` que lea filas existentes ni índice único sobre `items`, así que la respuesta no depende de lo oculto. Lo cubren PB-10 y V-26; falta una prueba de servidor específica (V11-6) |
+| AMZ-13 proxy | No aplica | La demo solo tiene el camino (b) |
+| AMZ-14 identificador de la lista | Cumplido en (b) | `listaId` solo detecta; el identificador no se envía, no se guarda y no se registra. Ver V11-5 sobre el identificador de las pruebas |
+| AMZ-15 entradas hostiles | **Parcial** | Topes de 2 MB y 100 filas correctos; expresiones acotadas; el texto plano de 2 MB tarda unos 50 ms. El HTML tiene un caso cuadrático (V11-1) |
+| AMZ-16 camino (b) | Cumplido | Lo pegado se lee del evento o de `clipboard.read()`, con `preventDefault`, y no entra en el DOM. `DOMParser` da un documento inerte. Vista previa sin `<img>`: ninguna petición a Amazon antes de confirmar. `connect-src` sin Amazon. Nada de lo pegado va a `localStorage`, a la IA ni al servidor |
+
+### Enmienda a AMZ-10: prioridad y cantidad
+
+Me parece bien. Son valores acotados (prioridad 1 a 3, cantidad 1 a 20), los eligió la dueña y ya los ve en su regalo: no tocan LA REGLA. Condición que el código cumple hoy y que debe seguir cumpliendo: **«Tiene» y «Comprado» no se leen nunca**. Ese recuento es estado (lo que otros ya le han comprado en Amazon) y traerlo a Lazo sería una fuga por otra puerta. `prioCantidad` solo casa `cantidad`, `necesita` y `quiere`. **Prueba que falta:** una ficha con «Necesita 2 · Tiene 1» da `quantity: 2` y ningún otro campo.
+
+### Intent de Android
+
+- **Superficie:** `ACTION_SEND` con `text/plain`, actividad exportada. Solo se lee `EXTRA_TEXT`; se ignoran `EXTRA_STREAM` y `EXTRA_HTML_TEXT`, así que no hay lectura de archivos ni de URIs ajenas, y lo recibido se analiza siempre como texto plano (sin enlaces ni fotos).
+- **Tope:** 2 000 000 de caracteres en Java y otra vez en `guardaCompartido`. En la práctica Binder corta antes (alrededor de 1 MB por transacción).
+- **Una sola vez:** `consume` cambia la acción a `MAIN`, de modo que girar la pantalla o recargar el WebView no repite la entrega. Excepción en V11-3.
+- **Texto hostil:** solo produce filas de título y precio que la persona debe confirmar. No se devuelve nada a la app que llama.
+
+### Hallazgos
+
+**V11-1 (bajo; AMZ-15 no cumplido tal como se escribió) · El análisis del HTML es cuadrático.**
+`parseListaHtml` recorre los 5 000 primeros enlaces aunque ya tenga 100 filas (`push` no corta el bucle) y, por cada uno, vuelve a analizar con `asinDe` todos los enlaces de sus contenedores. Lo mismo con fichas `data-itemid` anidadas. Medido con happy-dom: 4 000 enlaces a `/gp/product/<ASIN>` (215 KB) tardan 30 s; 400 fichas anidadas (100 KB), 11 s. A 2 MB son minutos. Además `comoLista` (`AddGift.tsx`) analiza lo pegado hasta dos veces antes de que `AmazonLista` lo haga una tercera.
+*Escenario.* Alguien copia una página preparada (o una página grande de Amazon que enlaza por `/gp/product/`) y la pega: la pestaña se congela. No hay fuga ni escritura; solo se alcanza con HTML, no por el intent.
+*Arreglo.* Salir de los dos bucles cuando `out.length >= MAX_PRODUCTOS`, calcular el ASIN de cada enlace una sola vez y saltar las fichas que contienen otra ficha.
+*Prueba.* En `amazonLista.test.ts`: 2 MB de `<a href="/gp/product/B0…">` con ASIN distintos y 2 MB de `data-itemid` anidados terminan en menos de 500 ms. Bajar a 500 ms el umbral actual de 3 000.
+
+**V11-2 (bajo) · Cualquier app instalada puede abrir Lazo en la vista previa con un texto suyo.**
+*Escenario.* Una app envía `ACTION_SEND` a Lazo con 100 fichas inventadas. Lazo pasa a primer plano, salta a `#/amazon` (se pierde lo que hubiera a medias) y enseña 100 filas marcadas. Si la persona pulsa «Añadir», su lista se llena de títulos ajenos, en texto plano y sin enlaces. Hace falta ese toque.
+*Arreglo opcional.* Cuando lo analizado viene del intent, un aviso «Texto recibido desde otra app» sobre la vista previa. No bloquea.
+*Prueba.* e2e con `guardaCompartido`: nada se crea sin pulsar «Añadir».
+
+**V11-3 (bajo) · El texto compartido vuelve si Android recrea la actividad.**
+`setAction(MAIN)` cambia el intent en memoria. Si el sistema mata el proceso y la app se reabre desde Recientes, entrega otra vez el intent original y la vista previa reaparece. Deducido del código, no probado en un dispositivo.
+*Arreglo.* En `SharePlugin.consume`, devolver `null` si `(intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0`.
+*Prueba.* Manual: compartir, activar «No mantener actividades» en las opciones de desarrollador y volver desde Recientes.
+
+**V11-4 (bajo) · El texto pendiente sobrevive a un cierre de sesión.**
+`pendiente` solo se borra cuando la hoja lo lee. Si no hay plaza (`AmazonDestino` se queda en el mensaje) o la persona cierra sesión antes, sigue en memoria hasta que muere el proceso, y lo vería quien entre después y abra `#/l/<id>/amazon`.
+*Arreglo.* Llamar a `olvidaCompartido()` en la rama sin plaza de `AmazonDestino` y al cerrar sesión.
+*Prueba.* `test/api/signout.test.ts`: tras cerrar sesión, `leeCompartido()` es `null`.
+
+**V11-5 (bajo, privacidad) · Identificador de lista con aspecto real en las pruebas.**
+`test/core/amazonLista.test.ts` usaba un identificador de lista con aspecto real en doce líneas (ya sustituido, no se repite aquí). Si es una lista real, el repositorio público enlaza a su dueña (justo lo que AMZ-14 evita). No lo he comprobado contra Amazon.
+*Arreglo.* Confirmar que es inventado o sustituirlo por uno evidente (`LAZOTEST00001`), como ya hace la demo con `LAZODEMO2026X`.
+
+**V11-6 (bajo) · Falta la prueba de servidor de AMZ-11.**
+El comportamiento es correcto por construcción, pero la prueba descrita en AMZ-11 (quitar A reservado y B libre, reimportar ambos, misma respuesta y dos filas nuevas) no está en `server/test/rules.test.mjs`. Es la que impediría que un día alguien añada un índice único o un deduplicado en el servidor.
+
+### Secretos
+
+`.env.local` y `.env.*` están ignorados y no están en el índice (solo `.env.example` y `server/.env.example`); `dist/`, `dist-demo/` y `dist-apk/` también están ignorados. No se ha leído ni impreso ningún valor de `.env*`. La v1.1 no añade claves, variables de entorno ni permisos de Android. Las fixtures de `test/fixtures/amazon-lista/` son ficticias y no llevan datos personales. `DEMO_AMAZON_HTML` entra en todos los builds, también en el APK: es contenido de ejemplo, no un secreto.
+
+### Estado
+
+**V-11-1 a V-11-6 corregidos** (2026-11-12, Opus 5.5, junto con los arreglos 1 a 6 de `docs/design/v1.1/FABLE-REVISION.md`):
+
+- **V11-1:** `parseListaHtml` para en 100 filas en los dos bucles, calcula el ASIN de cada enlace una vez, recorre los enlaces con `getElementsByTagName` y salida temprana, calcula los productos de cada contenedor una vez y salta las fichas que contienen otra. `comoLista` analiza lo pegado una sola vez. Pruebas: en Chromium (`e2e/amazon-lista.spec.ts`) 2 MB de enlaces a `/gp/product/` y 2 MB de fichas anidadas tardan menos de 500 ms; en Vitest, 4 000 enlaces (sueltos o en un mismo contenedor) menos de 500 ms, y los topes hostiles de siempre bajan de 3 000 a 500 ms. Con 2 MB, Vitest admite 1 500 ms porque happy-dom tarda unos 500 ms solo en construir el documento.
+- **V11-2:** la vista previa de lo que llega por «Compartir» empieza con «Texto recibido de otra app» y nada se crea sin pulsar «Añadir» (e2e). El enlace de un producto suelto ya no acaba en «No encuentro productos»: va al alta normal.
+- **V11-3:** `MainActivity` descarta el intent recibido si la actividad se recrea (`savedInstanceState`) o se abre desde Recientes (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`). Sin probar en un Android real.
+- **V11-4:** `olvidaCompartido()` al cerrar sesión (`PocketBaseApi.signOut`, probado en `test/api/signout.test.ts`) y cuando `AmazonDestino` no encuentra plaza.
+- **V11-5:** el identificador de las pruebas es ahora `LAZOPRUEBA01` (sigue casando con `listaId`). El anterior sigue en el historial de git.
+- **V11-6:** prueba AMZ-11 en `server/test/rules.test.mjs` (A cogido y B libre, quitados y reimportados en un lote: misma respuesta y dos filas nuevas) y prueba de la enmienda a AMZ-10 en `test/core/amazonLista.test.ts`: «Necesita 2 · Tiene 1» da solo `quantity: 2`, y «Tiene» y «Comprado» no se leen ni en texto ni en HTML.

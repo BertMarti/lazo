@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { ClipboardText } from '@phosphor-icons/react';
 import { useEffect, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode } from 'react';
 import { esDuplicado, MAX_PEGADO, parseListaPegada, soloEnlace, type AmazonProducto } from '../../core/amazonLista';
@@ -22,6 +23,7 @@ export function AmazonDestino() {
         const mine = (await api.groupDetail(g.id).catch(() => null))?.lists.find((l) => l.user === me);
         if (mine) return go(`/l/${mine.id}/amazon`);
       }
+      olvidaCompartido(); // V11-4: sin plaza, lo compartido no se queda en memoria
       setMsg('Para importar una lista necesitas estar en un grupo con tu plaza.');
     })();
   }, [api]);
@@ -36,14 +38,14 @@ const NOMBRE: Record<Plataforma, string> = { android: 'Android', ios: 'iPhone', 
 type Dibujo = 'abrir' | 'pulsar' | 'menu' | 'teclas-a' | 'teclas-c' | 'pegar';
 const PASOS: Record<Plataforma, [Dibujo, string][]> = {
   android: [
-    ['abrir', 'Abre tu lista de Amazon en Chrome, no en la app de Amazon (la app solo comparte el enlace).'],
-    ['pulsar', 'Mantén el dedo sobre un texto de la lista hasta que salga el menú.'],
-    ['menu', 'Toca «Seleccionar todo» y después «Copiar».'],
+    ['abrir', 'Abre tu lista de Amazon en Chrome, no en la app de Amazon (la app solo comparte el enlace), y baja hasta el final para que carguen todos.'],
+    ['pulsar', 'Mantén el dedo sobre un texto que no sea el nombre de un producto, por ejemplo una fecha, hasta que salga el menú.'],
+    ['menu', 'Toca «Seleccionar todo» y después «Copiar», o toca «Compartir» y elige Lazo.'],
     ['pegar', 'Vuelve a Lazo y toca «Pegar».'],
   ],
   ios: [
-    ['abrir', 'Abre tu lista de Amazon en Safari, no en la app de Amazon (la app solo comparte el enlace).'],
-    ['pulsar', 'Mantén el dedo sobre un texto de la lista hasta que salga el menú.'],
+    ['abrir', 'Abre tu lista de Amazon en Safari, no en la app de Amazon (la app solo comparte el enlace), y baja hasta el final para que carguen todos.'],
+    ['pulsar', 'Mantén el dedo sobre un texto que no sea el nombre de un producto, por ejemplo una fecha, hasta que salga el menú.'],
     ['menu', 'Toca «Seleccionar todo» y después «Copiar».'],
     ['pegar', 'Vuelve a Lazo y toca «Pegar».'],
   ],
@@ -63,12 +65,14 @@ const NADA = 'No encuentro productos en lo que has pegado. Copia la página ente
  * Importar una lista de Amazon copiando y pegando (docs/legal/AMAZON.md, camino b). Lazo no hace ninguna petición a
  * Amazon: lo pegado se analiza aquí, no se guarda ni se envía, y solo se crean los regalos que la persona marca.
  */
-export function AmazonLista({ listId, aviso, compartido, onClose, onSaved }: { listId: string; aviso?: string; compartido?: { text: string; html?: string }; onClose: () => void; onSaved: () => void }) {
+export function AmazonLista({ listId, aviso, compartido, deOtraApp, onClose, onSaved }: { listId: string; aviso?: string; compartido?: { text: string; html?: string }; deOtraApp?: boolean; onClose: () => void; onSaved: () => void }) {
   const api = useApi();
   const toast = useToast();
   const [plat, setPlat] = useState<Plataforma>(() => plataforma());
   const [hint, setHint] = useState(aviso);
-  const [aMano, setAMano] = useState(false);
+  // En el APK el WebView puede no dejar leer el portapapeles: el campo de pegar está a la vista desde el principio.
+  const [aMano, setAMano] = useState(() => Capacitor.isNativePlatform());
+  const [ajeno, setAjeno] = useState(false);
   const [productos, setProductos] = useState<AmazonProducto[] | null>(null);
   const [visibles, setVisibles] = useState<Item[] | null>(null);
 
@@ -80,6 +84,7 @@ export function AmazonLista({ listId, aviso, compartido, onClose, onSaved }: { l
   const analiza = (text: string, html?: string) => {
     const t = text.slice(0, MAX_PEGADO);
     const found = parseListaPegada(t, html?.slice(0, MAX_PEGADO));
+    setAjeno(false);
     if (found.length) {
       setProductos(found);
       setHint(undefined);
@@ -90,6 +95,7 @@ export function AmazonLista({ listId, aviso, compartido, onClose, onSaved }: { l
   useEffect(() => {
     if (!compartido) return;
     analiza(compartido.text, compartido.html);
+    setAjeno(!!deOtraApp); // V11-2: que se vea que no lo ha pegado ella
     olvidaCompartido();
   }, [compartido]);
 
@@ -127,7 +133,7 @@ export function AmazonLista({ listId, aviso, compartido, onClose, onSaved }: { l
     }
   };
 
-  if (productos && visibles) return <Vista productos={productos} visibles={visibles ?? []} onBack={() => setProductos(null)} onClose={onClose} onAdd={async (sel) => {
+  if (productos && visibles) return <Vista productos={productos} visibles={visibles ?? []} ajeno={ajeno} onBack={() => setProductos(null)} onClose={onClose} onAdd={async (sel) => {
     try {
       const n = await api.importItems(listId, sel.map((p) => ({ title: p.title, priceCents: p.priceCents, url: p.url, image: p.image, store: 'Amazon', priority: p.priority ?? 2, quantity: p.quantity ?? 1 })));
       toast(n === 1 ? '1 regalo añadido.' : `${n} regalos añadidos.`);
@@ -168,7 +174,7 @@ export function AmazonLista({ listId, aviso, compartido, onClose, onSaved }: { l
             <span>Pega aquí el texto de tu lista</span>
             <textarea
               className="textarea"
-              autoFocus
+              autoFocus={!Capacitor.isNativePlatform()} // en el APK está desde el principio: sin abrir el teclado solo
               onPaste={(e: ReactClipboardEvent<HTMLTextAreaElement>) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -188,7 +194,7 @@ export function AmazonLista({ listId, aviso, compartido, onClose, onSaved }: { l
   );
 }
 
-function Vista({ productos, visibles, onBack, onClose, onAdd }: { productos: AmazonProducto[]; visibles: Item[]; onBack: () => void; onClose: () => void; onAdd: (sel: AmazonProducto[]) => Promise<void> }) {
+function Vista({ productos, visibles, ajeno, onBack, onClose, onAdd }: { productos: AmazonProducto[]; visibles: Item[]; ajeno?: boolean; onBack: () => void; onClose: () => void; onAdd: (sel: AmazonProducto[]) => Promise<void> }) {
   const dup = productos.map((p) => esDuplicado(p, visibles));
   const [on, setOn] = useState(() => dup.map((d) => !d));
   const [busy, setBusy] = useState(false);
@@ -201,15 +207,17 @@ function Vista({ productos, visibles, onBack, onClose, onAdd }: { productos: Ama
       footer={
         <ButtonGroup align="stretch">
           <Button variant="primary" loading={busy} disabled={n === 0} onClick={async () => { setBusy(true); await onAdd(productos.filter((_, i) => on[i])); setBusy(false); }}>
-            {n === 1 ? 'Añadir 1 a tu lista' : `Añadir ${n} a tu lista`}
+            {`Añadir ${n}`}
           </Button>
           <Button variant="secondary" onClick={onBack}>Volver a pegar</Button>
         </ButtonGroup>
       }
     >
       <div className="stack" style={{ gap: 'var(--s-2)' }}>
+        {ajeno && <p className="notice" role="status">Texto recibido de otra app. Revisa la lista: no se añade nada hasta que pulses «Añadir».</p>}
         <p className="lead">{productos.length === 1 ? 'He encontrado 1 producto.' : `He encontrado ${productos.length} productos.`}</p>
         {dups > 0 && <p className="meta">{dups === 1 ? '1 ya está en tu lista: lo dejamos sin marcar.' : `${dups} ya están en tu lista: los dejamos sin marcar.`}</p>}
+        <p className="meta">Las fotos aparecerán al añadirlos.</p>
       </div>
       <ul className="amz-vista">
         {productos.map((p, i) => (
@@ -224,7 +232,8 @@ function Vista({ productos, visibles, onBack, onClose, onAdd }: { productos: Ama
                 <span className="amz-titulo">{p.title}</span>
                 <span className="meta">
                   {p.priceCents !== undefined && <span className="money">{formatMoney(p.priceCents)}</span>}
-                  {dup[i] && <span className="amz-dup">{p.priceCents !== undefined && ' · '}Ya está en tu lista</span>}
+                  {(p.quantity ?? 1) > 1 && <span>{p.priceCents !== undefined && ' · '}{p.quantity} unidades</span>}
+                  {dup[i] && <span className="amz-dup">{(p.priceCents !== undefined || (p.quantity ?? 1) > 1) && ' · '}Ya está en tu lista</span>}
                 </span>
               </span>
             </label>
@@ -248,7 +257,7 @@ function Paso({ dibujo, n }: { dibujo: Dibujo; n: number }) {
   const tecla = (letra: string) => (
     <>
       <rect x="4" y="24" width="38" height="32" rx="6" fill="var(--tarjeta)" stroke="currentColor" strokeWidth="2.5" />
-      <text x="23" y="45" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor">Ctrl</text>
+      <text x="23" y="45" textAnchor="middle" fontSize="14" fontWeight="700" fill="currentColor">Ctrl</text>
       <text x="47" y="45" textAnchor="middle" fontSize="16" fontWeight="700" fill="currentColor">+</text>
       <rect x="52" y="24" width="26" height="32" rx="6" fill="var(--terracota)" stroke="currentColor" strokeWidth="2.5" />
       <text x="65" y="46" textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--sobre-terracota)">{letra}</text>
@@ -269,7 +278,7 @@ function Paso({ dibujo, n }: { dibujo: Dibujo; n: number }) {
     ),
   };
   return (
-    <svg className="amz-dibujo" viewBox="0 0 80 80" width="64" height="64" aria-hidden data-paso={n}>
+    <svg className="amz-dibujo" viewBox="0 0 80 80" width={dibujo.startsWith('teclas') ? 80 : 64} height={dibujo.startsWith('teclas') ? 80 : 64} aria-hidden data-paso={n}>
       {body[dibujo]}
     </svg>
   );

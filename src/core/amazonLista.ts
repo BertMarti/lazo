@@ -172,12 +172,42 @@ export function parseListaHtml(html: string): AmazonProducto[] {
     out.push(p);
   };
 
+  // V11-1: el ASIN de cada enlace se calcula una vez y los bucles paran en 100 filas, para que 2 MB no congelen la pestaña.
+  const asins = new Map<Element, string | undefined>();
+  const asinOf = (a: Element) => {
+    if (!asins.has(a)) asins.set(a, asinDe(a.getAttribute('href')));
+    return asins.get(a);
+  };
+  // Enlaces con salida temprana: getElementsByTagName no recorre más de lo que se pide (`a[href]` lo recorre todo).
+  function* enlaces(el: Element | Document, max = Infinity) {
+    const as = el.getElementsByTagName('a');
+    for (let i = 0; i < as.length && i < max; i++) if (as[i]!.hasAttribute('href')) yield as[i]!;
+  }
+
+  // ASIN de los productos enlazados desde un contenedor, una vez por contenedor.
+  const productos = new Map<Element, Set<string>>();
+  const productosDe = (el: Element) => {
+    let set = productos.get(el);
+    if (!set) {
+      set = new Set();
+      for (const a of enlaces(el)) {
+        const x = asinOf(a);
+        if (x) set.add(x);
+        if (set.size > 1) break;
+      }
+      productos.set(el, set);
+    }
+    return set;
+  };
+
   const cards = [...doc.querySelectorAll('[data-itemid]')].slice(0, 500);
   for (const card of cards) {
+    if (out.length >= MAX_PRODUCTOS) break;
+    if (card.querySelector('[data-itemid]')) continue; // la ficha de verdad es la de dentro
     const name = card.querySelector('a[id^="itemName_"]');
-    const asin =
-      [...card.querySelectorAll('a[href]')].map((a) => asinDe(a.getAttribute('href'))).find(Boolean) ??
-      (card.getAttribute('data-reposition-action-params') ?? '').match(/ASIN:([A-Z0-9]{10})\b/)?.[1];
+    let asin: string | undefined;
+    for (const a of enlaces(card)) if ((asin = asinOf(a))) break;
+    asin ??= (card.getAttribute('data-reposition-action-params') ?? '').match(/ASIN:([A-Z0-9]{10})\b/)?.[1];
     const raw = card.getAttribute('data-price');
     const n = raw ? Number.parseFloat(raw) : Number.NaN;
     push(card, asin, name?.getAttribute('title') || texto(name), Number.isFinite(n) && n > 0 ? { priceCents: priceToCents(n) ?? undefined } : {});
@@ -185,14 +215,16 @@ export function parseListaHtml(html: string): AmazonProducto[] {
   if (out.length || cards.length) return out;
 
   // Sin fichas marcadas (otro navegador, otra versión de la página): enlaces a productos con texto.
-  for (const a of [...doc.querySelectorAll('a[href]')].slice(0, 5000)) {
-    const asin = asinDe(a.getAttribute('href'));
-    const title = texto(a);
+  for (const a of enlaces(doc, 5000)) {
+    if (out.length >= MAX_PRODUCTOS) break;
+    const asin = asinOf(a);
+    const title = limpiaTitulo(texto(a));
     if (!asin || seen.has(asin) || title.length < 8 || RUIDO.test(title)) continue;
     // La ficha: el contenedor más alto que solo habla de este producto.
     let card: Element = a;
     for (let up = card.parentElement, i = 0; up && up !== doc.body && i < 6; up = up.parentElement, i++) {
-      if ([...up.querySelectorAll('a[href]')].some((x) => asinDe(x.getAttribute('href')) !== asin && /\/dp\//.test(x.getAttribute('href') ?? ''))) break;
+      const dentro = productosDe(up);
+      if (dentro.size > 1 || !dentro.has(asin)) break;
       card = up;
     }
     push(card, asin, title);

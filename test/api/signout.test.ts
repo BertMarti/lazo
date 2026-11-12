@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PocketBaseApi } from '../../src/api/pocketbase';
+import { guardaCompartido, leeCompartido } from '../../src/ui/compartido';
 
 // V-28: cerrar sesión deja el navegador sin nada de la persona.
 const fill = (api: PocketBaseApi) => {
@@ -10,6 +11,7 @@ const fill = (api: PocketBaseApi) => {
   localStorage.setItem('lazo:last-group', 'g1');
   localStorage.setItem('lazo:ia', '{"apiKey":"k"}');
   localStorage.setItem('lazo:server', 'https://casa.example');
+  guardaCompartido('Lista compartida desde otra app');
 };
 const left = () => Object.keys(localStorage).sort();
 
@@ -24,6 +26,7 @@ describe('signOut', () => {
     await api.signOut(false);
     expect(api.me()).toBeNull();
     expect(left()).toEqual(['lazo:server']);
+    expect(leeCompartido()).toBeNull(); // V11-4
     expect(f).not.toHaveBeenCalled();
   });
 
