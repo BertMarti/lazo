@@ -40,6 +40,7 @@ Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparte
 | # | Tarea | Responsable | Modelo |
 |---|---|---|---|
 | 14 | Hallazgos bajos V-20 a V-25 de `docs/security/AUDIT.md` (pruebas de avisos contra el servidor, `og:url`, permisos y cifrado de copias, túnel, `.xlsx` comprimido, número de sorteo en el mensaje) | revisor-seguridad → implementador | Fable 5.2 → Opus 5.5 |
+| 16 | Recuperar una plaza cuando alguien pierde el móvil: botón «Liberar su plaza» para admins (el servidor ya tiene `/api/lazo/plaza-release`) y nuevo enlace personal | implementador | Opus 5.5 |
 | 15 | Validar en el homelab real: `caddy validate`, `docker compose up` y las comprobaciones de `docs/HOMELAB.md` §7 | usuario | — |
 | 8 | Avatares de la familia en la entrada por enlace (`inviteInfo` con nombres y colores, revisado por seguridad) | revisor-seguridad → implementador | Fable 5.2 → Opus 5.5 |
 | 9 | Selector propio de claro u oscuro en Ajustes | implementador | Opus 5.5 |

@@ -108,7 +108,13 @@ Fuera de casa, haz lo mismo a través de la VPN de HEIMDALL.
 
 ## 6. Primer grupo
 
-Hasta que exista el alta pública, crea tu usuario y tu primer grupo desde el panel y genera las invitaciones con «Invitar» en la app. Cada persona recibe **su enlace personal** (de un solo uso) y reclama su plaza.
+Crea tu cuenta y tu primer grupo con un comando (tú quedas como quien organiza):
+
+```bash
+docker compose exec pocketbase pocketbase lazo-alta "Tu nombre" "Navidad en familia" 2026-12-24   --dir=/pb/pb_data --migrationsDir=/pb/pb_migrations --hooksDir=/pb/pb_hooks
+```
+
+Imprime un código de 8 letras válido durante 60 minutos: en el móvil, abre tu Lazo, pulsa «Tengo un código» y escríbelo. Después genera las invitaciones con «Invitar» en la app. Cada persona recibe **su enlace personal** (de un solo uso) y reclama su plaza.
 
 ## 7. Comprueba la seguridad
 
@@ -118,8 +124,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://tu-dominio/_/                  
 curl -s -o /dev/null -w '%{http_code}\n' https://tu-dominio/api/settings              # 404
 curl -s https://tu-dominio/api/health                                                 # {"message":"API is healthy."…}
 # El login de superusuario tampoco se publica, ni por nombre ni por su id fijo:
-curl -s -o /dev/null -w '%{http_code}
-' -X POST https://tu-dominio/api/collections/pbc_3142635823/auth-with-password   # 404
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://tu-dominio/api/collections/pbc_3142635823/auth-with-password   # 404
 ```
 
 Desde la wifi de casa, inventarse la IP no sirve para saltarse los límites: tras diez intentos seguidos, los últimos deben dar 429.
