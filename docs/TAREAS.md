@@ -73,6 +73,21 @@ Distribución: APK firmado en GitHub Releases más la web instalable (sin Play S
 | X | Release 1.0.0: CHANGELOG para usuarios, README con capturas finales, demo, APK firmado (clave en WSL, fuera del repo, como Gestorín), PR del portafolio y perfil | Opus | Opus 5.5 | — | pendiente |
 | 15 | Montarlo en el homelab real con `PRUEBA-REAL.md` | usuario | — | — | bloqueada: usuario (no frena la etiqueta) |
 
+## v1.1 «Lista de Amazon» (después de publicar la 1.0)
+
+Petición del usuario: en mi lista, al pegar una lista de deseos de Amazon (`amazon.es/hz/wishlist/ls/<id>`, `amzn.eu/…`), que se añadan sus productos.
+
+| # | Tarea | Responsable | Modelo | Estado |
+|---|---|---|---|---|
+| AA | Detectar enlaces de lista (`/hz/wishlist/ls/<id>`, `amzn.eu` y URL cortas) al pegar y ofrecer «Importar lista de Amazon» | implementador | Opus 5.5 | pendiente |
+| AB | Extracción en el servidor con el `unfurl` anti-SSRF: solo listas públicas de amazon.es y solo a petición del usuario. Una lectura por importación, como mucho 5 páginas y 100 productos, y límite de peticiones por usuario. Título, imagen, precio, ASIN canónico sin parámetros de seguimiento, cantidad y prioridad. Tests con fixtures ficticios, sin red en CI | implementador | Opus 5.5 | pendiente |
+| AC | Vista previa: «He encontrado 14 productos», casillas marcadas, aviso de duplicados y «Añadir 14 a tu lista» | implementador | Opus 5.5 | pendiente |
+| AD | Si Amazon bloquea (captcha o 503): mensaje claro y dos salidas, (a) comprobar que la lista es pública, con los pasos, y (b) modo manual: pegar el texto de la página (Ctrl+A y Ctrl+C) y extraer en el cliente. Nunca saltarse el captcha ni simular un navegador | implementador | Opus 5.5 | pendiente |
+| AE | Legal en `docs/legal/` y revisión de si las condiciones de Amazon lo permiten. Si no está claro, el modo manual (b) pasa a ser el camino principal | revisor-seguridad | Fable 5.2 | pendiente |
+| AF | Seguridad: SSRF, tamaño de respuesta, inyección en títulos y límite de peticiones | revisor-seguridad | Fable 5.2 | pendiente |
+| AG | La hoja «Añadir a tu lista» tapa la rejilla y corta el precio de la segunda tarjeta (escritorio, oscuro): modal centrado con fondo atenuado y hoja inferior en el móvil | implementador | Opus 5.5 | pendiente |
+| AH | Release v1.1: CHANGELOG, APK, demo con una lista de Amazon ficticia y README | Opus | Opus 5.5 | pendiente |
+
 ## Después
 
 | # | Tarea | Responsable | Modelo |
