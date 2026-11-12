@@ -1,4 +1,5 @@
 import PocketBase, { ClientResponseError, type RecordModel, type RecordSubscription } from 'pocketbase';
+import { seenFacts } from '../core/avisos';
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
@@ -146,6 +147,20 @@ export class PocketBaseApi implements Api {
     this.run(async () => {
       const r = await this.pb.send<{ token: string; record: RecordModel }>('/api/lazo/device-claim', { method: 'POST', body: { code } });
       this.pb.authStore.save(r.token, r.record);
+    });
+
+  // V-28: el token nuevo que devuelve logout-all no se guarda. Se borra todo lo de la persona en este navegador
+  // (sesión, avisos vistos, solicitudes pendientes, último grupo y clave de IA); se queda el servidor del APK.
+  signOut = (everywhere: boolean) =>
+    this.run(async () => {
+      if (everywhere) await this.pb.send('/api/lazo/logout-all', { method: 'POST' });
+      this.pb.authStore.clear();
+      seenFacts.forget();
+      try {
+        for (const k of Object.keys(localStorage)) if (/^lazo:(pendiente:|last-group$|ia$)/.test(k)) localStorage.removeItem(k);
+      } catch {
+        /* sin almacenamiento */
+      }
     });
 
   deviceCode = () => this.run(() => this.pb.send<{ code: string; minutes: number }>('/api/lazo/device-code', { method: 'POST' }));

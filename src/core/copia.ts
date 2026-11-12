@@ -1,13 +1,12 @@
 import type { Api, ItemInput } from '../api/types';
 import { normName } from './plazas';
 import { LIMITS, type BuyMode, type Cents, type Id, type Item, type Occasion, type Priority } from './types';
-import { canSeeStatus } from './visibility';
 
 /**
- * Copia del grupo (no es la copia del servidor, que está en server/backup/). Se hace en el cliente SOLO con lo que
- * el servidor ya entrega a quien la descarga, y además se recorta a mano su propia plaza: de ella van solo los
- * regalos que pidió, sin sorpresas, sin retirados, sin estados ni presupuesto. Al restaurar solo se usan grupo,
- * plazas y regalos pedidos: nunca reservas, compras ni aportaciones.
+ * Copia del grupo (no es la copia del servidor, que está en server/backup/). Lleva SOLO lo que se restaura: grupo,
+ * plazas y los regalos que pidió cada persona. Nada de reservas, compras, aportaciones, sorpresas, retirados ni
+ * presupuestos, de ninguna lista (V-27): el archivo no contiene nada que su dueño no sepa ya, lo descargue quien
+ * lo descargue. Las copias v1 antiguas que sí los llevan se siguen leyendo: `parseCopia` solo mira `regalos`.
  */
 
 export const COPIA_VERSION = 1;
@@ -27,22 +26,11 @@ export interface GiftCopy {
   quantity: number;
 }
 
-/** Lo que ve de un regalo quien exporta, solo en listas ajenas. */
-export interface GiftSeen extends GiftCopy {
-  reservas?: { quien: string; tipo: 'self' | 'pot'; estado: 'reserved' | 'bought'; unidades: number; pagadoCents?: Cents }[];
-  aportaciones?: { quien: string; cents: Cents; pagada: boolean }[];
-}
-
 export interface ListCopy {
   name: string;
   kind: 'person' | 'child';
   birthYear?: number;
-  /** La plaza de quien exporta: solo `regalos`, sin nada más. */
-  propia: boolean;
-  regalos: GiftSeen[];
-  sorpresas?: GiftSeen[];
-  retirados?: GiftSeen[];
-  presupuestoCents?: Cents;
+  regalos: GiftCopy[];
 }
 
 export interface Copia {
@@ -63,33 +51,10 @@ export async function exportGroup(api: Api, groupId: Id, now = new Date()): Prom
   const me = api.me();
   if (!me) throw new Error('Sin sesión');
   const d = await api.groupDetail(groupId);
-  const nameOf = (id?: Id) => d.members.find((m) => m.id === id)?.name ?? 'Alguien';
   const listas: ListCopy[] = [];
   for (const l of d.lists) {
-    const base = { name: l.name, kind: l.kind ?? (l.user ? 'person' : 'child'), ...(l.birthYear ? { birthYear: l.birthYear } : {}) } as const;
-    // Mi plaza: ni se piden sus estados; y aunque llegaran, solo se copian los regalos que pedí.
-    if (!canSeeStatus(me.id, l)) {
-      const own = await api.listDetail(l.id);
-      listas.push({ ...base, propia: true, regalos: own.items.filter((i) => !i.secret && !i.removed).map(strip) });
-      continue;
-    }
     const x = await api.listDetail(l.id);
-    const seen = (i: Item): GiftSeen => {
-      const g: GiftSeen = strip(i);
-      const cs = x.claims.filter((c) => c.item === i.id);
-      const ps = x.contributions.filter((c) => c.item === i.id);
-      if (cs.length) g.reservas = cs.map((c) => ({ quien: nameOf(c.user), tipo: c.kind ?? 'self', estado: c.status, unidades: c.units, ...(c.paidCents !== undefined ? { pagadoCents: c.paidCents } : {}) }));
-      if (ps.length) g.aportaciones = ps.map((c) => ({ quien: nameOf(c.user), cents: c.amountCents, pagada: c.paid }));
-      return g;
-    };
-    listas.push({
-      ...base,
-      propia: false,
-      regalos: x.items.filter((i) => !i.secret && !i.removed).map(seen),
-      sorpresas: x.items.filter((i) => i.secret).map(seen),
-      retirados: x.items.filter((i) => i.removed && !i.secret).map(seen),
-      ...(x.budget ? { presupuestoCents: x.budget.amountCents } : {}),
-    });
+    listas.push({ name: l.name, kind: l.kind ?? (l.user ? 'person' : 'child'), ...(l.birthYear ? { birthYear: l.birthYear } : {}), regalos: x.items.filter((i) => !i.secret && !i.removed).map(strip) });
   }
   const g = d.group;
   return {

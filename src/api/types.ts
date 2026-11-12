@@ -127,6 +127,8 @@ export interface Api {
   claimDevice(code: string): Promise<void>;
   /** Código de un solo uso para entrar con esta cuenta en otro móvil. */
   deviceCode(): Promise<{ code: string; minutes: number }>;
+  /** Cerrar sesión en este dispositivo (y, con `everywhere`, anular antes todas las sesiones de la cuenta). */
+  signOut(everywhere: boolean): Promise<void>;
   joinRequests(groupId: Id): Promise<JoinRequest[]>;
   decideJoin(requestId: Id, accept: boolean): Promise<void>;
   hucha(groupId: Id): Promise<HuchaData>;

@@ -61,13 +61,9 @@ describe('copia del grupo: nada de la propia plaza', () => {
         api.setViewer(x);
         const { lists } = await api.groupDetail((await api.groups()).find((g) => g.name === copia.grupo.name)!.id);
         const plaza = lists.find((l) => l.user === x)!;
-        const own = copia.listas.filter((l) => l.propia);
+        const own = copia.listas.filter((l) => l.name === plaza.name);
         expect(own).toHaveLength(1);
-        expect(Object.keys(own[0]!).sort()).toEqual(['kind', 'name', 'propia', 'regalos']);
-        for (const g of own[0]!.regalos) {
-          expect(g).not.toHaveProperty('reservas');
-          expect(g).not.toHaveProperty('aportaciones');
-        }
+        expect(Object.keys(own[0]!).sort()).toEqual(['kind', 'name', 'regalos']);
 
         // Lo que ve otra persona de la plaza de X: los regalos pedidos coinciden; las sorpresas no salen nunca.
         const y = FAMILY.find((f) => f !== x)!;
@@ -83,17 +79,25 @@ describe('copia del grupo: nada de la propia plaza', () => {
     });
   }
 
-  it('de las listas ajenas sí lleva reservas, aportaciones y presupuesto', async () => {
+  it('V-27: las listas son idénticas la descargue quien la descargue, y sin estados de nadie', async () => {
     const api = new DemoApi(null);
-    await meddle(api, 'mama');
-    const [navidad] = await exportsOf(api, 'alberto');
-    const mama = navidad!.listas.find((l) => l.name === 'Mamá')!;
-    expect(mama.propia).toBe(false);
-    expect(mama.presupuestoCents).toBe(98765);
-    expect(mama.sorpresas!.some((g) => g.title.startsWith('Sorpresa secreta'))).toBe(true);
-    expect(mama.regalos.some((g) => g.reservas?.length)).toBe(true);
-    expect(navidad!.version).toBe(1);
-    expect(navidad!.fecha).toBe(NOW.toISOString());
+    for (const x of FAMILY) await meddle(api, x);
+    const all = await Promise.all(FAMILY.map(async (x) => (await exportsOf(api, x)).find((c) => c.grupo.name === 'Navidad en familia')!));
+    for (const c of all) {
+      expect(JSON.stringify(c.listas)).toBe(JSON.stringify(all[0]!.listas));
+      const text = JSON.stringify(c);
+      expect(text).not.toMatch(/reservas|aportaciones|sorpresas|retirados|presupuesto/);
+      expect(text).not.toContain('Sorpresa secreta');
+      expect(text).not.toContain('98765');
+      expect(c.version).toBe(1);
+      expect(c.fecha).toBe(NOW.toISOString());
+    }
+  });
+
+  it('sigue leyendo copias v1 antiguas con estados, y los descarta', () => {
+    const old = { lazo: 'copia-grupo', version: 1, fecha: NOW.toISOString(), grupo: { name: 'Navidad', occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', allowNewNames: false }, listas: [{ name: 'Ana', kind: 'person', propia: false, presupuestoCents: 5000, sorpresas: [{ title: 'Secreto', priority: 1, quantity: 1 }], regalos: [{ title: 'Libro', priority: 2, quantity: 1, reservas: [{ quien: 'Bea', tipo: 'self', estado: 'bought', unidades: 1 }] }] }] };
+    const r = parseCopia(JSON.stringify(old));
+    expect(r.listas).toEqual([{ name: 'Ana', kind: 'person', regalos: [{ title: 'Libro', priority: 2, quantity: 1 }] }]);
   });
 });
 
@@ -103,7 +107,7 @@ describe('copia del grupo: el validador', () => {
     version: 1,
     fecha: NOW.toISOString(),
     grupo: { name: 'Navidad', occasion: 'navidad', date: '2027-12-24', currency: 'EUR', buyMode: 'mixto', allowNewNames: false },
-    listas: [{ name: 'Ana', kind: 'person', propia: true, regalos: [{ title: 'Libro', priority: 2, quantity: 1 }] }],
+    listas: [{ name: 'Ana', kind: 'person', regalos: [{ title: 'Libro', priority: 2, quantity: 1 }] }],
   });
   const parse = (v: unknown) => () => parseCopia(typeof v === 'string' ? v : JSON.stringify(v));
 
