@@ -3,7 +3,7 @@
 Autor: dirección de arte / UX. Fecha: 2026-11-11. Ámbito: toda la app, con foco en la pantalla de grupo y la lista de una persona.
 Prioridad del encargo: **sencilla e intuitiva, UI/UX práctica**. Todo lo decorativo que no ayude a reservar, añadir o entender la sorpresa, sobra.
 
-Familia de ejemplo en todo el documento: **Alberto** (quien mira, salvo que se diga otra cosa), **Juan Carlos**, **Samira**, **Mamá**, **Papá**. Grupo: «Navidad en familia», 24 de diciembre.
+Familia de ejemplo en todo el documento: **Alberto** (quien mira, salvo que se diga otra cosa), **Javier**, **Samira**, **Marta**, **Papá**. Grupo: «Navidad en familia», 24 de diciembre.
 
 > Nota de estado. Las capturas de `docs/design/v0.1/` están desfasadas: muestran la familia Robles. `src/api/seed.ts` ya tiene la familia nueva y `src/core/budget.ts` + `Api.setBudget` + `ListDetail.budget` ya existen, pero **ninguna pantalla pinta el presupuesto todavía**. Esta dirección especifica esa interfaz. Los contrastes citados están calculados con la fórmula WCAG 2.x sobre los hex exactos (no estimados).
 
@@ -23,7 +23,7 @@ Escala: **P0** rompe un requisito o el uso · **P1** fricción seria · **P2** c
 | T4 | P0 | **La barra azul se estira sola**: en inicio, lista ajena, compras y amigo invisible la cabecera ocupa ~400 px vacíos. `.app` declara `grid-template-rows: auto 1fr auto` pero en la demo tiene 4 hijos (`demo-bar`, `topbar`, `main`, `tabbar` fija): la cabecera cae en la fila `1fr`. | `movil/inicio.png`, `lista-ajena.png`, `compras.png`, `amigo-invisible.png`. |
 | T5 | P1 | **El sello festoneado sin texto no se entiende**. Un círculo punteado = «libre», uno con raya = «reservado», uno medio relleno = «a medias»: hay que aprenderlo. Incumple «sin depender solo de la forma»: el texto solo está en `aria-label`. | Todas las tarjetas. |
 | T6 | P1 | **El 45 % de cada tarjeta es un bloque pastel con una letra** (monograma del título). No informa de nada, empuja el contenido y hace la página de grupo de 6 479 px de alto en móvil. | `movil/grupo.png`. |
-| T7 | P1 | **La regla de la sorpresa se explica con un párrafo**, y solo en la lista propia. En las listas ajenas no hay nada que diga «Mamá no ve esto», que es justo donde da miedo tocar. | `List.tsx` `.secret`. |
+| T7 | P1 | **La regla de la sorpresa se explica con un párrafo**, y solo en la lista propia. En las listas ajenas no hay nada que diga «Marta no ve esto», que es justo donde da miedo tocar. | `List.tsx` `.secret`. |
 | T8 | P2 | **Bodoni en precios pequeños** (17–20 px): las astas finas se pierden en pantallas baratas y con vista cansada; los ceros con barra del cuerpo de texto conviven con cifras Didone → dos sistemas de números. | `.price`. |
 | T9 | P2 | **Contrastes que no llegan**: `--ink-3` sobre `--sunken` = 4,45:1 (texto «Ponen: …», «Reunido…» en la ficha) < 4,5. Relleno de la barra `--foil-fill` sobre `--sunken` = 1,32:1 (< 3:1 exigido a gráficos). Borde de campos `--line-strong` sobre blanco = 1,95:1 (< 3:1). | Calculado. |
 | T10 | P2 | **Título duplicado**: «Mis compras» y «Amigo invisible» salen en la cabecera azul y otra vez como `h2` debajo. | `compras.png`, `amigo-invisible.png`. |
@@ -88,7 +88,7 @@ Escala: **P0** rompe un requisito o el uso · **P1** fricción seria · **P2** c
 - **P1** **Fugas de caja**: los sellos salen por el borde izquierdo del panel y los precios tocan el borde derecho (la lista no hereda el relleno del panel).
 - **P1** No hay acción en la fila: para marcar «comprado» hay que abrir la lista de la persona. Esta pantalla es la lista de la compra; debe permitir tachar.
 - **P2** Sin agrupar por persona ni por estado («por comprar» / «comprado»). El total mezcla reservas y aportaciones sin desglose.
-- **P2** «Para Mamá · Navidad en fam…» se trunca; el grupo es redundante si solo hay uno.
+- **P2** «Para Marta · Navidad en fam…» se trunca; el grupo es redundante si solo hay uno.
 
 ### A.8 Amigo invisible
 
@@ -113,7 +113,7 @@ Las tres resuelven lo mismo (pantalla de grupo con tarjetas de miembro + lista d
 - **Tarjeta de regalo.** Fila: miniatura 72 (foto o papel del sabor con frunces, sin letra) · título 2 líneas · precio + tienda · pie con estado en texto («Lo reserva Samira») a la izquierda y **botón a la derecha**.
 - **Reservar en 1 toque.** Botón `primary` «Reservar» en el pie de cada fila libre, siempre en la misma esquina (abajo-derecha), 44 px de alto, 128 de ancho mínimo. Sin confirmación; «Deshacer» en el aviso durante 6 s.
 - **Presupuesto.** Barra horizontal de 10 px, relleno dorado oscuro sobre pista lila; cifras encima. Excedido: relleno granate + «Os pasáis 35,00 €» con icono.
-- **Microcopy de visibilidad.** Etiqueta con ojo tachado **«Mamá no ve esto»** pegada al presupuesto y a la cabecera de la lista. En mi tarjeta: «Tu presupuesto y tus reservas son sorpresa».
+- **Microcopy de visibilidad.** Etiqueta con ojo tachado **«Marta no ve esto»** pegada al presupuesto y a la cabecera de la lista. En mi tarjeta: «Tu presupuesto y tus reservas son sorpresa».
 - **Riesgo honesto.** Es la menos espectacular: filas blancas con botón pueden leerse como «lista de la compra con buen gusto». La identidad descansa en tres cosas pequeñas (sabores, precinto, Bodoni en nombres); si se ejecutan flojas, queda genérica. Además, a 1 columna las listas de 15+ regalos son largas.
 
 ### B.2 «La libreta» — libro de cuentas de la abuela
@@ -126,7 +126,7 @@ Las tres resuelven lo mismo (pantalla de grupo con tarjetas de miembro + lista d
 - **Tarjeta de regalo.** Renglón sin miniatura: título · tienda · precio en columna; estado como anotación al margen en cursiva («Samira», «a medias 63 %»).
 - **Reservar en 1 toque.** Casilla cuadrada de 28 px al inicio del renglón: tocarla escribe tus iniciales dentro («A»).
 - **Presupuesto.** El filete del renglón + suma al pie de página («Comprometido 124,90 · Quedan 75,10»), como una cuenta.
-- **Microcopy de visibilidad.** Nota al pie de página: «Mamá no lee esta página».
+- **Microcopy de visibilidad.** Nota al pie de página: «Marta no lee esta página».
 - **Riesgo honesto.** Incumple el requisito 4 al pie de la letra (tarjetas con avatar). Una casilla sin palabra no dice «reservar» y un toque accidental reserva sin enterarte. Sin fotos, los regalos de Amazon pierden lo que mejor los identifica. Y se siente contabilidad: frío para Navidad.
 
 ### B.3 «El calendario» — calendario de adviento
@@ -140,7 +140,7 @@ Las tres resuelven lo mismo (pantalla de grupo con tarjetas de miembro + lista d
 - **Reservar en 1 toque.** Botón a todo el ancho en el pie de cada ventana («Reservar», 44 px).
 - **Presupuesto.** Anillo alrededor del avatar + «Quedan 75 €» bajo el nombre. Excedido: anillo granate completo.
 - **Microcopy de visibilidad.** Tu propia puerta sale cerrada con lazo: «Tu puerta no se abre para ti».
-- **Riesgo honesto.** El anillo se lee peor que una barra para dinero (el encargo pide barra) y no deja sitio a «comprometido / objetivo / restante». 5 puertas de color lleno compiten con el dorado y con las fotos de producto. La metáfora solo vale en diciembre: Lazo también es cumpleaños, bodas y bebés. Dos columnas de 173 px truncan títulos y nombres («Lo reserva Juan Carlos» no cabe). Es la más vistosa y la menos práctica.
+- **Riesgo honesto.** El anillo se lee peor que una barra para dinero (el encargo pide barra) y no deja sitio a «comprometido / objetivo / restante». 5 puertas de color lleno compiten con el dorado y con las fotos de producto. La metáfora solo vale en diciembre: Lazo también es cumpleaños, bodas y bebés. Dos columnas de 173 px truncan títulos y nombres («Lo reserva Javier» no cabe). Es la más vistosa y la menos práctica.
 
 ### Veredicto
 
@@ -165,7 +165,7 @@ Las tres resuelven lo mismo (pantalla de grupo con tarjetas de miembro + lista d
 1. **Una pantalla, un trabajo.** Grupo = elegir persona. Lista = elegir regalo. Ficha = detalles y a medias.
 2. **Texto antes que símbolo.** Todo estado se lee en una frase con sujeto: «Lo reserva Samira». El sello acompaña, nunca sustituye.
 3. **El botón vive siempre abajo a la derecha** de su tarjeta, misma altura, mismo ancho mínimo. Un primario por tarjeta como máximo.
-4. **Lo que X no ve, lo dice la interfaz con su nombre:** «Mamá no ve esto».
+4. **Lo que X no ve, lo dice la interfaz con su nombre:** «Marta no ve esto».
 5. **Lo libre pesa, lo cogido descansa.** Blanco con sombra = disponible; plano con filete = ya cogido; dorado claro = lo tuyo.
 
 ### C.2 Tokens
@@ -200,7 +200,7 @@ Se conserva `:root` de `src/styles.css` salvo lo marcado. **Cambia** = editar va
 | `--ok-tint` | `#dff0e7` | — | — |
 | `--focus` | `#2f62d6` | anillo de foco 3 px | 4,96 sobre `--ground` |
 
-Sabores (sin cambios; tinta sobre su papel): limón 6,53 · canela 6,02 · menta 6,13 · fresa 6,02 · violeta 7,04 · almendra 7,03 · cielo 6,53. Asignación de la demo (ya en `seed.ts`): Alberto cielo, Juan Carlos menta, Samira fresa, Mamá violeta, Papá canela.
+Sabores (sin cambios; tinta sobre su papel): limón 6,53 · canela 6,02 · menta 6,13 · fresa 6,02 · violeta 7,04 · almendra 7,03 · cielo 6,53. Asignación de la demo (ya en `seed.ts`): Alberto cielo, Javier menta, Samira fresa, Marta violeta, Papá canela.
 
 #### Color (oscuro)
 
@@ -258,12 +258,12 @@ Mínimo de texto legible: 15 px. `letter-spacing`: −0,01em en ≥ 34 px; 0,08e
 │ │   son sorpresa                    │ │
 │ └──────────────────────────────────┘ │  separación 12
 │ ┌──────────────────────────────────┐ │
-│ │ (M) Mamá                        › │ │  tarjeta de miembro, 128
+│ │ (M) Marta                        › │ │  tarjeta de miembro, 128
 │ │     6 regalos · 4 libres          │ │
 │ │ 124,90 € de 200,00 €  Quedan 75,10 € │
 │ │ ████████████░░░░░░░               │ │
 │ └──────────────────────────────────┘ │
-│  … Juan Carlos · Papá · Samira       │
+│  … Javier · Papá · Samira       │
 ├──────────────────────────────────────┤
 │  Grupo     Mis compras   Amigo inv.  │  barra inferior 64
 └──────────────────────────────────────┘
@@ -274,18 +274,18 @@ Mínimo de texto legible: 15 px. `letter-spacing`: −0,01em en ≥ 34 px; 0,08e
 - «Invitar» sale de la primera línea: va como `IconButton` (`UserPlus`, `onBox`) en la cabecera azul, solo para admin.
 - Se elimina la línea «5 personas · 18 regalos en 6 listas».
 
-Lista de Mamá (vista por Alberto):
+Lista de Marta (vista por Alberto):
 
 ```
 ┌──────────────────────────────────────┐
 │ ←  Navidad en familia                │
-│    (M) Mamá                          │
+│    (M) Marta                          │
 ├──────────────────────────────────────┤
-│ Presupuesto para Mamá      [Cambiar] │  BudgetPanel
+│ Presupuesto para Marta      [Cambiar] │  BudgetPanel
 │ 124,90 € de 200,00 €                 │
 │ ████████████░░░░░░░                  │
 │ Quedan 75,10 € · 2 de 6 regalos cogidos │
-│ ⦸ Mamá no ve esto                    │
+│ ⦸ Marta no ve esto                    │
 │                                      │
 │ Disponibles · 4                      │
 │ ┌──────────────────────────────────┐ │
@@ -318,7 +318,7 @@ Barra inferior. Tarjetas de miembro y de regalo a 2 columnas (`repeat(2, 1fr)`, 
 │        ├───────────────────────────────────────────────────────────────┤
 │ Grupo  │  24 px                                                         │
 │ Mis c. │  ┌─ 360 ─────┐ 24 ┌─ 360 ─────┐ 24 ┌─ 360 ─────┐                │
-│ Amigo  │  │ Tu lista  │    │ Juan Carlos│    │ Mamá      │                │
+│ Amigo  │  │ Tu lista  │    │ Javier│    │ Marta      │                │
 │        │  └───────────┘    └───────────┘    └───────────┘                │
 │ 264 px │  ┌───────────┐    ┌───────────┐                                 │
 │        │  │ Papá      │    │ Samira    │                                 │
@@ -332,9 +332,9 @@ Lista en escritorio (≥ 1200): **dos paneles**.
 
 ```
 │        │  ┌─ 360 ──────────┐ 24 ┌─ 744 ─────────────────────────────┐   │
-│        │  │ (A) Tu lista    │    │ Presupuesto para Mamá   [Cambiar] │   │
-│        │  │ (J) Juan Carlos │    │ 124,90 € de 200,00 € ██████░░░    │   │
-│        │  │▌(M) Mamá       ▐│    │ ⦸ Mamá no ve esto                 │   │
+│        │  │ (A) Tu lista    │    │ Presupuesto para Marta   [Cambiar] │   │
+│        │  │ (J) Javier │    │ 124,90 € de 200,00 € ██████░░░    │   │
+│        │  │▌(M) Marta       ▐│    │ ⦸ Marta no ve esto                 │   │
 │        │  │ (P) Papá        │    │ Disponibles · 4                   │   │
 │        │  │ (S) Samira      │    │ ┌─ 360 ────┐ 24 ┌─ 360 ────┐      │   │
 │        │  └─────────────────┘    │ │ regalo   │    │ regalo   │      │   │
@@ -409,7 +409,7 @@ Entrada: `BudgetProgress` de `core/budget.ts` (ya existe: `target`, `committed`,
 ```
 
 - Se anima `transform: scaleX`, no `width` (sin recalcular maquetación). `--p` = `percent / 100`.
-- Accesibilidad: `role="progressbar"`, `aria-valuemin=0`, `aria-valuemax={target}`, `aria-valuenow={min(committed, target)}`, `aria-valuetext="124,90 € de 200,00 €. Quedan 75,10 €"`, `aria-label="Presupuesto para Mamá"`.
+- Accesibilidad: `role="progressbar"`, `aria-valuemin=0`, `aria-valuemax={target}`, `aria-valuenow={min(committed, target)}`, `aria-valuetext="124,90 € de 200,00 €. Quedan 75,10 €"`, `aria-label="Presupuesto para Marta"`.
 - Reemplaza a `.meter` también en la ficha de «a medias» (mismo componente, mismas reglas).
 
 Estados y texto exacto:
@@ -429,17 +429,17 @@ Caso límite: reservas de regalos **sin precio** no suman (así lo hace `committ
 
 Bloque sin tarjeta (sobre `--ground`), separación 8:
 
-1. Fila: «Presupuesto para Mamá» (`.meta`, 700) · a la derecha `Button ghost sm` «Cambiar» (o «Poner presupuesto» `secondary sm` si no hay).
+1. Fila: «Presupuesto para Marta» (`.meta`, 700) · a la derecha `Button ghost sm` «Cambiar» (o «Poner presupuesto» `secondary sm` si no hay).
 2. `BudgetBar size="md"`.
 3. «2 de 6 regalos cogidos» (`.meta`).
-4. `VisibilityNote name="Mamá"`.
+4. `VisibilityNote name="Marta"`.
 
-Hoja «Presupuesto para Mamá» (al tocar «Cambiar» / «Poner presupuesto»): un campo `inputMode="decimal"` con foco automático, etiqueta «¿Cuánto os gastáis entre todos?», ayuda «Lo ve todo el grupo menos Mamá.», pie con `primary` «Guardar» y, si ya hay, `ghost` «Quitar presupuesto». Llama a `api.setBudget(listId, cents | null)`. Avisos: «Presupuesto guardado.» / «Presupuesto quitado.»
+Hoja «Presupuesto para Marta» (al tocar «Cambiar» / «Poner presupuesto»): un campo `inputMode="decimal"` con foco automático, etiqueta «¿Cuánto os gastáis entre todos?», ayuda «Lo ve todo el grupo menos Marta.», pie con `primary` «Guardar» y, si ya hay, `ghost` «Quitar presupuesto». Llama a `api.setBudget(listId, cents | null)`. Avisos: «Presupuesto guardado.» / «Presupuesto quitado.»
 
 #### VisibilityNote (`src/ui/kit.tsx`, nuevo)
 
 ```tsx
-<p className="vis"><EyeSlash size={18} weight="bold" aria-hidden /> Mamá no ve esto</p>
+<p className="vis"><EyeSlash size={18} weight="bold" aria-hidden /> Marta no ve esto</p>
 ```
 
 ```css
@@ -458,7 +458,7 @@ interface GiftCardProps {
   status?: ItemStatus;        // undefined = mi lista (no pinta estado)
   meId: Id;
   nameOf: (id: Id) => string; // «tú» / nombre
-  recipient: string;          // «Mamá», para los avisos
+  recipient: string;          // «Marta», para los avisos
   fresh?: boolean;            // acaba de cambiar: anima precinto y sello
   busy?: boolean;
   onOpen: () => void;         // cuerpo → ficha
@@ -492,7 +492,7 @@ Anatomía (358 de ancho, relleno 12, radio 16):
 | `mine` | lo he reservado/comprado yo o aporto | `--foil-tint` | sin sombra |
 | `taken` | lo tiene otro | `transparent` | `1px solid var(--line)` |
 
-**Estados** (quien mira: Alberto; lista de Mamá). El sello (`Seal`, 24 px en la fila) acompaña siempre al texto.
+**Estados** (quien mira: Alberto; lista de Marta). El sello (`Seal`, 24 px en la fila) acompaña siempre al texto.
 
 | Estado | Sello | Línea de estado | Botón del pie (1 toque) | `data-tone` |
 |---|---|---|---|---|
@@ -517,7 +517,7 @@ Reglas de redacción del estado:
 **Acción de 1 toque — comportamiento**
 
 1. Toque en **Reservar** → `api.claim(item.id, 'reserved')`. **Optimista**: la tarjeta cambia al instante a «Lo reservas tú», entra el precinto, el botón pasa a «Ya lo compré» y la barra de presupuesto crece.
-2. Aviso (toast) 6 s: **«Reservado. Mamá no lo verá.»** con botón **Deshacer** (→ `releaseClaim`). Sin diálogo de confirmación.
+2. Aviso (toast) 6 s: **«Reservado. Marta no lo verá.»** con botón **Deshacer** (→ `releaseClaim`). Sin diálogo de confirmación.
 3. Si la API falla: se revierte la tarjeta y aviso de error «No se ha podido reservar. Inténtalo otra vez.» Si otro se adelantó: «Samira lo acaba de reservar.» y la tarjeta pasa a `taken`.
 4. La tarjeta **no cambia de sección** hasta la siguiente carga: no se mueve nada bajo el dedo.
 5. **Ya lo compré** → `setClaimStatus(id, 'bought')`; aviso «Apuntado como comprado.» + Deshacer.
@@ -526,7 +526,7 @@ Reglas de redacción del estado:
 
 El aviso (`ToastProvider`) necesita aceptar una acción: `toast(text, { action?: { label: string; run: () => void } })`. Duración 6 s con acción, 3 s sin ella. `role="status"`.
 
-**Secciones de la lista ajena**: «Disponibles · N» (libre y a medias sin cubrir; orden: prioridad, luego título) y «Ya cogidos · N» (el resto; primero lo mío). Cabeceras: Bodoni `--t-xl`. Si no queda nada disponible: «Todo cogido. Mamá va servida.» Si la lista está vacía: «Mamá aún no ha apuntado nada.»
+**Secciones de la lista ajena**: «Disponibles · N» (libre y a medias sin cubrir; orden: prioridad, luego título) y «Ya cogidos · N» (el resto; primero lo mío). Cabeceras: Bodoni `--t-xl`. Si no queda nada disponible: «Todo cogido. Marta va servida.» Si la lista está vacía: «Marta aún no ha apuntado nada.»
 
 #### Ficha de regalo (`ItemSheet`, ajustar)
 
@@ -704,8 +704,8 @@ Curvas (ya en `:root`): `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)` (entradas, 
 ### C.8 Comprobación de aceptación
 
 - [ ] Como Alberto, veo 5 tarjetas; 4 con barra de presupuesto y la mía con «Tu presupuesto y tus reservas son sorpresa».
-- [ ] «Ver como Mamá»: la tarjeta de Mamá no muestra barra ni cifras, y la petición de su lista no trae `budget`, `claims` ni `contributions`.
-- [ ] Desde la lista de Mamá, reservar un regalo libre es **un** toque y se puede deshacer durante 6 s.
+- [ ] «Ver como Marta»: la tarjeta de Marta no muestra barra ni cifras, y la petición de su lista no trae `budget`, `claims` ni `contributions`.
+- [ ] Desde la lista de Marta, reservar un regalo libre es **un** toque y se puede deshacer durante 6 s.
 - [ ] Cada regalo cogido dice quién lo tiene sin abrir nada.
 - [ ] Con un enlace copiado: «Añadir regalo» → «Pegar enlace» = regalo guardado (2 toques).
 - [ ] Presupuesto excedido: barra granate + icono + «Os pasáis 35,00 €».

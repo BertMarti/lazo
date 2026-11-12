@@ -7,7 +7,7 @@ Medido el 2026-11-12 con `npm run rendimiento` (`scripts/rendimiento.mjs`) sobre
 | Ruta | FCP | LCP | CLS | Interactivo (aprox.) | Transferido | JS transferido | Peticiones |
 |---|---|---|---|---|---|---|---|
 | `/#/g/navidad` | 1,71 s | 1,77 s | 0,004 | 1,77 s | 481,0 KB | 198,0 KB (674,5 KB sin comprimir) | 10 |
-| `/#/l/l-mama` | 1,62 s | 1,72 s | 0,004 | 1,72 s | 570,2 KB | 198,0 KB (674,5 KB sin comprimir) | 11 |
+| `/#/l/l-marta` | 1,62 s | 1,72 s | 0,004 | 1,72 s | 570,2 KB | 198,0 KB (674,5 KB sin comprimir) | 11 |
 
 **JS total con gzip:** 352,3 KB en 2 ficheros ⚠; lo que se descarga al abrir estas rutas, 197,2 KB. Límites: LCP ≤ 2,5 s, CLS ≤ 0,1 y JS ≤ 300 KB con gzip. **Algo pasa del límite** (⚠): ver las causas abajo.
 

@@ -126,8 +126,8 @@ describe('presupuesto', () => {
 import { normName, parsePlazas } from '../../src/core/plazas';
 describe('plazas (U-10)', () => {
   it('normaliza, quita repetidos, vacíos y al creador; máximo 40', () => {
-    expect(normName('  Mamá  Rosa ')).toBe('mama rosa');
-    expect(parsePlazas('Mamá\nmama\n\nPapá, Samira\nAlberto', 'alberto')).toEqual(['Mamá', 'Papá', 'Samira']);
+    expect(normName('  Marta  Rosa ')).toBe('marta rosa');
+    expect(parsePlazas('Mónica\nmonica\n\nPapá, Samira\nAlberto', 'alberto')).toEqual(['Mónica', 'Papá', 'Samira']);
     expect(parsePlazas(Array.from({ length: 60 }, (_, i) => `P${i}`))).toHaveLength(40);
   });
   it('estado «para la hucha» y comprado con la hucha (U-1)', () => {

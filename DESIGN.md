@@ -23,7 +23,7 @@ Principios:
 
 1. **Las personas y los regalos mandan.** Avatares de 80 a 96 px y fotos 1:1 a todo lo ancho de la tarjeta.
 2. **Texto antes que símbolo.** Cada estado se dice con palabras («Lo reserva Samira»). La cinta y la etiqueta lo refuerzan, pero nunca lo sustituyen.
-3. **La sorpresa es sagrada.** En tu propia lista no hay cinta, ni etiqueta, ni progreso. Lo que una persona no ve, la interfaz lo dice con su nombre: «Mamá no ve esto».
+3. **La sorpresa es sagrada.** En tu propia lista no hay cinta, ni etiqueta, ni progreso. Lo que una persona no ve, la interfaz lo dice con su nombre: «Marta no ve esto».
 4. **Un toque para lo frecuente.** Reservar es un botón y se puede deshacer.
 
 ## Colores
@@ -61,7 +61,7 @@ Principios:
 
 | Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| `--oro-suave` / `--sobre-oro-suave` | `#f1e1b5` / `#4a3608` | `#4a3a14` / `#f3e2b4` | «Mamá no ve esto», «Sorpresa» y avisos |
+| `--oro-suave` / `--sobre-oro-suave` | `#f1e1b5` / `#4a3608` | `#4a3a14` / `#f3e2b4` | «Marta no ve esto», «Sorpresa» y avisos |
 | `--peligro` / `--sobre-peligro` | `#a3261f` / `#fff` | `#f0907f` / `#20140c` | Borrar y excedido |
 
 ### Colores de persona
@@ -147,7 +147,7 @@ Todos los botones son píldoras de 48 px de alto en móvil y 44 px en escritorio
 ### Tarjeta de regalo (`GiftCard`)
 
 - Foto 1:1 con la **etiqueta de precio** en terracota (círculo de 56 px girado −6°, arriba a la derecha).
-- Debajo, el título (dos líneas como máximo), la tienda o «Para Mamá», la frase de estado y las acciones a todo el ancho.
+- Debajo, el título (dos líneas como máximo), la tienda o «Para Marta», la frase de estado y las acciones a todo el ancho.
 - Las señales de estado son redundantes:
 
 | Estado | Etiqueta sobre la foto | Cinta | Frase |
@@ -156,7 +156,7 @@ Todos los botones son píldoras de 48 px de alto en móvil y 44 px en escritorio
 | Reservado por otra persona | «Reservado» | Una banda dorada en el tercio inferior, con lazo | «Lo reserva Samira» |
 | Para la hucha | «Para la hucha» | La misma banda | «Para la hucha · lo apuntó Papá» |
 | Lo llevas tú | «Lo llevas tú», en abeto | Banda en abeto y borde de 2 px en abeto | «Lo reservas tú» |
-| A medias | «A medias · 60 %» | — | «A medias · Juan Carlos» |
+| A medias | «A medias · 60 %» | — | «A medias · Javier» |
 | Comprado | «Comprado», en tinta | Dos bandas en cruz (el paquete atado) | «Lo compró Samira» |
 | Sorpresa | «Sorpresa», en oro suave, arriba a la izquierda | La del estado que tenga | — |
 
@@ -170,7 +170,7 @@ Todos los botones son píldoras de 48 px de alto en móvil y 44 px en escritorio
 ### Otros
 
 - **Etiqueta** (`.tag`): píldora opaca de 28 px con icono y palabra.
-- **Visibilidad** (`.vis`): «Mamá no ve esto», sobre oro suave.
+- **Visibilidad** (`.vis`): «Marta no ve esto», sobre oro suave.
 - **Hoja:** `<dialog>` nativo; sube desde abajo en móvil y se centra en 560 px en escritorio.
 - **Tique** (`.rows`): filas de la hucha y de «Mis compras», separadas por una línea de puntos, con miniatura de 72 px.
 - **Sorteo:** paquete en abeto atado con cinta dorada; al abrirlo, el nombre aparece en `--t-display`.

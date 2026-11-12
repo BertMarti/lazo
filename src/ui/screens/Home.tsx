@@ -121,7 +121,7 @@ function NewGroup({ onClose, onCreated }: { onClose: () => void; onCreated: (id:
       </fieldset>
       <label className="field">
         <span>¿Quiénes sois? (opcional)</span>
-        <textarea className="textarea" value={plazas} onChange={(e) => setPlazas(e.target.value)} placeholder={'Mamá\nPapá\nSamira'} />
+        <textarea className="textarea" value={plazas} onChange={(e) => setPlazas(e.target.value)} placeholder={'Marta\nPapá\nSamira'} />
         <small>Un nombre por línea. Cada uno tendrá su sitio aunque aún no haya entrado.</small>
       </label>
       <label className="check">

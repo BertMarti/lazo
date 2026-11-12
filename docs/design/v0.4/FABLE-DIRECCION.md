@@ -1,6 +1,6 @@
 # Lazo v0.4 · Dirección de arte
 
-Revisadas las doce capturas de `direcciones/` (A, B y C; grupo y lista; 375 y 1280 px), tres de la v0.3 (grupo móvil, lista de Mamá y hucha en escritorio) y cinco referencias de `referencias/v0.4/` (gift-people, visual-wishlist, gift-organizer, search-christmas, pinterest-gift-list-app).
+Revisadas las doce capturas de `direcciones/` (A, B y C; grupo y lista; 375 y 1280 px), tres de la v0.3 (grupo móvil, lista de Marta y hucha en escritorio) y cinco referencias de `referencias/v0.4/` (gift-people, visual-wishlist, gift-organizer, search-christmas, pinterest-gift-list-app).
 
 **Elección: A «El catálogo de juguetes» manda.** Se le corrigen seis defectos concretos y toma dos préstamos menores de C (la línea «Se abren el 24 de diciembre» y la idea de un sello con texto para el estado, convertido en etiqueta de regalo). De B no se toma nada estructural.
 
@@ -203,7 +203,7 @@ El disparador de una acción destructiva es un fantasma con texto `--peligro`; e
 
 **Lista de otra persona**
 
-1. Cabecera: avatar de 96 px, nombre en `display`, «5 regalos · 1 libre» y la marca «Mamá no ve esto» (oro suave, icono de ojo tachado).
+1. Cabecera: avatar de 96 px, nombre en `display`, «5 regalos · 1 libre» y la marca «Marta no ve esto» (oro suave, icono de ojo tachado).
 2. Tira de presupuesto en tarjeta: «374,90 € de 400 €», barra, «Quedan 25,10 €».
 3. «Su lista» con «Añadir sorpresa» (secundario con icono «+»; el primario se reserva para Reservar).
 4. Tablero. **Rejilla uniforme, no masonry**: foto 1:1, título a dos líneas como máximo, acciones ancladas abajo, tarjetas de igual alto por fila. Columnas: 1 por debajo de 340 px, 2 en móvil, 3 desde 768 px, 4 desde 1100 px. Orden: libres, a medias, reservados, comprados.
@@ -230,7 +230,7 @@ Lenguaje de tique de caja de la juguetería. Arriba «Te falta poner» y la cifr
 
 **Mis compras**
 
-Filas con foto de 72 px, título, «Para Mamá» con su avatar de 24 px, precio y marca de estado. Dos grupos: «Por comprar» (con primario «Ya comprado») y «Comprado». Arriba el total gastado en `cifra`.
+Filas con foto de 72 px, título, «Para Marta» con su avatar de 24 px, precio y marca de estado. Dos grupos: «Por comprar» (con primario «Ya comprado») y «Comprado». Arriba el total gastado en `cifra`.
 
 **Sorteo**
 
@@ -242,7 +242,7 @@ Una columna, sin navegación. Lazo grande, «Te han invitado a **Navidad en fami
 
 **Estados vacíos**
 
-El lazo sin anudar (dibujo de línea, 96 px, `--oro`), una frase en `titulo-2`, una línea en `cuerpo-g` y un botón. Ejemplos: «Mamá aún no ha pedido nada» + «Añadir sorpresa»; «Todavía no has reservado nada» + «Ver el grupo». Sin ilustraciones de personajes.
+El lazo sin anudar (dibujo de línea, 96 px, `--oro`), una frase en `titulo-2`, una línea en `cuerpo-g` y un botón. Ejemplos: «Marta aún no ha pedido nada» + «Añadir sorpresa»; «Todavía no has reservado nada» + «Ver el grupo». Sin ilustraciones de personajes.
 
 **Errores**
 
@@ -259,7 +259,7 @@ Cada estado lleva tres señales redundantes: **etiqueta con icono y texto** sobr
 | **Reservado por mí** | «Lo llevas tú», icono de lazo. Fondo `--abeto`, texto `--sobre-abeto` | La misma banda, en `--abeto`; borde de tarjeta 2 px `--abeto` | «Lo has reservado tú» | Primario «Ya comprado», fantasma «Soltar» |
 | **A medias** | «A medias», icono de dos mitades. Fondo `--tarjeta`, texto `--tinta` | No | «Faltan 140 € de 349 €», barra fina y avatares de quien ya puso | Secundario «Poner mi parte»; si ya pusiste: «Tu parte: 70 €» y fantasma «Cambiar» |
 | **Comprado** | «Comprado», icono de visto. Fondo `--tinta`, texto `--papel` | Dos bandas `--oro` en cruz (paquete envuelto) con lazo en el cruce | «Ya comprado por Papá» o «Ya lo has comprado» | Ninguna; si es tuyo, fantasma «Deshacer» |
-| **Sorpresa** | «Sorpresa», icono de ojo tachado. Fondo `--oro-suave`, texto `--sobre-oro-suave`, arriba a la izquierda | La del estado que tenga | «Idea de Papá · Mamá no la ha pedido» | Las del estado que tenga |
+| **Sorpresa** | «Sorpresa», icono de ojo tachado. Fondo `--oro-suave`, texto `--sobre-oro-suave`, arriba a la izquierda | La del estado que tenga | «Idea de Papá · Marta no la ha pedido» | Las del estado que tenga |
 
 Notas:
 

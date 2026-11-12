@@ -13,12 +13,12 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-/** Samira reserva el cuchillo de Juan Carlos sin tocar la pantalla. */
+/** Samira reserva el cuchillo de Javier sin tocar la pantalla. */
 const samiraReserves = (page: Page) =>
   page.evaluate(async () => {
     const demo = (window as unknown as { __lazoDemo: DemoApi }).__lazoDemo;
     const me = demo.me().id;
-    const item = (await demo.listDetail('l-juancarlos')).items.find((i) => i.title.includes('Cuchillo de chef'))!;
+    const item = (await demo.listDetail('l-javier')).items.find((i) => i.title.includes('Cuchillo de chef'))!;
     demo.setViewer('samira');
     try {
       await demo.gift({ action: 'reserve', item: item.id, kind: 'self' });
@@ -28,7 +28,7 @@ const samiraReserves = (page: Page) =>
   });
 
 test('una reserva de otra persona aparece sola en la lista abierta', async ({ page }) => {
-  await page.goto('/#/l/l-juancarlos');
+  await page.goto('/#/l/l-javier');
   const card = page.locator('.gift', { hasText: 'Cuchillo de chef' });
   await expect(card.getByText('Libre')).toBeVisible();
   await page.evaluate(() => Object.assign(window, { __sinRecargar: true }));
@@ -38,8 +38,8 @@ test('una reserva de otra persona aparece sola en la lista abierta', async ({ pa
 });
 
 test('el dueño de la lista no nota nada cuando le reservan', async ({ page }) => {
-  await page.goto('/#/l/l-juancarlos');
-  await page.getByLabel('Ver como').selectOption('juancarlos');
+  await page.goto('/#/l/l-javier');
+  await page.getByLabel('Ver como').selectOption('javier');
   await expect(page.getByText('Lo que te regalan es sorpresa: aquí solo ves lo que has pedido.')).toBeVisible();
   const before = await page.locator('main').innerText();
   await samiraReserves(page);

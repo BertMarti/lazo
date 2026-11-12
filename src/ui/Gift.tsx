@@ -20,9 +20,9 @@ export function GiftCard({ item, flavor, status, line, owner, forName, fresh, bu
   flavor: Flavor;
   status?: ItemStatus;
   line?: StatusLine;
-  /** Nombre del dueño, para «Mamá lo ha quitado de su lista». */
+  /** Nombre del dueño, para «Marta lo ha quitado de su lista». */
   owner?: string;
-  /** En el tablero del grupo: «Para Mamá». */
+  /** En el tablero del grupo: «Para Marta». */
   forName?: string;
   fresh?: boolean;
   busy?: string | null;

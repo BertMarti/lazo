@@ -19,9 +19,9 @@ describe('DemoApi', () => {
     await expect(api.saveItem('l-papa', { title: 'x', priority: 2, quantity: 1 })).rejects.toThrow();
   });
 
-  it('presupuesto de Mamá en modo mixto: cuenta la hucha; lo individual va aparte', async () => {
+  it('presupuesto de Marta en modo mixto: cuenta la hucha; lo individual va aparte', async () => {
     api.setViewer('papa');
-    const d = await api.listDetail('l-mama');
+    const d = await api.listDetail('l-marta');
     const p = budgetProgress(d.budget!.amountCents, d.items, d.claims, d.contributions, d.group.buyMode);
     // robot comprado con la hucha 339,90 + pañuelo sorpresa para la hucha a precio de lista 35
     expect(p).toMatchObject({ target: 40000, committed: 33990 + 3500 });
@@ -47,7 +47,7 @@ describe('DemoApi', () => {
 
   it('el sorteo solo enseña la propia asignación', async () => {
     api.setViewer('alberto');
-    await api.runDraw('navidad', ['alberto', 'juancarlos', 'samira', 'mama', 'papa'], [['mama', 'papa']]);
+    await api.runDraw('navidad', ['alberto', 'javier', 'samira', 'marta', 'papa'], [['marta', 'papa']]);
     const info = await api.drawInfo('navidad');
     expect(info.receiver!.id).not.toBe('alberto');
     expect(Object.keys(info)).toEqual(['draw', 'receiver']);
@@ -55,7 +55,7 @@ describe('DemoApi', () => {
 
   it('pagos de la hucha: solo con el tesorero (o el suplente por sus regalos) y solo los ven sus dos partes', async () => {
     api.setViewer('papa');
-    await expect(api.addPayment('navidad', { from: 'papa', to: 'mama', amountCents: 100, sub: false })).rejects.toThrow();
+    await expect(api.addPayment('navidad', { from: 'papa', to: 'marta', amountCents: 100, sub: false })).rejects.toThrow();
     await expect(api.addPayment('navidad', { from: 'papa', to: 'alberto', amountCents: 100, sub: true })).rejects.toThrow();
     await api.addPayment('navidad', { from: 'papa', to: 'samira', amountCents: 500, sub: true });
     api.setViewer('alberto');
@@ -71,7 +71,7 @@ describe('hucha en la demo', () => {
     const d = await api.hucha('navidad');
     const user = (id?: string) => d.lists.find((l) => l.id === id)?.user;
     const ctx: HuchaCtx = { me: 'papa', members: d.members.map((m) => m.id), lists: d.lists, items: d.items, claims: d.claims, payments: d.payments, treasurer: user(d.group.treasurer), deputy: user(d.group.deputy), treasurerList: d.group.treasurer };
-    // Mamá 339,90 entre 4 (mayor resto: a Papá le tocan 84,97) + Juan Carlos 65/4 = 16,25 → 101,22; ha dado 30 al tesorero
+    // Marta 339,90 entre 4 (mayor resto: a Papá le tocan 84,97) + Javier 65/4 = 16,25 → 101,22; ha dado 30 al tesorero
     const g = generalProgress(ctx);
     expect(g.put).toBe(3000);
     expect(g.target).toBe(10122);
@@ -89,7 +89,7 @@ describe('DemoApi · tiempo real', () => {
     await new Promise((r) => setTimeout(r));
     expect(n).toBe(1);
     stop();
-    await demo.setBudget('l-mama', 1000);
+    await demo.setBudget('l-marta', 1000);
     await new Promise((r) => setTimeout(r));
     expect(n).toBe(1);
   });

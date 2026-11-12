@@ -48,7 +48,7 @@ Persona: con prisa, una mano, cobertura regular. Quiere dos toques y una prueba 
 
 Lo que funciona: dos toques reales, «Leyendo la tienda…», el título «Añadido a tu lista» con la marca verde y el precio con la tienda.
 
-## 3. Mamá apunta que ya le dio su parte a Alberto
+## 3. Marta apunta que ya le dio su parte a Alberto
 
 Persona: no entiende de cuentas y teme «pagar» sin querer o apuntar algo mal delante de la familia.
 
@@ -134,4 +134,4 @@ La última frase mantiene la promesa actual, que no he podido comprobar: ver «L
 
 ## Resumen
 
-Los tres recorridos se completan, pero ninguno deja a la persona segura de haberlo hecho bien. El abuelo se queda con un código que parece un año, sin su nombre y sin forma de mandarlo por WhatsApp. Samira depende de un permiso del navegador que nadie le anuncia y de mensajes de error que se contradicen. Mamá lee «Estás al día» encima de una deuda de 12,50 € y puede apuntar el mismo pago dos veces con un doble toque. Los cinco arreglos son de textos, un estado de espera y dos reglas de CSS, en `Hucha.tsx`, `Join.tsx`, `AddGift.tsx` y `styles.css`. Queda sin resolver, y sin comprobar, qué pasa al reabrir el enlace estando pendiente.
+Los tres recorridos se completan, pero ninguno deja a la persona segura de haberlo hecho bien. El abuelo se queda con un código que parece un año, sin su nombre y sin forma de mandarlo por WhatsApp. Samira depende de un permiso del navegador que nadie le anuncia y de mensajes de error que se contradicen. Marta lee «Estás al día» encima de una deuda de 12,50 € y puede apuntar el mismo pago dos veces con un doble toque. Los cinco arreglos son de textos, un estado de espera y dos reglas de CSS, en `Hucha.tsx`, `Join.tsx`, `AddGift.tsx` y `styles.css`. Queda sin resolver, y sin comprobar, qué pasa al reabrir el enlace estando pendiente.

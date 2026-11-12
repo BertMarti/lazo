@@ -16,7 +16,7 @@ Vocabulario: **plaza** = una `list` de tipo persona. **L_r** = «cuenta de r»: 
 | # | Decisión | Descartado y por qué |
 |---|---|---|
 | D1 | **Una plaza es una `list` con `kind = "person"`**; libre si `user = ""`. La regla existente `list.user != @request.auth.id` ya da el comportamiento pedido: mientras está libre la ven todos; al reclamarla, su ocupante deja de verla sin tocar ningún dato. | Colección `plazas` aparte: duplica `lists` y obliga a reescribir todas las reglas. |
-| D2 | **Dos formas de entrar, un solo mecanismo de reclamación (transacción en el hook):** (a) **enlace personal por plaza**, de un solo uso: entra al instante («Eres Mamá»); (b) **enlace general del grupo**: elige plaza libre o escribe nombre → queda **pendiente** y no es miembro (no lee nada) hasta que un admin lo acepta comparando un **código de 4 cifras** que el solicitante ve en su pantalla. | Solo enlace general sin aprobación: Mamá entra como «Papá» en una ventana privada y ve su lista. Solo enlaces personales: el usuario pidió expresamente elegir plaza o escribir nombre. Código/PIN por plaza: es un secreto más que repartir por el mismo canal que el enlace, sin ganar nada. Aprobación sin código: el admin no distingue dos solicitudes para «Papá». |
+| D2 | **Dos formas de entrar, un solo mecanismo de reclamación (transacción en el hook):** (a) **enlace personal por plaza**, de un solo uso: entra al instante («Eres Marta»); (b) **enlace general del grupo**: elige plaza libre o escribe nombre → queda **pendiente** y no es miembro (no lee nada) hasta que un admin lo acepta comparando un **código de 4 cifras** que el solicitante ve en su pantalla. | Solo enlace general sin aprobación: Marta entra como «Papá» en una ventana privada y ve su lista. Solo enlaces personales: el usuario pidió expresamente elegir plaza o escribir nombre. Código/PIN por plaza: es un secreto más que repartir por el mismo canal que el enlace, sin ganar nada. Aprobación sin código: el admin no distingue dos solicitudes para «Papá». |
 | D3 | **Nadie reclama una plaza ocupada** (comprobación `user = ""` dentro de la transacción + índice único `(group, user)`): una cuenta, una plaza por grupo. Una sesión que ya es miembro no puede pedir otra plaza. | — |
 | D4 | **Solo un admin libera una plaza, nunca la suya ni la del dueño del grupo.** Liberar expulsa a esa cuenta del grupo. La plaza conserva su historial (`prevUser`) y, al volver a reclamarse, las reservas, compras y pagos de la cuenta anterior pasan a la nueva: la identidad es la plaza; la cuenta es solo la llave. | «Reenlazar» una plaza ocupada con un enlace del admin: daría al admin la sesión de cualquiera y, con ella, la vista de su propia lista. Prohibido para siempre. |
 | D5 | **Regalos sorpresa** (`items.secret`): lo que otro apunta en la plaza de X no lo ve X. Hace falta para que una plaza libre (lista vacía) admita reservas, y sirve para «le he comprado algo que no pidió». | Dejar que otros añadan regalos visibles: al reclamar, X vería «ideas» con huella de quién las puso. |
@@ -53,7 +53,7 @@ Fuera de alcance: alguien que coge el móvil desbloqueado de otro o recibe su c�
         │  user = ""  · la ven todos · admiten presupuesto,            │
         │  regalos sorpresa, reservas y compras                        │
         │                                                              │
- enlace personal (1 uso)          enlace general: «Soy Mamá»           │ admin libera
+ enlace personal (1 uso)          enlace general: «Soy Marta»           │ admin libera
         │                                  │                           │ (no la suya, no la del dueño;
         │                                  ▼                           │  expulsa la cuenta; prevUser = cuenta)
         │                    LIBRE + SOLICITUD PENDIENTE               │
@@ -75,9 +75,9 @@ Al pasar LIBRE → OCUPADA no se toca ninguna reserva, compra ni presupuesto: si
 
 1. **Crear grupo.** Nombre, ocasión, fecha, modo de compra y, opcional, «¿Quiénes sois?» (nombres, uno por línea). El creador ocupa su plaza (`via = creator`); cada nombre es una plaza libre.
 2. **Invitar.** Pantalla «Invitar» (solo admin): una fila por plaza libre con «Enviar su enlace» (WhatsApp / copiar), y debajo «Enlace para todos» (general). Recomendación en pantalla: el personal.
-3. **Enlace personal.** `#/unirse/<token>` → «Navidad en familia te espera, Mamá» → un botón → dentro.
-4. **Enlace general.** Lista de plazas libres («Soy Mamá») y, si `allowNewNames`, «No estoy en la lista». Al elegir: pantalla de espera con el código. El admin ve la solicitud con el nombre pedido y el código; acepta o rechaza.
-5. Si la sesión ya es miembro del grupo: «Ya estás en este grupo como Mamá.» y se abre el grupo.
+3. **Enlace personal.** `#/unirse/<token>` → «Navidad en familia te espera, Marta» → un botón → dentro.
+4. **Enlace general.** Lista de plazas libres («Soy Marta») y, si `allowNewNames`, «No estoy en la lista». Al elegir: pantalla de espera con el código. El admin ve la solicitud con el nombre pedido y el código; acepta o rechaza.
+5. Si la sesión ya es miembro del grupo: «Ya estás en este grupo como Marta.» y se abre el grupo.
 
 ---
 
@@ -215,7 +215,7 @@ Hook `onRecordDeleteRequest('items')`:
 - regalo propio (`secret = false`) con alguna fila en `claims` o `contributions` → `removed = true`, guardar y responder **204 sin borrar** (misma respuesta que un borrado real, D6);
 - sorpresa (`secret = true`) con alguna fila `bought` → 400 «Ya está comprado: deshaz la compra antes.» (quien borra no es el destinatario).
 
-Para los demás, un regalo `removed` se pinta «Mamá lo ha quitado de su lista» y conserva su estado.
+Para los demás, un regalo `removed` se pinta «Marta lo ha quitado de su lista» y conserva su estado.
 
 ### 4.4 `claims` (cambia)
 
@@ -421,7 +421,7 @@ El greedy de Repartito se conserva donde no hay nada que esconder: saldar un reg
 | Suplente T2 | Lo de cualquiera + tabla de cobro de «Regalos de Samira». |
 | Nadie | Total de la hucha, suma de presupuestos, gasto total, saldos de otros, tabla global de aportaciones, porcentajes del grupo. |
 
-En la **lista de r vista por los demás** (no por r): presupuesto, comprometido, restante con barra, y «Hucha de Mamá: 124,90 € entre 4 · 31,23 € cada uno · adelantó Samira».
+En la **lista de r vista por los demás** (no por r): presupuesto, comprometido, restante con barra, y «Hucha de Marta: 124,90 € entre 4 · 31,23 € cada uno · adelantó Samira».
 
 ---
 
@@ -513,7 +513,7 @@ Nunca: `paidCents`, `paidBy`, presupuesto, aportaciones, filas `reserved`, nada 
 
 ## 9. Pruebas que deben existir
 
-Familia de las pruebas: `FAMILY = [alberto (creador, admin, tesorero), juancarlos, samira (suplente), mama, papa]`. «∀X» = `for (const who of FAMILY)`.
+Familia de las pruebas: `FAMILY = [alberto (creador, admin, tesorero), javier, samira (suplente), marta, papa]`. «∀X» = `for (const who of FAMILY)`.
 
 ### 9.1 Unitarias (Vitest, `src/core`)
 
@@ -550,10 +550,10 @@ Familia de las pruebas: `FAMILY = [alberto (creador, admin, tesorero), juancarlo
 |---|---|
 | PB-1 | ∀X (amplía la prueba actual): su plaza no devuelve `claims`, `contributions`, `budgets`, sorpresas ni retirados por list, view, `expand`, `filter`, `sort`, `fields`, `totalItems`, `_via_`, `@collection` ni tiempo real (creación, edición **y borrado**). |
 | PB-2 | **No interferencia** ∀X contra el servidor: se vuelcan todas las colecciones y endpoints GET como X, se ejecuta como otros un guion sobre la plaza de X (reservar, pasar a hucha, comprar, deshacer, presupuesto, sorpresa, pago `sub`), se vuelca de nuevo: idéntico byte a byte. |
-| PB-3 | Reclamar con historial: plaza libre «Mamá» con presupuesto, sorpresa, reserva y compra de hucha; entra con enlace personal; PB-1 se cumple para la cuenta nueva desde su primera petición. |
+| PB-3 | Reclamar con historial: plaza libre «Marta» con presupuesto, sorpresa, reserva y compra de hucha; entra con enlace personal; PB-1 se cumple para la cuenta nueva desde su primera petición. |
 | PB-4 | Enlace personal: un solo uso (el segundo falla con el mensaje genérico); generar otro revoca el anterior; no se puede generar para plaza ocupada. |
 | PB-5 | Enlace general: tras `join` la cuenta no está en `members` y recibe 0 registros de `groups`, `lists`, `items`, `claims`, `users`; ve solo su `joinRequests`. Aceptar → entra. Rechazar → sigue fuera. |
-| PB-6 | Suplantación: (a) Mamá, con su sesión, pide la plaza «Papá» → 400; (b) dos solicitudes para «Papá», se acepta una, la otra → «ya está ocupada»; (c) carrera: dos `join` personales simultáneos sobre la misma plaza → uno gana (índice único); (d) no admin llama a `join-decide`, `invite`, `plaza-release` → 403; (e) `PATCH lists/{id}` con `user`, `kind`, `via`, `claimedAt` → rechazado. |
+| PB-6 | Suplantación: (a) Marta, con su sesión, pide la plaza «Papá» → 400; (b) dos solicitudes para «Papá», se acepta una, la otra → «ya está ocupada»; (c) carrera: dos `join` personales simultáneos sobre la misma plaza → uno gana (índice único); (d) no admin llama a `join-decide`, `invite`, `plaza-release` → 403; (e) `PATCH lists/{id}` con `user`, `kind`, `via`, `claimedAt` → rechazado. |
 | PB-7 | Admin y su plaza: Alberto no puede `plaza-release` de la suya ni de la del dueño; `PATCH groups` con `treasurer`, `deputy`, `revealedAt`, `members` → rechazado; PB-1 y PB-2 pasan con X = Alberto. |
 | PB-8 | `gift` ∀X sobre su plaza: mismo código y cuerpo con el regalo libre, reservado, comprado y con aportaciones; id de sorpresa propia ≡ id inexistente. |
 | PB-9 | `gift` transiciones y modos (tabla de §3.2); 20 `reserve` concurrentes sobre un regalo de 1 unidad → exactamente 1 fila. |
@@ -598,7 +598,7 @@ Misma `MemberCard`, avatar con contorno discontinuo (sin relleno de sabor). Meta
 Invitar                                              ✕
 Envía a cada uno su enlace. Entra con un toque y nadie puede ocupar su sitio.
 
-(M) Mamá          Aún no ha entrado      [ Enviar enlace ]
+(M) Marta          Aún no ha entrado      [ Enviar enlace ]
 (P) Papá          Aún no ha entrado      [ Enviar enlace ]
 [ + Añadir a alguien ]                                         ghost
 
@@ -607,7 +607,7 @@ Quien lo abra elige su nombre y espera a que le aceptes.
 [ Copiar enlace ]                                              secondary, wide
 ```
 
-Mensaje de WhatsApp (personal): «Mamá, este es tu enlace para "Navidad en familia" en Lazo. Es solo para ti: {url}». General: «Entrad en "Navidad en familia" en Lazo y elegid vuestro nombre: {url}».
+Mensaje de WhatsApp (personal): «Marta, este es tu enlace para "Navidad en familia" en Lazo. Es solo para ti: {url}». General: «Entrad en "Navidad en familia" en Lazo y elegid vuestro nombre: {url}».
 
 ### 10.4 Entrar eligiendo plaza
 
@@ -617,9 +617,9 @@ Enlace personal:
 Navidad en familia
 24 de diciembre · lo organiza Alberto
 
-Eres Mamá                                                      Bodoni --t-2xl
+Eres Marta                                                      Bodoni --t-2xl
 [ Entrar ]                                                     primary, lg, wide
-No soy Mamá                                                    ghost → «Pide a Alberto tu enlace.»
+No soy Marta                                                    ghost → «Pide a Alberto tu enlace.»
 ```
 
 Enlace general:
@@ -629,12 +629,12 @@ Navidad en familia
 24 de diciembre · lo organiza Alberto
 
 ¿Quién eres?                                                   --t-xl
-( ) Mamá
+( ) Marta
 ( ) Papá
 ( ) Samira
 No estoy en la lista                                           ghost (solo si se permite) → campo «Tu nombre»
 
-[ Soy Mamá ]                                                   primary, lg, wide (cambia con la elección)
+[ Soy Marta ]                                                   primary, lg, wide (cambia con la elección)
 Elige solo tu nombre. Alberto tiene que aceptarte.             15 px --ink-2
 ```
 
@@ -663,7 +663,7 @@ Pregúntale el código a Papá antes de aceptar.
 ```
 
 Nombre nuevo: «Alguien quiere entrar como Tía Loli · código 4821». Aviso tras aceptar: «Papá ya está dentro.»
-Errores: «Esa plaza ya está ocupada.» · «Ya estás en este grupo como Mamá.» · «Ya hay una plaza con ese nombre: elígela en la lista.»
+Errores: «Esa plaza ya está ocupada.» · «Ya estás en este grupo como Marta.» · «Ya hay una plaza con ese nombre: elígela en la lista.»
 
 Liberar (en «Quién está», `danger sm`, confirmación en la hoja): «¿Sacar a esta persona de la plaza de Papá? Tendrá que volver a entrar con un enlace nuevo. Sus reservas y compras se quedan en la plaza.» → **Sí, liberar** / **No**.
 
@@ -681,12 +681,12 @@ Se mantiene la `GiftCard` (pie con estado a la izquierda y botón a la derecha).
 | Para la hucha | **Para la hucha · lo apuntó Samira** | `secondary` Ya comprado |
 | Ya comprado, individual | **Lo compró Papá** / **Lo compraste tú** | — |
 | Ya comprado, hucha | **Comprado con la hucha · adelantó Papá** | — |
-| Retirado por su dueño | **Mamá lo ha quitado de su lista** + estado | el que corresponda |
+| Retirado por su dueño | **Marta lo ha quitado de su lista** + estado | el que corresponda |
 | Sorpresa | etiqueta única de la tarjeta: **Sorpresa** (sustituye a «Me encantaría») | igual |
 
-Avisos (6 s, con Deshacer): «Reservado. Mamá no lo verá.» · «Apuntado para la hucha. Mamá no lo verá.» · «Lo has soltado. Vuelve a estar libre.» · «Quitado de la hucha.»
+Avisos (6 s, con Deshacer): «Reservado. Marta no lo verá.» · «Apuntado para la hucha. Marta no lo verá.» · «Lo has soltado. Vuelve a estar libre.» · «Quitado de la hucha.»
 
-Al final de la sección «Disponibles» de una lista ajena: `ghost` **Apuntar una sorpresa** → formulario corto de regalo con la ayuda «Mamá no lo verá en su lista.»
+Al final de la sección «Disponibles» de una lista ajena: `ghost` **Apuntar una sorpresa** → formulario corto de regalo con la ayuda «Marta no lo verá en su lista.»
 
 ### 10.7 «Ya comprado» en 2 toques
 
@@ -705,7 +705,7 @@ Marco digital de fotos
 ¿De dónde sale?                              ← solo en mixto y compra directa
 [ De la hucha ]  [ Lo pago yo ]
 
-⦸ Mamá no ve esto
+⦸ Marta no ve esto
 [ Guardar ]                                  ← primary, wide, 48, con el foco
 ```
 
@@ -718,12 +718,12 @@ Marco digital de fotos
 `BudgetPanel` existente, con dos líneas nuevas bajo la barra:
 
 ```
-Presupuesto para Mamá                          [Cambiar]
+Presupuesto para Marta                          [Cambiar]
 124,90 € de 200,00 €                     Quedan 75,10 €
 ████████████░░░░░░░
 Sale a 31,23 € por persona · adelantó Samira
 Además, por su cuenta: 49,00 €                         ← solo en mixto, si hay
-⦸ Mamá no ve esto
+⦸ Marta no ve esto
 ```
 
 Hoja de presupuesto, botón adicional `ghost` **Poner el mismo a todos** → «Puesto a todos menos a ti. El tuyo lo pone otra persona.»
@@ -745,11 +745,11 @@ Un trabajo: saber cuánto me falta y a quién se lo doy. Sin tabla, sin rejilla 
 │ ⦸ Aquí no sale lo que se gasta en ti │  VisibilityNote
 │                                      │
 │ Tu parte, persona a persona          │  Bodoni --t-xl
-│ (M) Mamá              31,23 €        │  renglón 56: avatar 32 · nombre · cifra a la derecha
+│ (M) Marta              31,23 €        │  renglón 56: avatar 32 · nombre · cifra a la derecha
 │     124,90 € entre 4                 │  .meta
 │ (P) Papá              22,50 €        │
 │     90,00 € entre 4                  │
-│ (J) Juan Carlos       20,00 €        │
+│ (J) Javier       20,00 €        │
 │ (S) Samira            12,67 €        │
 │     Lo de Samira se lo das a Papá    │  .meta 700
 │ ───────────────────────────────────  │
@@ -757,7 +757,7 @@ Un trabajo: saber cuánto me falta y a quién se lo doy. Sin tabla, sin rejilla 
 │ parte llegará a 118,00 €.            │  .meta
 │                                      │
 │ Lo que has puesto                    │  Bodoni --t-xl
-│ Compraste el chal de Mamá    49,00 € │
+│ Compraste el chal de Marta    49,00 € │
 │ Le diste a Samira            11,00 € │  cada renglón, «Quitar» al deslizar o en su ficha
 └──────────────────────────────────────┘
 ```
@@ -780,7 +780,7 @@ Hoja «Ya se lo di a Samira»: importe prerrellenado con lo que falta, `primary`
 Quién te ha dado ya                                  Bodoni --t-xl
 Sin contar tus regalos: esos los lleva Papá.         .meta
 (A) Alberto        Le falta 26,40 €    [ Me lo dio ]
-(M) Mamá           Al día
+(M) Marta           Al día
 (P) Papá           Hay que devolverle 12,00 €   [ Se lo di ]
 ```
 

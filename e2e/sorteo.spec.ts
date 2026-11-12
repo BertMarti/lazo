@@ -17,7 +17,7 @@ test('amigo invisible: abrir, ver el nombre, taparlo y copiar sin Web Share', as
 
   const open = page.getByRole('button', { name: 'Abrir el paquete del amigo invisible' });
   const name = page.locator('.envelope .who');
-  await expect(name).toHaveText('Juan Carlos');
+  await expect(name).toHaveText('Javier');
   // Tapado: ni se ve ni se lee, y no hay nada que pulsar dentro.
   await expect(name).toHaveCSS('opacity', '0');
   await expect(page.getByRole('button', { name: 'Copiar' })).toHaveCount(0);
@@ -37,5 +37,5 @@ test('amigo invisible: abrir, ver el nombre, taparlo y copiar sin Web Share', as
   await page.getByRole('button', { name: 'Copiar' }).click();
   await expect(page.getByText('Copiado. Pégatelo en un chat contigo mismo')).toBeVisible();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toBe(`Amigo invisible de Navidad en familia (sorteo n.º 1): te toca regalar a Juan Carlos. ${new URL(page.url()).origin}/#/l/l-juancarlos`);
+  expect(copied).toBe(`Amigo invisible de Navidad en familia (sorteo n.º 1): te toca regalar a Javier. ${new URL(page.url()).origin}/#/l/l-javier`);
 });

@@ -47,7 +47,7 @@ async function meddle(api: DemoApi, x: string) {
 }
 
 describe('avisos: nunca dependen de la propia lista', () => {
-  for (const x of ['alberto', 'juancarlos', 'samira', 'mama', 'papa']) {
+  for (const x of ['alberto', 'javier', 'samira', 'marta', 'papa']) {
     it(`lo que hacen los demás en la plaza de ${x} no cambia sus avisos`, async () => {
       const api = new DemoApi(null);
       const before = await as(api, x);
@@ -68,14 +68,14 @@ describe('avisos: nunca dependen de la propia lista', () => {
 
   it('sí avisa de lo que hacen los demás en sus propias listas', async () => {
     const api = new DemoApi(null);
-    const before = await as(api, 'mama');
+    const before = await as(api, 'marta');
     api.setViewer('papa');
     for (const t of ['Libro', 'Bufanda', 'Gorro']) await api.saveItem('l-papa', { title: t, priority: 2, quantity: 1 });
     api.setViewer('samira');
     await api.addSurprise('l-papa', { title: 'Sorpresa', priority: 2, quantity: 1 }); // no la añade Papá
     api.setViewer('alberto');
-    await api.runDraw('navidad', ['alberto', 'juancarlos', 'samira', 'mama', 'papa'], []);
-    const after = await as(api, 'mama');
+    await api.runDraw('navidad', ['alberto', 'javier', 'samira', 'marta', 'papa'], []);
+    const after = await as(api, 'marta');
     const texts = notices(before, after).map((n) => n.text);
     expect(texts).toContain('Papá ha añadido 3 regalos a su lista');
     expect(texts).toContain('Han hecho el sorteo');
@@ -84,14 +84,14 @@ describe('avisos: nunca dependen de la propia lista', () => {
 
   it('cuenta atrás, hucha y quién entra', async () => {
     const api = new DemoApi(null);
-    const now = await as(api, 'mama');
+    const now = await as(api, 'marta');
     const texts = notices(withBaseline([], now), now).map((n) => n.text);
     expect(texts).toContain('Faltan 10 días para Navidad en familia');
     expect(texts.some((t) => /^Te toca poner .+ en la hucha$/.test(t))).toBe(true);
     expect(notices(withBaseline([], now), now)).toEqual(notices([], now)); // primera vez: sin regalos ni personas
     const gone = now.map((g) => ({ ...g, members: g.members.filter((m) => m.id !== 'samira') }));
     expect(notices(gone, now).map((n) => n.text)).toContain('Samira ha entrado en el grupo');
-    api.setViewer('mama');
+    api.setViewer('marta');
     const tomorrow = await collectFacts(api, new Date(2026, 11, 23));
     expect(notices(now, tomorrow).map((n) => n.text)).toContain('Navidad en familia es mañana');
   });
@@ -110,10 +110,10 @@ describe('V-19: lo visto muere con la sesión', () => {
     Object.defineProperty(globalThis, 'localStorage', { value: ls, configurable: true });
     try {
       seenFacts.set('papa', []);
-      seenFacts.set('mama', []);
+      seenFacts.set('marta', []);
       store.set('otra-cosa', '1');
-      seenFacts.forget('mama');
-      expect([...store.keys()].sort()).toEqual(['lazo:avisos:mama', 'otra-cosa']);
+      seenFacts.forget('marta');
+      expect([...store.keys()].sort()).toEqual(['lazo:avisos:marta', 'otra-cosa']);
       seenFacts.forget();
       expect([...store.keys()]).toEqual(['otra-cosa']);
     } finally {

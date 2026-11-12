@@ -11,7 +11,7 @@ const BIN = process.env.PB_BIN;
 const PORT = 18600 + Math.floor(Math.random() * 500);
 const BASE = `http://127.0.0.1:${PORT}`;
 const ROOT = resolve(import.meta.dirname, '..', 'pb');
-const FAMILY = { alberto: 'Alberto', samira: 'Samira', mama: 'Mamá' };
+const FAMILY = { alberto: 'Alberto', samira: 'Samira', marta: 'Marta' };
 
 let dir, proc, su;
 const ids = {};
@@ -57,18 +57,18 @@ describe('enlace de solo lectura', { skip: !BIN && 'Falta PB_BIN (binario de Poc
       ids[who] = u.id;
       tok[who] = (await ok('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 3600 }, su)).token;
     }
-    const g = await ok('POST', '/api/collections/groups/records', { name: 'Navidad', occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: ['Samira', 'Mamá'] }, tok.alberto);
+    const g = await ok('POST', '/api/collections/groups/records', { name: 'Navidad', occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: ['Samira', 'Marta'] }, tok.alberto);
     ids.group = g.id;
     let lists = (await ok('GET', '/api/collections/lists/records?perPage=50', null, tok.alberto)).items;
-    for (const who of ['samira', 'mama']) {
+    for (const who of ['samira', 'marta']) {
       const inv = await ok('POST', '/api/lazo/invite', { group: g.id, list: lists.find((l) => l.name === FAMILY[who]).id }, tok.alberto);
       await ok('POST', '/api/lazo/join', { token: inv.token }, tok[who]);
     }
     lists = (await ok('GET', '/api/collections/lists/records?perPage=50', null, tok.alberto)).items;
     for (const who of Object.keys(FAMILY)) ids[`l-${who}`] = lists.find((l) => l.user === ids[who]).id;
 
-    // Mamá: A (reservado y comprado), B (a medias), C (reservado y luego retirado), D (libre).
-    const add = (title, extra = {}) => ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title, priority: 2, quantity: 1, createdBy: ids.mama, ...extra }, tok.mama);
+    // Marta: A (reservado y comprado), B (a medias), C (reservado y luego retirado), D (libre).
+    const add = (title, extra = {}) => ok('POST', '/api/collections/items/records', { list: ids['l-marta'], title, priority: 2, quantity: 1, createdBy: ids.marta, ...extra }, tok.marta);
     const A = await add('Bufanda de lana', { priceCents: 3500, priority: 1, store: 'Lanas Sol', size: 'Única', color: 'Gris', url: 'https://tienda.example/bufanda', image: 'https://tienda.example/bufanda.jpg' });
     const B = await add('Cafetera italiana', { priceCents: 6000 });
     const C = await add('Libro de recetas', { priceCents: 2000 });
@@ -78,11 +78,11 @@ describe('enlace de solo lectura', { skip: !BIN && 'Falta PB_BIN (binario de Poc
     const ct = await ok('POST', '/api/collections/contributions/records', { item: B.id, user: ids.alberto, amountCents: 2000 }, tok.alberto);
     await ok('PATCH', `/api/collections/contributions/records/${ct.id}`, { paid: true }, tok.alberto);
     await ok('POST', '/api/lazo/gift', { action: 'reserve', item: C.id, kind: 'self' }, tok.samira);
-    assert.equal((await call('DELETE', `/api/collections/items/records/${C.id}`, null, tok.mama)).status, 204); // queda «removed»
-    const S = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Sorpresa: pulsera', priceCents: 4000, priority: 2, quantity: 1, createdBy: ids.samira, secret: true }, tok.samira);
+    assert.equal((await call('DELETE', `/api/collections/items/records/${C.id}`, null, tok.marta)).status, 204); // queda «removed»
+    const S = await ok('POST', '/api/collections/items/records', { list: ids['l-marta'], title: 'Sorpresa: pulsera', priceCents: 4000, priority: 2, quantity: 1, createdBy: ids.samira, secret: true }, tok.samira);
     ids.S = S.id;
     await ok('POST', '/api/lazo/gift', { action: 'reserve', item: S.id, kind: 'pot' }, tok.samira);
-    await ok('POST', '/api/collections/budgets/records', { list: ids['l-mama'], amountCents: 15000 }, tok.samira);
+    await ok('POST', '/api/collections/budgets/records', { list: ids['l-marta'], amountCents: 15000 }, tok.samira);
   });
 
   after(() => {
@@ -91,17 +91,17 @@ describe('enlace de solo lectura', { skip: !BIN && 'Falta PB_BIN (binario de Poc
   });
 
   test('solo la dueña de la plaza crea el enlace', async () => {
-    assert.equal((await call('POST', '/api/lazo/share', { list: ids['l-mama'] })).status, 401);
+    assert.equal((await call('POST', '/api/lazo/share', { list: ids['l-marta'] })).status, 401);
     for (const who of ['samira', 'alberto']) {
-      const r = await call('POST', '/api/lazo/share', { list: ids['l-mama'] }, tok[who]);
+      const r = await call('POST', '/api/lazo/share', { list: ids['l-marta'] }, tok[who]);
       assert.equal(r.status, 403, who);
-      assert.equal((await call('DELETE', '/api/lazo/share', { list: ids['l-mama'] }, tok[who])).status, 403, `${who} revoca`);
+      assert.equal((await call('DELETE', '/api/lazo/share', { list: ids['l-marta'] }, tok[who])).status, 403, `${who} revoca`);
     }
     // Una lista que no existe responde igual que una ajena.
     const nx = await call('POST', '/api/lazo/share', { list: 'noexiste123456' }, tok.samira);
-    const other = await call('POST', '/api/lazo/share', { list: ids['l-mama'] }, tok.samira);
+    const other = await call('POST', '/api/lazo/share', { list: ids['l-marta'] }, tok.samira);
     assert.equal(nx.text, other.text);
-    const { token } = await ok('POST', '/api/lazo/share', { list: ids['l-mama'] }, tok.mama);
+    const { token } = await ok('POST', '/api/lazo/share', { list: ids['l-marta'] }, tok.marta);
     assert.match(token, /^[A-Za-z0-9]{32}$/);
     ids.token = token;
   });
@@ -114,7 +114,7 @@ describe('enlace de solo lectura', { skip: !BIN && 'Falta PB_BIN (binario de Poc
     assert.doesNotMatch(r.text, /Sorpresa|pulsera|Libro de recetas|15000|3400/);
     for (const [k, v] of Object.entries(ids)) if (k !== 'token') assert.ok(!r.text.includes(v), `id ${k}`);
     assert.deepEqual(Object.keys(r.json).sort(), ['items', 'name', 'occasion']);
-    assert.equal(r.json.name, 'Mamá');
+    assert.equal(r.json.name, 'Marta');
     assert.equal(r.json.occasion, 'navidad');
     // Cogido o libre, todos salen y en un orden que no depende del estado (prioridad y título).
     assert.deepEqual(r.json.items.map((i) => i.title), ['Bufanda de lana', 'Cafetera italiana', 'Calcetines']);
@@ -131,24 +131,24 @@ describe('enlace de solo lectura', { skip: !BIN && 'Falta PB_BIN (binario de Poc
     assert.equal(short.status, fake.status);
     assert.equal(short.text, fake.text);
     const old = ids.token;
-    const { token } = await ok('POST', '/api/lazo/share', { list: ids['l-mama'] }, tok.mama); // rotar
+    const { token } = await ok('POST', '/api/lazo/share', { list: ids['l-marta'] }, tok.marta); // rotar
     assert.notEqual(token, old);
     const rotated = await shared(old);
     assert.equal(rotated.status, fake.status);
     assert.equal(rotated.text, fake.text);
     assert.equal((await shared(token)).status, 200);
-    await ok('DELETE', '/api/lazo/share', { list: ids['l-mama'] }, tok.mama);
+    await ok('DELETE', '/api/lazo/share', { list: ids['l-marta'] }, tok.marta);
     const revoked = await shared(token);
     assert.equal(revoked.status, fake.status);
     assert.equal(revoked.text, fake.text);
   });
 
   test('la colección shares no se lee ni se escribe desde la API', async () => {
-    await ok('POST', '/api/lazo/share', { list: ids['l-mama'] }, tok.mama);
-    for (const who of ['mama', 'samira']) {
+    await ok('POST', '/api/lazo/share', { list: ids['l-marta'] }, tok.marta);
+    for (const who of ['marta', 'samira']) {
       const r = await call('GET', '/api/collections/shares/records', null, tok[who]);
       assert.ok(r.status === 403 || (r.status === 200 && r.json.totalItems === 0), `${who}: ${r.status}`);
-      assert.ok((await call('POST', '/api/collections/shares/records', { list: ids['l-mama'], tokenHash: 'x' }, tok[who])).status >= 400);
+      assert.ok((await call('POST', '/api/collections/shares/records', { list: ids['l-marta'], tokenHash: 'x' }, tok[who])).status >= 400);
     }
     assert.ok((await call('GET', '/api/collections/shares/records')).status >= 400);
   });
@@ -169,9 +169,9 @@ describe('enlace de solo lectura', { skip: !BIN && 'Falta PB_BIN (binario de Poc
   });
 
   test('liberar la plaza anula su enlace', async () => {
-    const { token } = await ok('POST', '/api/lazo/share', { list: ids['l-mama'] }, tok.mama);
+    const { token } = await ok('POST', '/api/lazo/share', { list: ids['l-marta'] }, tok.marta);
     assert.equal((await shared(token)).status, 200);
-    await ok('POST', '/api/lazo/plaza-release', { list: ids['l-mama'] }, tok.alberto);
+    await ok('POST', '/api/lazo/plaza-release', { list: ids['l-marta'] }, tok.alberto);
     const r = await shared(token);
     assert.equal(r.status, 404);
     assert.equal(r.text, (await shared(FAKE)).text);

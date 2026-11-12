@@ -39,7 +39,7 @@ const call = async (method, path, body, token) => {
 const su = (await call('POST', '/api/collections/_superusers/auth-with-password', { identity: 'su@lazo.invalid', password: 'superuser-de-pruebas-123' })).token;
 const u = await call('POST', '/api/collections/users/records', { email: 'a@lazo.invalid', password: 'x'.repeat(20), passwordConfirm: 'x'.repeat(20), name: 'Alberto' }, su);
 const tok = (await call('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 3600 }, su)).token;
-const g = await call('POST', '/api/collections/groups/records', { name: 'Navidad', occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: ['Mamá', 'Papá'] }, tok);
+const g = await call('POST', '/api/collections/groups/records', { name: 'Navidad', occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: ['Marta', 'Papá'] }, tok);
 await call('GET', '/api/collections/lists/records', null, tok);
 await call('GET', '/api/collections/lists/records', null, su);
 await call('GET', '/api/collections/groups/records', null, tok);

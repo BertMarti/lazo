@@ -5,7 +5,7 @@ import { Button, ButtonGroup } from '../Button';
 import { useApi } from '../ctx';
 import { errorText, Sheet, useToast } from '../kit';
 
-/** «Presupuesto para Mamá»: lo fija cualquiera del grupo menos Mamá. */
+/** «Presupuesto para Marta»: lo fija cualquiera del grupo menos Marta. */
 export function BudgetSheet({ list, budget, onClose, onSaved }: { list: GiftList; budget?: Budget; onClose: () => void; onSaved: () => void }) {
   const api = useApi();
   const toast = useToast();

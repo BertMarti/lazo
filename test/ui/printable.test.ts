@@ -19,29 +19,29 @@ const printed = async (viewer: string, list: string) => {
 
 describe('lista para imprimir', () => {
   it('sin sorpresas, sin retirados y sin ningún estado, aunque quien imprime sí los vea', async () => {
-    const { data, html } = await printed('samira', 'l-mama'); // Samira ve reservas, compras, presupuesto y la sorpresa de Papá
+    const { data, html } = await printed('samira', 'l-marta'); // Samira ve reservas, compras, presupuesto y la sorpresa de Papá
     expect(data.items.map((i) => i.title)).toEqual(['Marco digital de fotos', 'Robot de cocina', 'Chal de lana merino', 'Novela «La casa de los veranos»']);
     expect(html).not.toMatch(/Pañuelo de seda|Sorpresa|Reservad|Comprad|cogido|hucha|Presupuesto|reserva|compr[oó]/i);
     expect(JSON.stringify(data)).not.toMatch(/"(id|list|createdBy|secret|removed|quantity|notes)"/);
-    expect(html).toContain('Mamá');
+    expect(html).toContain('Marta');
     expect(html).toContain('Navidad');
     expect(html).toContain('Me encantaría');
   });
 
-  it('sale igual la imprima Mamá o cualquiera del grupo: no deja deducir qué está cogido', async () => {
-    const own = await printed('mama', 'l-mama');
-    for (const who of ['alberto', 'samira', 'papa']) expect((await printed(who, 'l-mama')).html).toBe(own.html);
+  it('sale igual la imprima Marta o cualquiera del grupo: no deja deducir qué está cogido', async () => {
+    const own = await printed('marta', 'l-marta');
+    for (const who of ['alberto', 'samira', 'papa']) expect((await printed(who, 'l-marta')).html).toBe(own.html);
   });
 
   it('un retirado con reserva no sale (su existencia delataría la reserva)', async () => {
-    api.setViewer('mama');
+    api.setViewer('marta');
     await api.deleteItem('i1'); // el marco estaba reservado por Alberto: queda «retirado» para los demás
-    const { data } = await printed('samira', 'l-mama');
+    const { data } = await printed('samira', 'l-marta');
     expect(data.items.map((i) => i.title)).not.toContain('Marco digital de fotos');
   });
 
   it('un QR por regalo con enlace web; sin enlace, sin QR', async () => {
-    const { data, html } = await printed('mama', 'l-mama');
+    const { data, html } = await printed('marta', 'l-marta');
     const withUrl = data.items.filter((i) => i.url).length;
     expect(withUrl).toBeGreaterThan(0);
     expect(html.match(/class="catalog-qr"/g)?.length).toBe(withUrl);

@@ -104,7 +104,7 @@ describe('plazas y entrada', () => {
     expect(loli.canSee).toBe(false);
     expect(loli.items).toEqual([]);
     expect(loli.budget).toBeUndefined();
-    admin.setViewer('mama');
+    admin.setViewer('marta');
     expect((await admin.listDetail('l-loli')).claims).toEqual(before.claims);
     // Enlace personal de un solo uso
     await expect(admin.join(token, {})).rejects.toThrow(/no existe o ha caducado/);
@@ -120,7 +120,7 @@ describe('plazas y entrada', () => {
       { initial: 'M', color: 'violeta' },
       { initial: 'P', color: 'canela' },
     ]);
-    expect(JSON.stringify(info.faces)).not.toMatch(/alberto|juancarlos|samira|mama|papa/);
+    expect(JSON.stringify(info.faces)).not.toMatch(/alberto|javier|samira|marta|papa/);
     await expect(api.inviteInfo('Z'.repeat(32))).rejects.toThrow(/no existe o ha caducado/);
   });
 
@@ -146,12 +146,12 @@ describe('plazas y entrada', () => {
     const info = await api.inviteInfo(DEMO_GENERAL_TOKEN);
     expect(info.free.map((f) => f.name)).toEqual(['Tía Loli']);
     await expect(api.join(DEMO_GENERAL_TOKEN, { list: 'l-papa' })).rejects.toThrow(/ocupada/);
-    await expect(api.join(DEMO_GENERAL_TOKEN, { name: 'mamá ' })).rejects.toThrow(/Ya hay una plaza/);
+    await expect(api.join(DEMO_GENERAL_TOKEN, { name: 'márta ' })).rejects.toThrow(/Ya hay una plaza/);
     const r = await api.join(DEMO_GENERAL_TOKEN, { list: 'l-loli' });
     expect('pending' in r && r.code).toMatch(/^\d{4}$/);
     expect(await api.groups()).toEqual([]); // pendiente: no lee nada
     await expect(api.groupDetail('navidad')).rejects.toThrow(/No perteneces/);
-    await expect(api.listDetail('l-mama')).rejects.toThrow(/No perteneces/);
+    await expect(api.listDetail('l-marta')).rejects.toThrow(/No perteneces/);
     // Otra persona pide la misma plaza; se acepta una y la otra ya no puede entrar.
     const second = await api.join(DEMO_GENERAL_TOKEN, { list: 'l-loli' });
     api.setViewer('alberto');
@@ -170,7 +170,7 @@ describe('plazas y entrada', () => {
     await expect(api.releasePlaza('l-alberto')).rejects.toThrow();
     const papaBefore = seed().claims.filter((c) => c.user === 'papa');
     await api.releasePlaza('l-papa');
-    api.setViewer('mama');
+    api.setViewer('marta');
     const d = await api.groupDetail('navidad');
     expect(d.members.some((m) => m.id === 'papa')).toBe(false);
     expect(d.lists.find((l) => l.id === 'l-papa')!.user).toBeUndefined();
@@ -179,58 +179,58 @@ describe('plazas y entrada', () => {
     const { url } = await api.createInvite('navidad', 'l-papa');
     await api.join(url.split('/unirse/')[1]!, {});
     const newPapa = api.me().id;
-    api.setViewer('mama');
-    const all = (await api.listDetail('l-juancarlos')).claims;
+    api.setViewer('marta');
+    const all = (await api.listDetail('l-javier')).claims;
     expect(all.filter((c) => c.user === newPapa)).toHaveLength(papaBefore.filter((c) => c.item === 'i12').length);
   });
 });
 
 describe('regalos, modos y entrega', () => {
   it('D-5: transiciones por modo y última unidad', async () => {
-    const api = fresh('mama');
+    const api = fresh('marta');
     await api.gift({ action: 'reserve', item: 'i13', kind: 'self' });
     await expect(api.gift({ action: 'reserve', item: 'i13', kind: 'pot' })).rejects.toThrow(/adelantado/);
-    const c = (await api.listDetail('l-juancarlos')).claims.find((x) => x.item === 'i13')!;
+    const c = (await api.listDetail('l-javier')).claims.find((x) => x.item === 'i13')!;
     await api.gift({ action: 'move', claim: c.id, kind: 'pot' });
     api.setViewer('papa');
     await api.gift({ action: 'buy', claim: c.id, paidCents: 7500, paidBy: 'alberto' });
     await expect(api.gift({ action: 'buy', item: 'i7', paidCents: 100, paidBy: 'papa' })).rejects.toThrow(/propia lista/);
     api.setViewer('alberto');
     await api.updateGroup('navidad', { buyMode: 'hucha' });
-    api.setViewer('mama');
+    api.setViewer('marta');
     await expect(api.gift({ action: 'reserve', item: 'i7', kind: 'self' })).rejects.toThrow(/hucha/);
     await expect(api.contribute('i7', 500)).rejects.toThrow(/hucha/);
     await api.gift({ action: 'reserve', item: 'i7', kind: 'pot' });
   });
 
   it('D-6: quitar un regalo propio responde igual con y sin reservas; los demás lo ven retirado', async () => {
-    const api = fresh('mama');
+    const api = fresh('marta');
     await api.deleteItem('i1'); // reservado por Alberto
     await api.deleteItem('i4'); // libre
-    const own = await api.listDetail('l-mama');
+    const own = await api.listDetail('l-marta');
     expect(own.items.map((i) => i.id)).not.toContain('i1');
     expect(own.items.map((i) => i.id)).not.toContain('i4');
     api.setViewer('papa');
-    const seen = await api.listDetail('l-mama');
+    const seen = await api.listDetail('l-marta');
     expect(seen.items.find((i) => i.id === 'i1')?.removed).toBe(true);
     expect(seen.items.find((i) => i.id === 'i4')).toBeUndefined();
   });
 
   it('D-7: entrega con dos llaves y sin precios', async () => {
-    const api = fresh('mama');
+    const api = fresh('marta');
     await expect(api.received('navidad')).rejects.toThrow(/no está abierta/);
     api.setViewer('alberto');
     await api.reveal('navidad', 'ask');
     await expect(api.reveal('navidad', 'confirm')).rejects.toThrow();
     api.setViewer('papa');
     await api.reveal('navidad', 'confirm');
-    api.setViewer('mama');
+    api.setViewer('marta');
     const r = await api.received('navidad');
     expect(r.map((x) => x.title).sort()).toEqual(['Chal de lana merino', 'Robot de cocina']);
     expect(r.find((x) => x.title === 'Robot de cocina')).toMatchObject({ fromAll: true, from: [] });
     expect(JSON.stringify(r)).not.toMatch(/paidCents|priceCents|4900|33990/);
     // Las cuentas siguen siendo secretas después
-    expect((await api.listDetail('l-mama')).claims).toEqual([]);
+    expect((await api.listDetail('l-marta')).claims).toEqual([]);
   });
 
   it('D-8: cambiar de modo nunca falla', async () => {

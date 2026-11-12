@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DemoApi } from '../../src/api/demo';
 import { COPIA_MAX, exportGroup, parseCopia, restoreCopia, type Copia } from '../../src/core/copia';
 
-const FAMILY = ['alberto', 'juancarlos', 'samira', 'mama', 'papa'];
+const FAMILY = ['alberto', 'javier', 'samira', 'marta', 'papa'];
 const NOW = new Date('2026-12-01T10:00:00Z');
 
 /** Lo que los demás hacen en la plaza de X sin que X lo sepa: sorpresas, presupuesto, reservas, compras, aportaciones. */
@@ -171,13 +171,13 @@ describe('copia del grupo: restaurar', () => {
     expect(id).not.toBe('navidad');
     const d = await api.groupDetail(id);
     expect(d.members.map((m) => m.id)).toEqual(['alberto']);
-    expect(d.lists.map((l) => l.name).sort()).toEqual(['Alberto', 'Juan Carlos', 'Mamá', 'Papá', 'Samira', 'Tía Loli']);
+    expect(d.lists.map((l) => l.name).sort()).toEqual(['Alberto', 'Javier', 'Marta', 'Papá', 'Samira', 'Tía Loli']);
     expect(d.lists.filter((l) => l.user).map((l) => l.user)).toEqual(['alberto']);
     const h = await api.hucha(id);
     expect(h.claims).toEqual([]);
     expect(h.items.some((i) => i.secret || i.removed)).toBe(false);
-    // Mamá pidió lo mismo que en el grupo original; la sorpresa de Papá no viaja.
-    const titles = (await api.listDetail(d.lists.find((l) => l.name === 'Mamá')!.id)).items.map((i) => i.title);
+    // Marta pidió lo mismo que en el grupo original; la sorpresa de Papá no viaja.
+    const titles = (await api.listDetail(d.lists.find((l) => l.name === 'Marta')!.id)).items.map((i) => i.title);
     expect(titles).toContain('Marco digital de fotos');
     expect(titles).not.toContain('Pañuelo de seda estampado');
     expect(h.items.map((i) => i.title)).not.toContain('Bufanda de punto');

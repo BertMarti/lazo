@@ -132,14 +132,14 @@ Primera versión completa: servidor para casa, plazas para cada persona, hucha c
 - **Presupuesto por persona.** El grupo fija cuánto se gasta en cada uno y una barra muestra lo comprometido (reservas, compras y aportaciones) y lo que queda, o cuánto os pasáis. Lo ve todo el grupo **menos el destinatario**.
 - **Reservar en un toque**, directamente desde la lista y con «Deshacer» durante 6 segundos.
 - **Añadir en dos toques:** «Añadir» y después «Pegar enlace». Lazo lee la tienda y lo guarda. También vale pegar en cualquier punto de la hoja.
-- **Cada regalo dice quién lo tiene** sin abrirlo: «Lo reserva Samira», «Lo compró Papá», «A medias · 71 % · ponen Juan Carlos y Papá».
-- **«Mamá no ve esto»:** la regla de la sorpresa se explica sola donde hace falta.
+- **Cada regalo dice quién lo tiene** sin abrirlo: «Lo reserva Samira», «Lo compró Papá», «A medias · 71 % · ponen Javier y Papá».
+- **«Marta no ve esto»:** la regla de la sorpresa se explica sola donde hace falta.
 - **Servidor para casa** (PocketBase, Docker y Caddy), con guía en `docs/HOMELAB.md`. La regla se impone en el servidor: el destinatario no recibe ni reservas, ni aportaciones, ni presupuesto por ninguna vía de la API.
 - Vista previa segura de enlaces (servicio `unfurl`, con protección anti-SSRF).
 - Escaneo de secretos (gitleaks) en el pre-commit y en CI.
 
 - **Plazas para cada persona.** Al crear el grupo se pone, si se quiere, quiénes sois (un nombre por línea). Cada uno tiene su sitio aunque no haya entrado, y ya se le puede poner presupuesto o apuntar sorpresas.
-- **Entrar sin líos ni suplantaciones.** Cada persona recibe su enlace personal y entra con un toque («Eres Mamá»). Con el enlace general, eliges tu nombre y esperas a que quien organiza te acepte comprobando un código de 4 cifras.
+- **Entrar sin líos ni suplantaciones.** Cada persona recibe su enlace personal y entra con un toque («Eres Marta»). Con el enlace general, eliges tu nombre y esperas a que quien organiza te acepte comprobando un código de 4 cifras.
 - **Hucha común.** Cada grupo elige cómo compra: hucha común, cada uno lo suyo o mixto. Los regalos se marcan como «Me lo reservo», «Para la hucha» o «Ya comprado» (en dos toques, con el precio ya puesto). La pantalla «Hucha» dice en frases cuánto te falta poner y a quién se lo das. Nadie paga sus propios regalos y nadie puede deducir lo que se gasta en él.
 - **Regalos sorpresa:** apunta en la lista de alguien algo que no pidió; esa persona no lo verá.
 - **Día de la entrega:** cuando quien organiza lo propone y otra persona confirma, cada uno puede ver qué le regalaron y de parte de quién, sin precios.
@@ -157,7 +157,7 @@ Primera versión completa: servidor para casa, plazas para cada persona, hucha c
   - las listas se dividen en «Disponibles» y «Ya cogidos»;
   - el texto es más grande y con mejor contraste;
   - los botones tienen tres alturas fijas.
-- La demo es ahora una familia de ejemplo (Alberto, Juan Carlos, Samira, Mamá, Papá y una plaza libre, la Tía Loli). Con «Probar a entrar» se prueba el enlace general.
+- La demo es ahora una familia de ejemplo (Alberto, Javier, Samira, Marta, Papá y una plaza libre, la Tía Loli). Con «Probar a entrar» se prueba el enlace general.
 - Diseño ajustado tras estudiar referencias reales (Zola, Babylist, Elfster):
   - sin cuadrados vacíos donde iría una foto;
   - importes sin «,00»;

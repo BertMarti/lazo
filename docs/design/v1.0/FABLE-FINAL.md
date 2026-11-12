@@ -25,10 +25,10 @@ No hay nada que bloquee la etiqueta. El sistema se cumple en claro y en oscuro, 
 
 ## El recorrido «la abuela imprime la lista del nieto»
 
-- **¿Se llega?** Sí: «Imprimir la lista» está al pie de la lista de Juan Carlos y la pantalla siguiente tiene un único primario, «Imprimir o guardar en PDF».
+- **¿Se llega?** Sí: «Imprimir la lista» está al pie de la lista de Javier y la pantalla siguiente tiene un único primario, «Imprimir o guardar en PDF».
 - **¿Delata algo?** No. Ni estado, ni quién reserva, ni sorpresas, ni presupuesto.
 - **¿Es bonita en papel?** Es correcta y sobria, pero pierde la marca y queda pequeña. Según el CSS: todo va a negro, la raya dorada pasa a negra, el texto baja a 9,5 pt (unos 12,7 px, por debajo de los 16 px que prometemos a los mayores) y, a dos columnas en A4, al texto le quedan unos 35 mm porque la columna del QR se reserva aunque el regalo no tenga enlace. Arreglo 1.
-- **¿Se entiende el QR?** A medias. Va pegado a su regalo, que es lo correcto, pero la única explicación está al final de la hoja y habla de «el código». Además, el papel no dice en ningún sitio que es una lista de regalos: solo «Juan Carlos» y «Navidad». Arreglo 2.
+- **¿Se entiende el QR?** A medias. Va pegado a su regalo, que es lo correcto, pero la única explicación está al final de la hoja y habla de «el código». Además, el papel no dice en ningún sitio que es una lista de regalos: solo «Javier» y «Navidad». Arreglo 2.
 - **En el móvil**, la marca «Lazo» sale dos veces seguidas (cabecera y catálogo) y el QR aprieta el título a tres palabras por línea. Lo primero entra en el arreglo 2; lo segundo lo dejo como está, porque la vista previa debe parecerse a la hoja.
 
 ## Arreglos, por importancia
@@ -53,7 +53,7 @@ No hay nada que bloquee la etiqueta. El sistema se cumple en claro y en oscuro, 
 
 - Qué cambia: `.offline-band` deja de imprimirse; `.catalog-brand` sale de la lista de negros y va en terracota; la raya vuelve a ser dorada (son bordes y texto, se imprimen sin activar «gráficos de fondo»); una columna con `auto` en el QR, para que el texto use el ancho cuando no hay enlace.
 - Los hex van sueltos a propósito, como ya hace este bloque: en oscuro los tokens valen otra cosa.
-- Caben unos 6 regalos en la primera hoja y 7 en las siguientes. No lo he visto impreso: hay que sacar un PDF de la lista de Juan Carlos y mirarlo.
+- Caben unos 6 regalos en la primera hoja y 7 en las siguientes. No lo he visto impreso: hay que sacar un PDF de la lista de Javier y mirarlo.
 
 ### 2. Que la hoja diga qué es y cómo se usa el cuadrado
 
@@ -98,9 +98,9 @@ En `oscuro/grupo-375.png` y `movil/despues/grupo.png` se lee «24 de diciembre �
 - **Archivo:** `src/styles.css`, línea 691, `.offline-band`: cambiar `font-size: var(--t-meta)` por `font-size: var(--t-md)` y añadir `position: sticky; top: 0; z-index: 20;`. Ahora la franja se va con el scroll y, a media lista, nada dice que no hay red hasta que falla un botón.
 - **Archivo:** `src/styles.css`, bloque `v10-copia`, regla nueva: `.copia .meta { font-size: var(--t-md); }`. Los dos párrafos pequeños de «Copia del grupo» son justo los que explican qué lleva la copia y qué no; no son línea secundaria.
 
-### 8. La lista ajena dice dos veces seguidas que Mamá no ve
+### 8. La lista ajena dice dos veces seguidas que Marta no ve
 
-«Mamá no ve esto» (píldora) y, 40 px más abajo, «Mamá no ve lo que reserváis». La segunda ya cubre el presupuesto («ni cuánto os gastáis»). Además, a 1280 el botón de información queda a mil píxeles de su frase.
+«Marta no ve esto» (píldora) y, 40 px más abajo, «Marta no ve lo que reserváis». La segunda ya cubre el presupuesto («ni cuánto os gastáis»). Además, a 1280 el botón de información queda a mil píxeles de su frase.
 
 - **Archivo:** `src/styles.css`, junto a la línea 614:
   - `.budget-panel:has(+ .vista) .vis { display: none; }`

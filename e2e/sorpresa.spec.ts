@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 
 const FAMILY = [
   ['alberto', 'Alberto'],
-  ['juancarlos', 'Juan Carlos'],
+  ['javier', 'Javier'],
   ['samira', 'Samira'],
-  ['mama', 'Mamá'],
+  ['marta', 'Marta'],
   ['papa', 'Papá'],
 ] as const;
 
@@ -34,21 +34,21 @@ for (const [id, name] of FAMILY) {
   });
 }
 
-test('Mamá no ve que Alberto le ha reservado el marco; Samira sí, con su nombre', async ({ page }) => {
-  await page.goto('/#/l/l-mama');
+test('Marta no ve que Alberto le ha reservado el marco; Samira sí, con su nombre', async ({ page }) => {
+  await page.goto('/#/l/l-marta');
   await page.getByLabel('Ver como').selectOption('samira');
   await expect(page.locator('.gift', { hasText: 'Marco digital de fotos' }).getByText('Lo reserva Alberto')).toBeVisible();
-  await expect(page.getByText('Mamá no ve lo que reserváis')).toBeVisible();
-  await page.getByLabel('Ver como').selectOption('mama');
+  await expect(page.getByText('Marta no ve lo que reserváis')).toBeVisible();
+  await page.getByLabel('Ver como').selectOption('marta');
   await expect(page.getByText('Lo reserva Alberto')).toHaveCount(0);
 });
 
 test('reservar es un toque y se puede deshacer', async ({ page }) => {
-  await page.goto('/#/l/l-juancarlos');
+  await page.goto('/#/l/l-javier');
   const card = page.locator('.gift', { hasText: 'Cuchillo de chef' });
   await card.getByRole('button', { name: 'Me lo reservo' }).click();
   await expect(card.getByText('Lo reservas tú')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('Reservado. Juan Carlos no lo verá.');
+  await expect(page.getByRole('status')).toContainText('Reservado. Javier no lo verá.');
   await page.getByRole('status').getByRole('button', { name: 'Deshacer' }).click();
   await expect(card.getByText('Libre')).toBeVisible();
   // «Ya comprado» en 2 toques, con el precio prerrellenado
@@ -75,7 +75,7 @@ test('entrar con el enlace general: pendiente con código hasta que el admin ace
   await page.goto('/#/g/navidad');
   await page.getByRole('link', { name: 'Probar a entrar' }).click();
   await expect(page.getByRole('heading', { name: '¿Quién eres?' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: 'Mamá' })).toHaveCount(0); // ocupada: no se puede elegir
+  await expect(page.getByRole('radio', { name: 'Marta' })).toHaveCount(0); // ocupada: no se puede elegir
   await page.getByRole('radio', { name: 'Tía Loli' }).check();
   await page.getByRole('button', { name: 'Soy Tía Loli' }).click();
   const code = (await page.locator('.code').textContent())!.trim();
@@ -109,15 +109,15 @@ test('la hucha de Papá no dice nada de lo que se gasta en él', async ({ page }
   await expect(page.getByText('Te falta poner')).toBeVisible();
 });
 
-test('qué ve Mamá: explicado la primera vez, luego plegado tras el icono; las cuentas, en «Ver cuentas»', async ({ page }) => {
-  await page.goto('/#/l/l-mama');
+test('qué ve Marta: explicado la primera vez, luego plegado tras el icono; las cuentas, en «Ver cuentas»', async ({ page }) => {
+  await page.goto('/#/l/l-marta');
   await page.getByLabel('Ver como').selectOption('alberto');
-  const why = page.getByText('Mamá ve su lista, pero no quién reserva');
-  await expect(page.getByText('Mamá no ve lo que reserváis')).toBeVisible();
+  const why = page.getByText('Marta ve su lista, pero no quién reserva');
+  await expect(page.getByText('Marta no ve lo que reserváis')).toBeVisible();
   await expect(why).toBeVisible();
   await page.reload();
   await expect(why).toBeHidden();
-  await page.getByRole('button', { name: 'Qué ve Mamá' }).click();
+  await page.getByRole('button', { name: 'Qué ve Marta' }).click();
   await expect(why).toBeVisible();
   const panel = page.locator('.budget-panel');
   await expect(panel.locator('.budget-big')).toHaveText(/^Quedan /);
@@ -125,13 +125,13 @@ test('qué ve Mamá: explicado la primera vez, luego plegado tras el icono; las 
   await panel.getByText('Ver cuentas').click();
   await expect(panel.getByText(/Lo pagáis entre \d+: .+ cada uno\./)).toBeVisible();
   // Una sola vez «no ve»: el chip del panel se oculta porque la línea de debajo ya lo dice.
-  await expect(panel.getByText('Mamá no ve esto')).toBeHidden();
+  await expect(panel.getByText('Marta no ve esto')).toBeHidden();
 });
 
 test('la banda de la demo cabe en una línea de 44 px a 320 px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
-  await page.goto('/#/l/l-mama');
-  await page.getByLabel('Ver como').selectOption('juancarlos'); // el nombre más largo
+  await page.goto('/#/l/l-marta');
+  await page.getByLabel('Ver como').selectOption('javier'); // el nombre más largo
   const bar = page.getByRole('region', { name: 'Demo' });
   expect((await bar.boundingBox())!.height).toBe(44);
   await expect(bar.getByRole('link', { name: 'Probar a entrar' })).toBeInViewport({ ratio: 1 });

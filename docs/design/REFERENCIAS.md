@@ -63,7 +63,7 @@ Fecha: 2026-11-11. Ámbito: lectura de las capturas de `docs/design/referencias/
 
 **Lo aprovechable.**
 
-1. **El formulario está en la portada**: «Ingresa Nombre 1, 2, 3» y «Continuar». La primera pantalla ya es la tarea, con nombres de persona. Es el argumento a favor de entrar eligiendo plaza («Soy Mamá») sin pantalla de bienvenida.
+1. **El formulario está en la portada**: «Ingresa Nombre 1, 2, 3» y «Continuar». La primera pantalla ya es la tarea, con nombres de persona. Es el argumento a favor de entrar eligiendo plaza («Soy Marta») sin pantalla de bienvenida.
 2. **Aviso sobre el festón.** La insignia festoneada es, en este sector, el sello de «con la confianza de millones». El sello de Lazo se parece. Solo se sostiene si sigue siendo pequeño (24 px), funcional y pegado a una frase; nunca como medalla.
 
 **Cliché o defecto, a evitar.** Cifras de confianza, estrellas, texto centrado, mayúsculas de título a la inglesa en castellano («Regalar es Divertido y Fácil»: delata traducción automática) y un aviso de cookies sin estilo.
@@ -93,10 +93,10 @@ Sirven poco. Dos apuntes:
 
 ### 2.1 Lo que ya está a la altura
 
-- **Frases de estado con sujeto**: «Lo compró Samira», «A medias · 71 % · ponen Juan Carlos y Papá». Ninguna referencia escribe tan bien el estado. Es lo más humano de Lazo.
-- **«Mamá no ve esto»**: un solo chip, con nombre propio. Concreto como el «Curated by humans» de Zola.
-- **Nombres de casa** (Mamá, Papá) y tiendas verosímiles (Lanas Norte, Librería del Puerto).
-- **Un solo primario por tarjeta**, siempre abajo a la derecha, con alturas iguales (`lista-de-mama.png`).
+- **Frases de estado con sujeto**: «Lo compró Samira», «A medias · 71 % · ponen Javier y Papá». Ninguna referencia escribe tan bien el estado. Es lo más humano de Lazo.
+- **«Marta no ve esto»**: un solo chip, con nombre propio. Concreto como el «Curated by humans» de Zola.
+- **Nombres de casa** (Marta, Papá) y tiendas verosímiles (Lanas Norte, Librería del Puerto).
+- **Un solo primario por tarjeta**, siempre abajo a la derecha, con alturas iguales (`lista-de-marta.png`).
 - **Tres pesos de tarjeta** (blanco con sombra, dorado claro, plano con filete): se entiende de un vistazo qué queda libre.
 - **Paleta con carácter**: azul turrón y dorado, sin degradados ni neón. Mantener.
 - **Dinero en cifras tabulares**, alineado a la derecha en las barras.
@@ -109,23 +109,23 @@ Ordenado por lo que más canta. Medidas en px de diseño (móvil a 390).
 | # | Dónde | Qué se ve | Por qué delata |
 |---|---|---|---|
 | 1 | GiftCard, todas las listas | **Ningún regalo tiene foto.** La miniatura de 72 px es un cuadrado lila (o azul) vacío con frunces. En `lista-propia.png` son tres cuadrados azules idénticos en columna. | Es el «bloque de color haciendo de foto» que la regla D.11 prohíbe, solo que sin letra. Todas las referencias viven de la foto del producto. |
-| 2 | Todo el texto | **Casi todo va en negrita**: título, precio, «Me encantaría», estado, chip, botón, pestañas, «Presupuesto para Mamá», «Os pasáis». En `lista-de-mama.png` solo son regulares la tienda y «2 de 4 regalos cogidos». | Sin contraste de pesos no hay jerarquía. Zola usa regular para todo salvo botón y enlace. |
+| 2 | Todo el texto | **Casi todo va en negrita**: título, precio, «Me encantaría», estado, chip, botón, pestañas, «Presupuesto para Marta», «Os pasáis». En `lista-de-marta.png` solo son regulares la tienda y «2 de 4 regalos cogidos». | Sin contraste de pesos no hay jerarquía. Zola usa regular para todo salvo botón y enlace. |
 | 3 | Dinero | **Ceros cruzados y decimales siempre**: «428,00 € de 400,00 €», «Quedan 105,05 €». En una tarjeta de grupo hay hasta siete ceros cruzados. | El cero cruzado en masa se lee como terminal o tabla de datos, no como una nota de familia. |
 | 4 | Fondo y tarjetas | **Tarjeta blanca de radio 16 con sombra difusa sobre lila claro** `#f4f3f8`, repetida en todas las pantallas. | Es la combinación por defecto de cualquier panel generado. Las referencias separan con filetes. |
 | 5 | MemberCard | **Filo de color de 6 px arriba** en cada tarjeta, que además se curva con el radio. | Es el «filete de color» de la regla D.5 girado 90°. |
-| 6 | Lista en escritorio, panel izquierdo | **Filete de color en el lateral** de cada miembro (`escritorio/lista-de-mama.png`). | Incumple D.5 al pie de la letra. |
+| 6 | Lista en escritorio, panel izquierdo | **Filete de color en el lateral** de cada miembro (`escritorio/lista-de-marta.png`). | Incumple D.5 al pie de la letra. |
 | 7 | Avatares | Círculo pastel con una inicial en Bodoni, en todas partes y a 5 tamaños. | Es el avatar de relleno universal. Zola y Babylist enseñan caras. |
 | 8 | Tu tarjeta (grupo) | La nota «Tu presupuesto y tus reservas son sorpresa» va en una **banda gris redondeada dentro de la tarjeta**, en negrita, partida en dos líneas con «sorpresa» sola. | Tarjeta dentro de tarjeta (D.6) y viuda. |
 | 9 | Cabecera de grupo (móvil) | «Navidad / en familia» parte en dos líneas a 34 px; la flecha se alinea con la segunda línea y «43 días» con ninguna. | Tres elementos, tres líneas base distintas. |
 | 10 | Hoja «Añadir a tu lista» | **Etiquetas cortadas**: «Escribirlo …» e «Importar E…». El foco sigue cayendo en la ✕ (anillo azul). | Defecto visible; era el P1 de A.6 y sigue ahí. |
-| 11 | Mis compras | El sello **se sale por el borde izquierdo** de la tarjeta y el botón «Ya lo compré» **toca el borde derecho**. «Para Mamá» aparece **dos veces** como grupo. El botón lleva aquí un ✓ que en la lista no lleva. | Fuga de caja, agrupación rota e incoherencia. |
+| 11 | Mis compras | El sello **se sale por el borde izquierdo** de la tarjeta y el botón «Ya lo compré» **toca el borde derecho**. «Para Marta» aparece **dos veces** como grupo. El botón lleva aquí un ✓ que en la lista no lleva. | Fuga de caja, agrupación rota e incoherencia. |
 | 12 | Mis compras | Tarjeta «En total · 369,00 €» con cifra de ~32 px y desglose gris debajo. | Es la tarjeta de estadística (D.7). |
 | 13 | Amigo invisible | Botón «Ver la lista de Samira» en `--box-2` sobre `--box`: **1,23:1** de contraste de contorno. Todo centrado. «Repetir el sorteo» visible y en rojo como única otra acción. El sobre sale ya abierto. | Botón casi invisible; lo destructivo, lo más llamativo. |
 | 14 | Inicio | Dos losas azul marino bajo una cabecera azul marino. «Navidad» encima de «Navidad en familia». Media pantalla vacía. | Redundancia y vacío. |
 | 15 | Ficha a medias | Panel gris dentro de la hoja, con el chip dentro. «Juan / Carlos» parte en dos líneas junto a la cifra. | Tres niveles de superficie; nombre partido. |
 | 16 | Escritorio, grupo e inicio | Cinco tarjetas arriba y dos tercios del lienzo vacíos. | Maqueta de móvil estirada. |
 | 17 | Raíl y pestañas | Icono de regalo junto a «Lazo»; cuadrícula de cuatro cuadrados para «Grupo». | Iconos por defecto de la librería. |
-| 18 | Capturas de móvil a página completa | La barra inferior tapa media tarjeta de Samira en `grupo.png` y parte la lista de Mamá. | Probablemente es artefacto de la captura (barra fija). **No lo he comprobado en un teléfono**: hay que verificar que el último elemento no queda bajo la barra. |
+| 18 | Capturas de móvil a página completa | La barra inferior tapa media tarjeta de Samira en `grupo.png` y parte la lista de Marta. | Probablemente es artefacto de la captura (barra fija). **No lo he comprobado en un teléfono**: hay que verificar que el último elemento no queda bajo la barra. |
 
 ### 2.3 Qué adoptar (disciplina, no ropa ajena)
 
@@ -251,15 +251,15 @@ Sigue prohibido animar al cargar.
 11. **BudgetBar.**
     - 6 px en tarjetas, 10 px en la cabecera de lista y en la ficha.
     - Excedido: la barra en `--danger` y la frase «Os pasáis 28 €» en `--danger` 700 con icono. Es el único texto rojo de la pantalla.
-    - «Presupuesto para Mamá» en 15/400; «Cambiar» como enlace subrayado, no como texto en negrita suelto.
+    - «Presupuesto para Marta» en 15/400; «Cambiar» como enlace subrayado, no como texto en negrita suelto.
 12. **Botones.** Radio 10. Tres alturas, sin cambio. Se añade la variante de **enlace** (texto subrayado, 44 px de zona táctil) para acciones terciarias. El icono dentro del botón solo se usa en «Añadir» y «Pegar enlace».
-13. **Hojas.** Radio 16. Un solo nivel de superficie: el bloque de estado de la ficha pierde el fondo gris y se separa con filetes. El chip «Mamá no ve esto» sale del bloque y va bajo el título. En las filas de aportación, el nombre no parte: `white-space: nowrap` y, si no cabe, la cifra baja a la segunda línea.
+13. **Hojas.** Radio 16. Un solo nivel de superficie: el bloque de estado de la ficha pierde el fondo gris y se separa con filetes. El chip «Marta no ve esto» sale del bloque y va bajo el título. En las filas de aportación, el nombre no parte: `white-space: nowrap` y, si no cabe, la cifra baja a la segunda línea.
 14. **Avisos (toast).** Fondo `--box`, texto `--on-box` en 400, «Deshacer» subrayado en `--foil`. Radio 10. Abajo, sobre la barra de pestañas, alineado a la izquierda en escritorio.
 15. **Mis compras: sin tarjeta de total.** La suma pasa a una frase bajo el título: «Te quedan por comprar **219 €**. A medias llevas puestos 150 €.» Las filas, agrupadas por persona, con filete.
 16. **Amigo invisible.** Sobre cerrado por defecto con «Toca para ver a quién regalas». «Repetir el sorteo» solo para quien organiza, como enlace al final, con confirmación en hoja.
 17. **Inicio.** Los grupos pasan a filas claras con filete (nombre en Bodoni 22, «Faltan 43 días · 5 personas» en 15). Se quita la etiqueta «Navidad» repetida. Con un solo grupo, se entra directo.
 
-#### P2 · Entrada eligiendo plaza («Soy Mamá»)
+#### P2 · Entrada eligiendo plaza («Soy Marta»)
 
 Pantalla que se abre desde el enlace de invitación. Sin bienvenida, sin registro previo.
 
@@ -268,18 +268,18 @@ Navidad en familia                       ← 15/400 --on-box-2, cabecera azul
 ¿Quién eres?                             ← Bodoni 28
 
 ( ) Alberto                              ← fila de 64 px, avatar 40, nombre 17/400
-(•) Mamá                                 ← elegida: fondo --foil-tint, nombre 700
+(•) Marta                                 ← elegida: fondo --foil-tint, nombre 700
 ( ) Papá
     Samira · ya ha entrado               ← no se puede elegir: --ink-3, sin avatar de color
-    Juan Carlos · ya ha entrado
+    Javier · ya ha entrado
 
 No estoy en la lista                     ← enlace subrayado
 
-[ Soy Mamá ]                             ← primario de 56, fijo en el pie
+[ Soy Marta ]                             ← primario de 56, fijo en el pie
 ```
 
 - Las filas son un grupo de radio nativo: flechas, lector de pantalla y foco funcionan sin código extra.
-- **El botón dice el nombre**: «Soy Mamá». Hasta que no se elige nadie, dice «Elige tu nombre» y está desactivado. Son dos toques, y el segundo obliga a leer el nombre: evita que Papá entre como Mamá y vea su sorpresa.
+- **El botón dice el nombre**: «Soy Marta». Hasta que no se elige nadie, dice «Elige tu nombre» y está desactivado. Son dos toques, y el segundo obliga a leer el nombre: evita que Papá entre como Marta y vea su sorpresa.
 - Las plazas ocupadas se ven, pero no se pueden tocar. Si alguien entró en la plaza equivocada, lo arregla quien organiza.
 - Tras entrar se va directo al grupo, con «Tu lista» arriba. Sin aviso de saludo.
 - Bajo el botón, una línea en 15/400: «Desde aquí no verás lo que te regalan a ti.»
@@ -299,7 +299,7 @@ Te toca dar                              ← título de grupo 17/700
                               [ Ya se lo di ]   ← secundario de 44
 
 Te tienen que dar
-(J)  Juan Carlos te da 12,00 €
+(J)  Javier te da 12,00 €
      Entradas para el fútbol
                               Esperando  ← texto, no botón: solo confirma quien paga
 
@@ -341,7 +341,7 @@ Reglas:
 | P1 | Radios 6 / 10 / 12 / 16; sombra corta solo en regalo libre; filete en lo demás |
 | P1 | MemberCard sin filo, avatar 40 con foto, nota propia en una línea sin banda |
 | P1 | Mis compras sin tarjeta de total; amigo invisible con sobre cerrado; inicio en filas claras |
-| P2 | Entrada «¿Quién eres?» con botón «Soy Mamá» |
+| P2 | Entrada «¿Quién eres?» con botón «Soy Marta» |
 | P2 | Hucha común en frases, con mínimo de pagos y «Ya se lo di» |
 | P2 | Escritorio: dos columnas anchas y lista a la derecha |
 | P3 | Raíl sin icono, barra «Demo» discreta, grano de papel, avatar con foto perfilado |

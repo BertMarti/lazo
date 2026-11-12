@@ -13,7 +13,7 @@ THESIS: La app es el catálogo de Navidad de una juguetería abierto en la mesa 
 
 OWN-WORLD: Papel crema #f6efe2 con tarjetas #fffaf0. Terracota #b4532e como acción y etiqueta de precio, abeto #23493b como «es tuyo» y progreso, y oro #c9a24a solo como cinta y lazo. Young Serif para títulos y cifras, Nunito para la interfaz. Botones en píldora. Sombras cálidas tintadas de marrón. En oscuro, la misma mesa con la luz baja (#1b1612).
 
-STORY: Abres el grupo y ves a tu familia en tarjetas con su cara, sus regalos y su presupuesto; debajo, lo más deseado en fotos. Entras en la lista de Mamá: un tablero de fotos con su precio. Lo cogido lleva la cinta (cruzada si ya está comprado) y una etiqueta que lo dice con palabras. En tu lista no hay cinta ni etiqueta: es sorpresa.
+STORY: Abres el grupo y ves a tu familia en tarjetas con su cara, sus regalos y su presupuesto; debajo, lo más deseado en fotos. Entras en la lista de Marta: un tablero de fotos con su precio. Lo cogido lleva la cinta (cruzada si ya está comprado) y una etiqueta que lo dice con palabras. En tu lista no hay cinta ni etiqueta: es sorpresa.
 
 FIRST VIEWPORT: Cabecera sobre papel: lazo y «Lazo» a la izquierda, pestañas en píldora en escritorio y barra inferior de 4 secciones en móvil. Título del grupo en Young Serif grande, con «24 de diciembre · faltan 43 días» debajo. Rejilla de personas (2 columnas en móvil y auto-fill de 190 px en escritorio), con tu tarjeta primero en abeto. Luego «Lo más deseado», 4 fotos en tablero.
 

@@ -28,13 +28,13 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 <p align="center">
   <img src="docs/design/v1.0/readme/grupo-390.png" width="270" alt="La familia en tarjetas con su cara y su presupuesto (la tuya no lo muestra) y lo más deseado en fotos" />
   &nbsp;
-  <img src="docs/design/v1.0/readme/lista-390.png" width="270" alt="Lista de Mamá vista por Alberto: tablero de fotos con su precio; lo cogido lleva cinta y lazo" />
+  <img src="docs/design/v1.0/readme/lista-390.png" width="270" alt="Lista de Marta vista por Alberto: tablero de fotos con su precio; lo cogido lleva cinta y lazo" />
   &nbsp;
-  <img src="docs/design/v1.0/readme/imprimir-390.png" width="270" alt="La lista de Juan Carlos lista para imprimir: fotos, precios orientativos y un código por regalo, sin decir qué está cogido" />
+  <img src="docs/design/v1.0/readme/imprimir-390.png" width="270" alt="La lista de Javier lista para imprimir: fotos, precios orientativos y un código por regalo, sin decir qué está cogido" />
 </p>
 
 <p align="center">
-  <img src="docs/design/v1.0/readme/lista-1280.png" width="820" alt="En el escritorio: cabecera con pestañas y la lista de Mamá como tablero de fotos" />
+  <img src="docs/design/v1.0/readme/lista-1280.png" width="820" alt="En el escritorio: cabecera con pestañas y la lista de Marta como tablero de fotos" />
 </p>
 
 ## Qué puedes hacer
@@ -64,7 +64,7 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 
 **[bertmarti.github.io/lazo](https://bertmarti.github.io/lazo/)**
 
-Es una familia de cinco con datos inventados: Alberto, Juan Carlos, Samira, Mamá y Papá. Arriba tienes **«Ver como…»**: cambia a Mamá y comprueba que no ve que Alberto le ha reservado el marco de fotos ni cuánto os gastáis en ella; cambia a Samira y lo verás todo. Todo se guarda en tu navegador; no hay servidor detrás.
+Es una familia de cinco con datos inventados: Alberto, Javier, Samira, Marta y Papá. Arriba tienes **«Ver como…»**: cambia a Marta y comprueba que no ve que Alberto le ha reservado el marco de fotos ni cuánto os gastáis en ella; cambia a Samira y lo verás todo. Todo se guarda en tu navegador; no hay servidor detrás.
 
 ## Instalarlo en casa
 

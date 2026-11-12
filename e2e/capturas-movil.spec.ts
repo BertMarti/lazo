@@ -6,7 +6,7 @@ test.skip(!dir, 'Solo cuando se piden capturas');
 test.use({ viewport: { width: 375, height: 812 } });
 
 const shots: [string, string, string][] = [
-  ['lista-de-mama', 'alberto', '/#/l/l-mama'],
+  ['lista-de-marta', 'alberto', '/#/l/l-marta'],
   ['grupo', 'alberto', '/#/g/navidad'],
   ['lista-propia', 'alberto', '/#/l/l-alberto'],
 ];

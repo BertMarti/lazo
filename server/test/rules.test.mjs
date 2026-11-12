@@ -14,8 +14,8 @@ const BIN = process.env.PB_BIN;
 const PORT = 18090 + Math.floor(Math.random() * 500);
 const BASE = `http://127.0.0.1:${PORT}`;
 const ROOT = resolve(import.meta.dirname, '..', 'pb');
-const FAMILY = ['alberto', 'juancarlos', 'samira', 'mama', 'papa'];
-const NAMES = { alberto: 'Alberto', juancarlos: 'Juan Carlos', samira: 'Samira', mama: 'Mamá', papa: 'Papá' };
+const FAMILY = ['alberto', 'javier', 'samira', 'marta', 'papa'];
+const NAMES = { alberto: 'Alberto', javier: 'Javier', samira: 'Samira', marta: 'Marta', papa: 'Papá' };
 
 let dir, proc, su;
 const ids = {}; // usuario → id; lista → id…
@@ -244,11 +244,11 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.match(r.meta.code, /^\d{4}$/);
     const t = r.token;
     for (const col of ['groups', 'lists', 'items', 'claims', 'budgets']) assert.equal((await ok('GET', `/api/collections/${col}/records`, null, t)).totalItems, 0, col);
-    // Mamá (ya dentro) no puede pedir otra plaza
-    assert.equal((await call('POST', '/api/lazo/join', { token: inv.token, list: ids['l-loli'] }, tok.mama)).status, 400);
+    // Marta (ya dentro) no puede pedir otra plaza
+    assert.equal((await call('POST', '/api/lazo/join', { token: inv.token, list: ids['l-loli'] }, tok.marta)).status, 400);
     // Plaza ocupada y nombre repetido
     assert.equal((await call('POST', '/api/lazo/join', { token: inv.token, list: ids['l-papa'] })).status, 400);
-    assert.equal((await call('POST', '/api/lazo/join', { token: inv.token, name: 'mamá' })).status, 400);
+    assert.equal((await call('POST', '/api/lazo/join', { token: inv.token, name: 'Márta' })).status, 400);
     // Solo un admin decide; al aceptar, entra y su plaza le queda ciega
     assert.equal((await call('POST', '/api/lazo/join-decide', { request: r.meta.request, accept: true }, tok.papa)).status, 403);
     await ok('POST', '/api/lazo/join-decide', { request: r.meta.request, accept: true }, tok.alberto);
@@ -261,9 +261,9 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
   });
 
   test('PB-10: quitar un regalo propio responde igual esté cogido o no; los demás lo ven retirado', async () => {
-    const t = tok.juancarlos;
-    const taken = ids['a-juancarlos']; // reservado por Samira
-    const free = (await ok('POST', '/api/collections/items/records', { list: ids['l-juancarlos'], title: 'Para quitar', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.juancarlos }, t)).id;
+    const t = tok.javier;
+    const taken = ids['a-javier']; // reservado por Samira
+    const free = (await ok('POST', '/api/collections/items/records', { list: ids['l-javier'], title: 'Para quitar', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.javier }, t)).id;
     const r1 = await call('DELETE', `/api/collections/items/records/${taken}`, null, t);
     const r2 = await call('DELETE', `/api/collections/items/records/${free}`, null, t);
     assert.equal(r1.status, 204);
@@ -278,7 +278,7 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     const seen = await ok('GET', `/api/collections/items/records/${taken}`, null, tok.samira);
     assert.equal(seen.removed, true);
     // V-26: recrearlo con el mismo id (POST o PUT en un lote) responde igual esté oculto (cogido) o borrado (libre).
-    const body = (id) => ({ ...(id ? { id } : {}), list: ids['l-juancarlos'], title: 'Otra vez', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.juancarlos });
+    const body = (id) => ({ ...(id ? { id } : {}), list: ids['l-javier'], title: 'Otra vez', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.javier });
     const p1 = await call('POST', '/api/collections/items/records', body(taken), t);
     const p2 = await call('POST', '/api/collections/items/records', body(free), t);
     assert.equal(p1.status, 400);
@@ -306,14 +306,14 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
 
   test('PB-12: pagos solo con el tesorero (o el suplente por sus regalos) y solo los ven sus dos partes', async () => {
     await ok('POST', '/api/lazo/hucha-roles', { group: ids.group, treasurer: ids['l-alberto'], deputy: ids['l-samira'] }, tok.alberto);
-    assert.equal((await call('POST', '/api/lazo/hucha-roles', { group: ids.group, treasurer: ids['l-papa'], deputy: ids['l-mama'] }, tok.alberto)).status, 400);
-    assert.ok((await call('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.mama, amountCents: 100, sub: false }, tok.papa)).status >= 400);
+    assert.equal((await call('POST', '/api/lazo/hucha-roles', { group: ids.group, treasurer: ids['l-papa'], deputy: ids['l-marta'] }, tok.alberto)).status, 400);
+    assert.ok((await call('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.marta, amountCents: 100, sub: false }, tok.papa)).status >= 400);
     assert.ok((await call('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.alberto, amountCents: 100, sub: true }, tok.papa)).status >= 400);
     await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.samira, amountCents: 500, sub: true }, tok.papa);
     await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.alberto, amountCents: 700, sub: false }, tok.papa);
     const seen = await ok('GET', '/api/collections/payments/records', null, tok.alberto);
     assert.ok(seen.items.every((x) => !x.sub), 'el tesorero nunca ve pagos de la cuenta de sus regalos');
-    assert.equal((await ok('GET', '/api/collections/payments/records', null, tok.mama)).totalItems, 0);
+    assert.equal((await ok('GET', '/api/collections/payments/records', null, tok.marta)).totalItems, 0);
   });
 
   // Tiempo real (v0.6): toda la familia escucha mientras los demás tocan la plaza de X. PocketBase solo manda a cada
@@ -361,7 +361,7 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
       const cs2 = (await ok('GET', `/api/collections/claims/records?filter=${q(`item = "${s}"`)}`, null, tok[a])).items[0].id;
       await ok('DELETE', `/api/collections/items/records/${s}`, null, tok[b]);
       // Hucha: pagos en los que X no es parte (el de la suplente es la cuenta de los regalos del tesorero)
-      const payer = ['juancarlos', 'mama', 'papa'].find((x) => x !== who);
+      const payer = ['javier', 'marta', 'papa'].find((x) => x !== who);
       const pays = [];
       if (who !== 'alberto') pays.push(await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids[payer], to: ids.alberto, amountCents: 200, sub: false }, tok[payer]));
       if (who !== 'samira') pays.push(await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids[payer], to: ids.samira, amountCents: 300, sub: true }, tok[payer]));
@@ -403,20 +403,20 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
   }
 
   test('PB-15: la entrega se abre con dos llaves y no enseña precios', async () => {
-    assert.equal((await call('GET', `/api/lazo/received/${ids.group}`, null, tok.mama)).status, 403);
-    await ok('POST', '/api/lazo/gift', { action: 'buy', item: ids['b-mama'], kind: 'self', paidCents: 9000, paidBy: ids.papa }, tok.papa).catch(() => null);
+    assert.equal((await call('GET', `/api/lazo/received/${ids.group}`, null, tok.marta)).status, 403);
+    await ok('POST', '/api/lazo/gift', { action: 'buy', item: ids['b-marta'], kind: 'self', paidCents: 9000, paidBy: ids.papa }, tok.papa).catch(() => null);
     await ok('POST', '/api/lazo/reveal', { group: ids.group, action: 'ask' }, tok.alberto);
     assert.equal((await call('POST', '/api/lazo/reveal', { group: ids.group, action: 'confirm' }, tok.alberto)).status, 403);
     await ok('POST', '/api/lazo/reveal', { group: ids.group, action: 'confirm' }, tok.papa);
-    const r = await call('GET', `/api/lazo/received/${ids.group}`, null, tok.mama);
+    const r = await call('GET', `/api/lazo/received/${ids.group}`, null, tok.marta);
     assert.equal(r.status, 200);
     assert.doesNotMatch(r.text, /paidCents|priceCents|paidBy/);
     // Las cuentas siguen siendo secretas después
-    assert.equal((await ok('GET', `/api/collections/claims/records?filter=${encodeURIComponent(`item.list = "${ids['l-mama']}"`)}`, null, tok.mama)).totalItems, 0);
+    assert.equal((await ok('GET', `/api/collections/claims/records?filter=${encodeURIComponent(`item.list = "${ids['l-marta']}"`)}`, null, tok.marta)).totalItems, 0);
   });
 
   test('amigo invisible: cada uno ve solo su asignación, también quien organiza', async () => {
-    await ok('POST', '/api/lazo/draw', { group: ids.group, participants: FAMILY.map((w) => ids[w]), exclusions: [[ids.mama, ids.papa]] }, tok.alberto);
+    await ok('POST', '/api/lazo/draw', { group: ids.group, participants: FAMILY.map((w) => ids[w]), exclusions: [[ids.marta, ids.papa]] }, tok.alberto);
     const seen = new Set();
     for (const who of FAMILY) {
       const r = await ok('GET', '/api/collections/assignments/records', null, tok[who]);
@@ -428,17 +428,17 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.equal(seen.size, FAMILY.length);
     assert.equal((await call('POST', '/api/lazo/draw', { group: ids.group, participants: [] }, tok.samira)).status, 403, 'solo admins');
   });
-  test('PB-2: lo que otros hacen sobre la lista de Mamá no cambia ni un byte de lo que Mamá ve', async () => {
+  test('PB-2: lo que otros hacen sobre la lista de Marta no cambia ni un byte de lo que Marta ve', async () => {
     const snap = async () => {
       const out = [];
-      for (const col of ['groups', 'lists', 'items', 'claims', 'contributions', 'budgets', 'payments']) out.push((await call('GET', `/api/collections/${col}/records?perPage=500&sort=id`, null, tok.mama)).text);
-      out.push((await call('GET', `/api/collections/items/records/${ids['c-mama']}`, null, tok.mama)).text);
+      for (const col of ['groups', 'lists', 'items', 'claims', 'contributions', 'budgets', 'payments']) out.push((await call('GET', `/api/collections/${col}/records?perPage=500&sort=id`, null, tok.marta)).text);
+      out.push((await call('GET', `/api/collections/items/records/${ids['c-marta']}`, null, tok.marta)).text);
       return out;
     };
     const before = await snap();
-    await ok('POST', '/api/lazo/gift', { action: 'buy', item: ids['c-mama'], kind: 'self', paidCents: 2100, paidBy: ids.juancarlos }, tok.juancarlos);
-    await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Otra sorpresa', priceCents: 900, priority: 2, quantity: 1, createdBy: ids.samira, secret: true }, tok.samira);
-    const budget = (await ok('GET', `/api/collections/budgets/records?filter=${encodeURIComponent(`list = "${ids['l-mama']}"`)}`, null, tok.samira)).items[0];
+    await ok('POST', '/api/lazo/gift', { action: 'buy', item: ids['c-marta'], kind: 'self', paidCents: 2100, paidBy: ids.javier }, tok.javier);
+    await ok('POST', '/api/collections/items/records', { list: ids['l-marta'], title: 'Otra sorpresa', priceCents: 900, priority: 2, quantity: 1, createdBy: ids.samira, secret: true }, tok.samira);
+    const budget = (await ok('GET', `/api/collections/budgets/records?filter=${encodeURIComponent(`list = "${ids['l-marta']}"`)}`, null, tok.samira)).items[0];
     if (budget) await call('PATCH', `/api/collections/budgets/records/${budget.id}`, { amountCents: 25000 }, tok.samira);
     assert.deepEqual(await snap(), before);
   });
@@ -473,16 +473,16 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
       before[who] = sums(who, await rows(tok[who]));
       assert.deepEqual(before[who], await expected(who), `${who}: antes`);
     }
-    // Samira compra con la hucha la sorpresa de Mamá y Papá le paga a la tesorería: a Mamá no le cambia nada.
-    const res = (await get('claims', tok.samira, `&filter=${encodeURIComponent(`item = "${ids['s-mama']}"`)}`))[0];
+    // Samira compra con la hucha la sorpresa de Marta y Papá le paga a la tesorería: a Marta no le cambia nada.
+    const res = (await get('claims', tok.samira, `&filter=${encodeURIComponent(`item = "${ids['s-marta']}"`)}`))[0];
     await ok('POST', '/api/lazo/gift', { action: 'buy', claim: res.id, paidCents: 1400, paidBy: ids.samira }, tok.samira);
     await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids.papa, to: ids.alberto, amountCents: 300, sub: false }, tok.papa);
     for (const who of FAMILY) assert.deepEqual(sums(who, await rows(tok[who])), await expected(who), `${who}: después`);
-    assert.deepEqual(sums('mama', await rows(tok.mama)), before.mama, 'Mamá no nota la compra en su plaza');
-    assert.ok(sums('papa', await rows(tok.papa)).shares.some((s) => s.list === ids['l-mama'] && s.spent === 1400), 'la compra cuenta para los demás');
+    assert.deepEqual(sums('marta', await rows(tok.marta)), before.marta, 'Marta no nota la compra en su plaza');
+    assert.ok(sums('papa', await rows(tok.papa)).shares.some((s) => s.list === ids['l-marta'] && s.spent === 1400), 'la compra cuenta para los demás');
   });
 
-  test('V-20: lo que pasa en la plaza de Mamá no cambia sus avisos (core/avisos contra el servidor real)', async () => {
+  test('V-20: lo que pasa en la plaza de Marta no cambia sus avisos (core/avisos contra el servidor real)', async () => {
     // core/avisos tal cual lo usa la app, empaquetado con esbuild (como PB-13).
     const out = join(dir, 'avisos.mjs');
     (await import('esbuild')).buildSync({ entryPoints: [resolve(import.meta.dirname, '..', '..', 'src/core/avisos.ts')], bundle: true, format: 'esm', outfile: out, logLevel: 'silent' });
@@ -508,31 +508,31 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
       const draw = (await get('draws', t, `group = "${ids.group}"`))[0]?.id;
       return A.buildFacts(ids[who], h, draw, today);
     };
-    const m1 = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Bufanda V-20', priceCents: 2500, priority: 2, quantity: 1, createdBy: ids.mama }, tok.mama);
-    const before = await facts('mama', tok.mama);
+    const m1 = await ok('POST', '/api/collections/items/records', { list: ids['l-marta'], title: 'Bufanda V-20', priceCents: 2500, priority: 2, quantity: 1, createdBy: ids.marta }, tok.marta);
+    const before = await facts('marta', tok.marta);
     assert.equal(before.stage, 3);
     // buildFacts descarta solo lo de su plaza: con TODAS las filas (superusuario, sorpresas y reservas incluidas) sale lo mismo.
-    assert.deepEqual(await facts('mama', su), before, 'filas sin filtrar de su plaza');
-    // Los demás hacen de todo en la plaza de Mamá: sorpresas nuevas, reservas, hucha y compra.
-    const s1 = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Sorpresa V-20', priceCents: 1200, priority: 2, quantity: 1, createdBy: ids.papa, secret: true }, tok.papa);
+    assert.deepEqual(await facts('marta', su), before, 'filas sin filtrar de su plaza');
+    // Los demás hacen de todo en la plaza de Marta: sorpresas nuevas, reservas, hucha y compra.
+    const s1 = await ok('POST', '/api/collections/items/records', { list: ids['l-marta'], title: 'Sorpresa V-20', priceCents: 1200, priority: 2, quantity: 1, createdBy: ids.papa, secret: true }, tok.papa);
     await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s1.id, kind: 'pot' }, tok.papa);
-    const s2 = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Otra sorpresa V-20', priceCents: 800, priority: 2, quantity: 1, createdBy: ids.juancarlos, secret: true }, tok.juancarlos);
-    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s2.id, kind: 'self' }, tok.juancarlos);
+    const s2 = await ok('POST', '/api/collections/items/records', { list: ids['l-marta'], title: 'Otra sorpresa V-20', priceCents: 800, priority: 2, quantity: 1, createdBy: ids.javier, secret: true }, tok.javier);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s2.id, kind: 'self' }, tok.javier);
     const pot = (await get('claims', tok.papa, `item = "${s1.id}"`))[0];
     await ok('POST', '/api/lazo/gift', { action: 'buy', claim: pot.id, paidCents: 1200, paidBy: ids.papa }, tok.papa);
     await ok('POST', '/api/lazo/gift', { action: 'reserve', item: m1.id, kind: 'self' }, tok.samira);
-    const after = await facts('mama', tok.mama);
-    assert.deepEqual(after, before, 'Mamá no nota nada de su plaza');
+    const after = await facts('marta', tok.marta);
+    assert.deepEqual(after, before, 'Marta no nota nada de su plaza');
     assert.equal(A.notices([before], [after]).length, 0, 'ni un aviso nuevo');
     // Las filas existen y el servidor se las da a los demás: la prueba no pasa por no mirar nada.
-    assert.equal((await get('claims', tok.samira, `item.list = "${ids['l-mama']}" && (item = "${s1.id}" || item = "${s2.id}" || item = "${m1.id}")`)).length, 3);
+    assert.equal((await get('claims', tok.samira, `item.list = "${ids['l-marta']}" && (item = "${s1.id}" || item = "${s2.id}" || item = "${m1.id}")`)).length, 3);
   });
 
   test('PB-9: veinte reservas a la vez del mismo regalo dejan una sola fila', async () => {
     await ok('PATCH', '/api/settings', { rateLimits: { enabled: false } }, su);
     try {
       const item = (await ok('POST', '/api/collections/items/records', { list: ids['l-papa'], title: 'Carrera', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.papa }, tok.papa)).id;
-      const who = ['alberto', 'juancarlos', 'samira', 'mama'];
+      const who = ['alberto', 'javier', 'samira', 'marta'];
       const rs = await Promise.all(Array.from({ length: 20 }, (_, i) => call('POST', '/api/lazo/gift', { action: 'reserve', item, kind: 'self' }, tok[who[i % who.length]])));
       assert.equal(rs.filter((r) => r.status === 200).length, 1, rs.map((r) => r.status).join(','));
       assert.equal((await ok('GET', `/api/collections/claims/records?filter=${encodeURIComponent(`item = "${item}"`)}`, null, su)).totalItems, 1);
@@ -555,9 +555,9 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
   test('PB-3/PB-17: plaza nueva con historial previo; su enlace usado o falso responde igual', async () => {
     assert.equal((await call('POST', '/api/collections/lists/records', { group: ids.group, name: ' samira ', kind: 'person' }, tok.alberto)).status, 400, 'V-13 d: nombre repetido');
     const pepe = await ok('POST', '/api/collections/lists/records', { group: ids.group, name: 'Tío Pepe', kind: 'person' }, tok.alberto);
-    const s = await ok('POST', '/api/collections/items/records', { list: pepe.id, title: 'Sorpresa para Pepe', priceCents: 1000, priority: 2, quantity: 1, createdBy: ids.juancarlos, secret: true }, tok.juancarlos);
-    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s.id, kind: 'self' }, tok.juancarlos);
-    await ok('POST', '/api/collections/budgets/records', { list: pepe.id, amountCents: 3000 }, tok.mama);
+    const s = await ok('POST', '/api/collections/items/records', { list: pepe.id, title: 'Sorpresa para Pepe', priceCents: 1000, priority: 2, quantity: 1, createdBy: ids.javier, secret: true }, tok.javier);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s.id, kind: 'self' }, tok.javier);
+    await ok('POST', '/api/collections/budgets/records', { list: pepe.id, amountCents: 3000 }, tok.marta);
     const inv = await ok('POST', '/api/lazo/invite', { group: ids.group, list: pepe.id }, tok.alberto);
     const info = await ok('POST', '/api/lazo/invite-info', { token: inv.token });
     assert.equal(info.personal.name, 'Tío Pepe');
@@ -578,9 +578,9 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.equal((await call('DELETE', `/api/collections/users/records/${ids.papa}`, null, tok.papa)).status, 400, 'V-10');
     const labels = (await ok('GET', '/api/settings', null, su)).rateLimits.rules.map((r) => r.label);
     assert.ok(labels.includes('GET /api/lazo/received/'), 'V-9');
-    const bought = await call('POST', '/api/lazo/gift', { action: 'buy', item: ids['a-juancarlos'], kind: 'self', paidCents: 100, paidBy: ids.mama }, tok.mama);
+    const bought = await call('POST', '/api/lazo/gift', { action: 'buy', item: ids['a-javier'], kind: 'self', paidCents: 100, paidBy: ids.marta }, tok.marta);
     assert.equal(bought.status, 400, 'V-13 e: compra');
-    const contrib = await call('POST', '/api/collections/contributions/records', { item: ids['a-juancarlos'], user: ids.mama, amountCents: 100 }, tok.mama);
+    const contrib = await call('POST', '/api/collections/contributions/records', { item: ids['a-javier'], user: ids.marta, amountCents: 100 }, tok.marta);
     assert.equal(contrib.status, 400, 'V-13 e: aportación');
     // V-11: liberar a la suplente y borrar su plaza no reabre los roles
     await ok('POST', '/api/lazo/plaza-release', { list: ids['l-samira'] }, tok.alberto);
@@ -606,8 +606,8 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
   });
 
   test('AMZ-11 (V11-6): reimportar de Amazon un regalo quitado responde igual esté cogido o no; el servidor no deduplica', async () => {
-    const t = tok.mama;
-    const amz = (k) => ({ list: ids['l-mama'], title: `Producto de Amazon ${k}`, url: `https://www.amazon.es/dp/B0LAZOPRU${k}`, store: 'Amazon', priceCents: 1999, priority: 2, quantity: 1, createdBy: ids.mama, currency: 'EUR' });
+    const t = tok.marta;
+    const amz = (k) => ({ list: ids['l-marta'], title: `Producto de Amazon ${k}`, url: `https://www.amazon.es/dp/B0LAZOPRU${k}`, store: 'Amazon', priceCents: 1999, priority: 2, quantity: 1, createdBy: ids.marta, currency: 'EUR' });
     const A = (await ok('POST', '/api/collections/items/records', amz('A'), t)).id;
     const B = (await ok('POST', '/api/collections/items/records', amz('B'), t)).id;
     await ok('POST', '/api/lazo/gift', { action: 'reserve', item: A, kind: 'self' }, tok.papa); // A cogido, B libre
@@ -621,8 +621,8 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.deepEqual(sin(ra.body), sin(rb.body));
     const nuevos = [ra.body.id, rb.body.id];
     assert.ok(nuevos.every((id) => id && id !== A && id !== B), 'dos filas nuevas');
-    const mias = (await ok('GET', `/api/collections/items/records?perPage=500&filter=${encodeURIComponent(`list = "${ids['l-mama']}" && store = "Amazon"`)}`, null, t)).items;
-    assert.deepEqual(mias.map((i) => i.id).sort(), [...nuevos].sort(), 'Mamá ve las dos nuevas y ninguna de las quitadas');
+    const mias = (await ok('GET', `/api/collections/items/records?perPage=500&filter=${encodeURIComponent(`list = "${ids['l-marta']}" && store = "Amazon"`)}`, null, t)).items;
+    assert.deepEqual(mias.map((i) => i.id).sort(), [...nuevos].sort(), 'Marta ve las dos nuevas y ninguna de las quitadas');
     assert.deepEqual(sin(mias.find((i) => i.id === nuevos[0])), sin(mias.find((i) => i.id === nuevos[1])));
   });
 });

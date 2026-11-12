@@ -31,7 +31,7 @@ function savePending(token: string, p: PendingReq | null) {
 
 /**
  * Entrar desde un enlace (spec plazas-hucha §10.4–10.5):
- * personal → «Eres Mamá» y dentro; general → «¿Quién eres?» → pendiente con un código que el admin comprueba.
+ * personal → «Eres Marta» y dentro; general → «¿Quién eres?» → pendiente con un código que el admin comprueba.
  */
 export function Join({ token, onJoined }: { token: string; onJoined: () => void }) {
   const api = useApi();

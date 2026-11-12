@@ -3,9 +3,9 @@ import { itemStatus } from '../../src/core/status';
 import type { BuyMode, Claim, Contribution, Item } from '../../src/core/types';
 import { people, statusLine } from '../../src/ui/statusText';
 
-const N: Record<string, string> = { samira: 'Samira', papa: 'Papá', jc: 'Juan Carlos', mama: 'Mamá' };
+const N: Record<string, string> = { samira: 'Samira', papa: 'Papá', jc: 'Javier', marta: 'Marta' };
 const nameOf = (id: string) => N[id] ?? id;
-const item = (o: Partial<Item> = {}): Item => ({ id: 'i', list: 'l', title: 'Robot', currency: 'EUR', priority: 1, quantity: 1, createdBy: 'mama', priceCents: 10000, ...o });
+const item = (o: Partial<Item> = {}): Item => ({ id: 'i', list: 'l', title: 'Robot', currency: 'EUR', priority: 1, quantity: 1, createdBy: 'marta', priceCents: 10000, ...o });
 const claim = (user: string, status: Claim['status'] = 'reserved', kind: 'self' | 'pot' = 'self', o: Partial<Claim> = {}): Claim => ({ id: `c-${user}-${kind}`, item: 'i', user, kind, status, units: 1, ...o });
 const pot = (user: string, amountCents: number): Contribution => ({ id: `p-${user}`, item: 'i', user, amountCents, paid: false });
 const line = (it: Item, claims: Claim[], pots: Contribution[] = [], mode: BuyMode = 'individual') => statusLine(it, itemStatus(it, claims, pots), claims, pots, 'me', nameOf, mode);

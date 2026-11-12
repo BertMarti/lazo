@@ -19,8 +19,8 @@ Leyenda: **sí** cumple · **NO** no cumple · **~** cumple con reparo · **—*
 | Captura | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | grupo | — | sí | sí | sí | sí | sí | sí | sí | ~ | sí | sí | sí | sí | sí | — |
-| grupo-visto-por-mama | — | sí | sí | sí | sí | sí | sí | sí | ~ | sí | sí | sí | sí | sí | — |
-| lista-de-mama | NO | NO | sí | ~ | NO | sí | sí | sí | sí | sí | ~ | sí | sí | sí | sí |
+| grupo-visto-por-marta | — | sí | sí | sí | sí | sí | sí | sí | ~ | sí | sí | sí | sí | sí | — |
+| lista-de-marta | NO | NO | sí | ~ | NO | sí | sí | sí | sí | sí | ~ | sí | sí | sí | sí |
 | lista-propia | NO | ~ | sí | sí | sí | sí | sí | ~ | sí | sí | sí | sí | sí | sí | — |
 | regalo-a-medias (ficha) | NO | sí | sí | sí | NO | sí | sí | sí | sí | sí | sí | sí | sí | — | ~ |
 | anadir | NO | sí | sí | sí | sí | sí | sí | sí | sí | sí | sí | sí | sí | — | — |
@@ -35,9 +35,9 @@ Leyenda: **sí** cumple · **NO** no cumple · **~** cumple con reparo · **—*
 
 ### Evidencia por punto
 
-**1. Fotos reales (NO).** La mitad del punto se cumple: ya no hay ningún cuadrado de color vacío. La otra mitad, no: **ningún regalo de la demo tiene foto**. Cero de cinco en la lista de Mamá, cero de tres en la propia, y la ficha de «Robot de cocina» tampoco. Era el P0 n.º 2 de REFERENCIAS §3.5 y sigue sin hacer. Hoy toda la app es texto sobre tarjetas blancas: se lee limpia, pero también como un prototipo.
+**1. Fotos reales (NO).** La mitad del punto se cumple: ya no hay ningún cuadrado de color vacío. La otra mitad, no: **ningún regalo de la demo tiene foto**. Cero de cinco en la lista de Marta, cero de tres en la propia, y la ficha de «Robot de cocina» tampoco. Era el P0 n.º 2 de REFERENCIAS §3.5 y sigue sin hacer. Hoy toda la app es texto sobre tarjetas blancas: se lee limpia, pero también como un prototipo.
 
-**2. Dos negritas por tarjeta (NO en lista-de-mama).**
+**2. Dos negritas por tarjeta (NO en lista-de-marta).**
 - Las tarjetas cogidas llevan tres: título, precio y el nombre del estado («Lo compró **Samira**»). Aquí chocan dos reglas mías: «máximo dos» y «en la frase de estado, solo el nombre en 700». Hay que decidir (ver P1-9).
 - `lista-propia`: el chip «Tú no ves quién te regala qué. Los demás sí.» es una frase entera en 700 que ocupa casi todo el ancho.
 - `hucha` (Papá): en el bloque de cabecera hay cuatro pesos 700 seguidos: «Te falta poner», «71,22 €», «52,50 €» y el chip.
@@ -45,9 +45,9 @@ Leyenda: **sí** cumple · **NO** no cumple · **~** cumple con reparo · **—*
 
 **3. Sin «,00» fuera de la hucha (sí).** «65 € de 150 €», «349 €», «Quedan 85 €». En la hucha, siempre dos decimales. Correcto. El cero cruzado sigue en todas partes, también en títulos («Mochila de senderismo 30 L») y en el año «2020»; quedó como verificación pendiente y no hay señal de que se haya hecho.
 
-**4. Sombra solo en regalo libre (~).** Miembros, paneles y filas van con filete. Reparo: en `lista-de-mama`, «Pañuelo de seda estampado» está en «Ya cogidos» pero es blanco y con sombra, igual que un regalo libre. Está apuntado para la hucha por Papá: ya no se puede coger.
+**4. Sombra solo en regalo libre (~).** Miembros, paneles y filas van con filete. Reparo: en `lista-de-marta`, «Pañuelo de seda estampado» está en «Ya cogidos» pero es blanco y con sombra, igual que un regalo libre. Está apuntado para la hucha por Papá: ya no se puede coger.
 
-**5. Sin filo de color (NO).** En `lista-de-mama`, `ya-comprado` y el fondo de la ficha, las tarjetas cogidas llevan una banda superior de 4 px, azul marino («Robot de cocina», «Chal de lana merino») o dorada («Marco digital», «Pañuelo»), que se curva con el radio. **Es culpa de mi propia especificación**: en REFERENCIAS §3.5 P0-1 pedí «el precinto, sin foto, pasa a ser una banda de 4 px en el borde superior», y en el punto 5 de la checklist lo prohibí. Visto construido, gana la checklist: es el mismo filo que quité de la MemberCard.
+**5. Sin filo de color (NO).** En `lista-de-marta`, `ya-comprado` y el fondo de la ficha, las tarjetas cogidas llevan una banda superior de 4 px, azul marino («Robot de cocina», «Chal de lana merino») o dorada («Marco digital», «Pañuelo»), que se curva con el radio. **Es culpa de mi propia especificación**: en REFERENCIAS §3.5 P0-1 pedí «el precinto, sin foto, pasa a ser una banda de 4 px en el borde superior», y en el punto 5 de la checklist lo prohibí. Visto construido, gana la checklist: es el mismo filo que quité de la MemberCard.
 
 **6. Sin superficie dentro de otra (NO en entrar e invitar).**
 - `entrar`: una tarjeta blanca con filete que contiene dos filas de radio con su propio filete y, debajo, el botón. Dos cajas concéntricas.
@@ -64,7 +64,7 @@ Leyenda: **sí** cumple · **NO** no cumple · **~** cumple con reparo · **—*
 
 **10. Un número grande (sí).** `hucha` tiene uno («71,22 €», 46 px, fuera de tarjeta). En escritorio, el «43» de la cabecera. «Samira» en el amigo invisible es un nombre.
 
-**11. Nombres partidos (~).** Ninguno se parte. Reparo en `lista-de-mama` móvil: «Para la hucha · lo apuntó / **Papá**» deja el nombre solo en la segunda línea, apretado contra el botón «Ya comprado».
+**11. Nombres partidos (~).** Ninguno se parte. Reparo en `lista-de-marta` móvil: «Para la hucha · lo apuntó / **Papá**» deja el nombre solo en la segunda línea, apretado contra el botón «Ya comprado».
 
 **12. Texto centrado (sí).** Solo dentro del sobre del amigo invisible y en botones.
 
@@ -100,7 +100,7 @@ Lo que está bien: el botón dice «Elige tu nombre» hasta que se elige y oblig
 | E5 | «No estoy en la lista» es una fila de radio idéntica a una persona. La spec pedía un enlace `ghost`. Como radio funciona, pero debe distinguirse de los nombres y la captura no enseña qué pasa al elegirla. | §10.4 |
 | E6 | Tarjeta envolvente con filas con borde dentro (punto 6). | — |
 | E7 | Falta «Desde aquí no verás lo que te regalan a ti.» (DESIGN §6, fila «Entrar»). | DESIGN §6 |
-| E8 | No hay captura del enlace personal («Eres Mamá» + «Entrar»), que es el camino principal. | §10.4 |
+| E8 | No hay captura del enlace personal («Eres Marta» + «Entrar»), que es el camino principal. | §10.4 |
 
 ### 2.2 Invitar (§10.3)
 
@@ -134,12 +134,12 @@ Lo que está bien: una frase grande, una barra y renglones; sin tabla ni gráfic
 | H8 | «71,22 €» aparece tres veces en 150 px: cifra grande, «Faltan 71,22 €» y, tras tocar, el importe de la hoja. | — |
 | H9 | «Papá te dio» bajo «Lo que has puesto». | — |
 | H10 | «La lleva Alberto» está en el cuerpo, no como subtítulo de la cabecera. | §10.9 |
-| H11 | Papá ve 84,97 € por lo de Mamá, Alberto ve 84,98 € y el panel de la lista dice «sale a 84,98 € por persona» a todos. Es el reparto del céntimo, pero la frase del panel no es cierta para todos. | — |
+| H11 | Papá ve 84,97 € por lo de Marta, Alberto ve 84,98 € y el panel de la lista dice «sale a 84,98 € por persona» a todos. Es el reparto del céntimo, pero la frase del panel no es cierta para todos. | — |
 | H12 | Sin captura de: «Estás al día», «te tiene que devolver», «falta elegir quién lleva la hucha», la hoja «Ya se lo di» ni el estado vacío. | §10.9 |
 
 ### 2.4 Ya comprado (§10.7)
 
-Lo que está bien: título, nombre del regalo, precio prerrellenado, chip «Mamá no ve esto» y «Guardar» a todo el ancho. Son dos toques.
+Lo que está bien: título, nombre del regalo, precio prerrellenado, chip «Marta no ve esto» y «Guardar» a todo el ancho. Son dos toques.
 
 | # | Problema | Spec |
 |---|---|---|
@@ -151,7 +151,7 @@ Lo que está bien: título, nombre del regalo, precio prerrellenado, chip «Mam�
 
 ### 2.5 Plaza libre (§10.2)
 
-Bien resuelta: avatar de contorno discontinuo, «Aún no ha entrado · 1 regalo», barra de presupuesto y, solo para el admin, «Invitar»; Mamá ve la flecha en su lugar. Es `secondary` y la spec decía `ghost`, pero lo prefiero así: se lee como botón.
+Bien resuelta: avatar de contorno discontinuo, «Aún no ha entrado · 1 regalo», barra de presupuesto y, solo para el admin, «Invitar»; Marta ve la flecha en su lugar. Es `secondary` y la spec decía `ghost`, pero lo prefiero así: se lee como botón.
 
 Falta comprobar, porque no hay captura: la frase «Tía Loli aún no ha entrado. Cuando entre, dejará de ver todo esto.» dentro de su lista (DESIGN §6) y la pantalla «Quién está».
 
@@ -184,7 +184,7 @@ Sin captura. Juzgado solo por `Group.tsx:59–95`.
 | P0-4 | `InviteSheet`, fila de añadir | Campo y botón con `height: 48px` los dos y `align-items: stretch`. Etiqueta visible «Añadir a alguien» sobre el campo y texto de ayuda **«Nombre»**. Quitar `autoFocus` del campo. |
 | P0-5 | `Hucha.tsx:62–76` | El segundo pago, igual que el primero: `secondary`, `wide`, 48 px, etiqueta **«Ya se lo di a Samira»**. Mismo ancho y alto que el primario en móvil y en escritorio. |
 | P0-6 | `Hucha.tsx:143–144`, `.rows .btn` | `min-width: 104px` para «Me lo dio» y «Se lo di», alineados a la derecha. |
-| P0-7 | `.members` (escritorio) | Las tarjetas de una fila deben medir lo mismo: hoy «Tu lista» mide unos 115 px y «Juan Carlos», a su lado, unos 131. `.members > * { height: 100%; align-self: stretch; }` y, en la propia, `align-content: space-between`. |
+| P0-7 | `.members` (escritorio) | Las tarjetas de una fila deben medir lo mismo: hoy «Tu lista» mide unos 115 px y «Javier», a su lado, unos 131. `.members > * { height: 100%; align-self: stretch; }` y, en la propia, `align-content: space-between`. |
 | P0-8 | `Join.tsx`, cabecera | Título de cabecera: **«Navidad en familia»** (nombre del grupo). Subtítulo en `--on-box-2` 15/400: **«24 de diciembre · lo organiza Alberto»**. Se elimina «Bienvenida» y la línea gris duplicada del cuerpo. |
 | P0-9 | `App.tsx`, ruta de entrada | En la pantalla de entrar no se pinta ni la barra de pestañas ni el raíl. Comprobarlo también fuera de la demo. |
 | P0-10 | `.btn:disabled` | Sustituir `opacity: 0.45` por `background: var(--sunken); color: var(--ink-2); border-color: transparent; opacity: 1` (6,39:1). «Elige tu nombre» tiene que poder leerse. |

@@ -58,7 +58,7 @@ El comando crea tu cuenta y el grupo, en el que eres quien organiza, e imprime u
 ## 4. Invita a la familia por WhatsApp (2 min)
 
 1. En el grupo, pulsa el icono de **Invitar** (arriba a la derecha).
-2. Para cada persona que ya sabes que viene (Mamá, Papá, los abuelos), pulsa **«Añadir a alguien»**, escribe su nombre y pulsa **«Enviar enlace»**. Se abre WhatsApp con su enlace, que es **personal y de un solo uso**: mándaselo por privado.
+2. Para cada persona que ya sabes que viene (Marta, Papá, los abuelos), pulsa **«Añadir a alguien»**, escribe su nombre y pulsa **«Enviar enlace»**. Se abre WhatsApp con su enlace, que es **personal y de un solo uso**: mándaselo por privado.
 3. Para el resto está **«Enlace para todos»**: cada uno elige su nombre o lo escribe, y tú lo aceptas comprobando el código de 4 cifras que le sale («Alguien quiere entrar como Tía Loli · código 4821»).
 
 > Mensaje que puedes copiar: «Este año hacemos la lista de regalos con Lazo, que es de casa. Toca el enlace y elige tu nombre: no hace falta contraseña. Lo que te regalen será sorpresa 🎁 [enlace]».
@@ -67,11 +67,11 @@ El comando crea tu cuenta y el grupo, en el que eres quien organiza, e imprime u
 
 Necesitas dos móviles, o un móvil y una ventana de incógnito del ordenador.
 
-1. **Como Mamá:** entra con su enlace personal y añade dos regalos a su lista.
-2. **Como tú:** abre la lista de Mamá, reserva uno y marca el otro como «Ya comprado». Ponle presupuesto («Cambiar» en su lista).
-3. **Vuelve a Mamá** y recarga:
+1. **Como Marta:** entra con su enlace personal y añade dos regalos a su lista.
+2. **Como tú:** abre la lista de Marta, reserva uno y marca el otro como «Ya comprado». Ponle presupuesto («Cambiar» en su lista).
+3. **Vuelve a Marta** y recarga:
    - En su lista **no aparece** ni la cinta, ni «Reservado», ni «Comprado», ni el presupuesto. Solo lo que pidió.
-   - Apunta una sorpresa para ella desde tu móvil: a Mamá **no le aparece**, ni contada.
+   - Apunta una sorpresa para ella desde tu móvil: a Marta **no le aparece**, ni contada.
    - En su campana de avisos no hay nada sobre su propia lista.
 4. Si los tres puntos se cumplen, la regla funciona. Lo garantiza el servidor, no solo la pantalla, y las pruebas automáticas (`server/test/rules.test.mjs` y `flujo.test.mjs`) lo comprueban persona a persona.
 

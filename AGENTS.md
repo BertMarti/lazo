@@ -20,7 +20,7 @@ Lazo es una app de listas de regalos en familia: PWA + Android (Capacitor) sobre
 
 - **Este PC (Windows con Smart App Control):** npm, Vite, Vitest y Playwright se ejecutan en WSL. Desde Git Bash: `bash scripts/wsl.sh npm run check`.
 - `npm run check` pasa lint, tipos y tests unitarios. `npx playwright test` pasa los E2E. Para las capturas de diseño: `CAPTURAS=docs/design/vX npx playwright test e2e/capturas.spec.ts`.
-- **Demo:** `npm run dev:demo` y `npm run build:demo` usan `DemoApi`, con la familia Alberto, Juan Carlos, Samira, Mamá y Papá, y sin backend.
+- **Demo:** `npm run dev:demo` y `npm run build:demo` usan `DemoApi`, con la familia Alberto, Javier, Samira, Marta y Papá, y sin backend.
 - **Servidor:** `npm run build:server` (genera `meta.mjs` y `pb_hooks/lib/draw.cjs`), `npm run test:server` y, con el binario, `PB_BIN=… node --test server/test/rules.test.mjs`.
 - **APK:** `bash scripts/wsl.sh bash scripts/build-apk.sh`.
 - **IA en vivo (opcional):** con las claves gratuitas en `.env.local` (ignorado por git): `set -a; . ./.env.local; set +a; npm run test:live`. Sin claves, esas pruebas se saltan. Nunca imprimas ni subas las claves; el pre-commit y gitleaks las bloquean.

@@ -51,7 +51,7 @@ export function Seal({ status, mine }: { status: ItemStatus; mine?: boolean; ani
 export const statusLabel = (s: ItemStatus) =>
   s.kind === 'partial' && s.percent !== undefined ? `A medias · ${s.percent} %` : SEAL_LABEL[s.kind];
 
-/** El chip de la regla: «Mamá no ve esto». Único chip dorado de la app. */
+/** El chip de la regla: «Marta no ve esto». Único chip dorado de la app. */
 export function VisibilityNote({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <p className={wide ? 'notice' : 'vis'}>

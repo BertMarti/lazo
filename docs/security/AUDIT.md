@@ -70,7 +70,7 @@ Desde las colecciones que X puede leer (`groups`, `lists`, `items`, `users`, `dr
 | Modo demo | Cubierta | `DemoApi.listDetail` aplica `canSeeStatus`; los datos son de ejemplo y viven en el navegador (no es una frontera de seguridad, y no pretende serlo) |
 | Imagen del regalo como baliza | Parcial → R-6 | X ve quién abre su lista, no el estado |
 | Superusuario, copia de `data.db`, backups | Fuera de LA REGLA | Quien administra el homelab puede leerlo todo. Documentarlo |
-| Deducción por ausencia | Inherente | «Mamá ha comprado para todos menos para mí» se deduce mirando las otras listas |
+| Deducción por ausencia | Inherente | «Marta ha comprado para todos menos para mí» se deduce mirando las otras listas |
 
 ## 1.3 Hallazgos
 
@@ -581,7 +581,7 @@ Fecha: 2026-11-11 · Alcance: `1762850000_lazo.js`, `1762860000_plazas_hucha.js`
 
 Al quitar un regalo propio, si tenía reservas, compras o aportaciones se marca `removed`; si no, se borra. La respuesta al borrado es la misma (204), pero después `gift` lo delata: para el dueño, un regalo `removed` sigue existiendo y devuelve **403** «No puedes reservar regalos de tu propia lista.»; uno borrado de verdad devuelve **404**.
 
-**Ataque.** Mamá quiere saber si ya le han cogido la batidora (id `A`, lo ve en su lista):
+**Ataque.** Marta quiere saber si ya le han cogido la batidora (id `A`, lo ve en su lista):
 
 ```
 DELETE /api/collections/items/records/A                      → 204 (siempre)
@@ -629,7 +629,7 @@ return e.noContent(204);
 
 `received` calcula al vuelo sobre todo lo `bought`. Si nadie pulsa `close`, la entrega queda abierta para siempre.
 
-**Escenario.** Se abre el 24 de diciembre. El 3 de enero Papá compra el regalo de Reyes de Mamá. Mamá abre «Ver qué me regalaron» y lo ve con título y «de parte de Papá». Tras la primera apertura, X tiene un canal permanente sobre las compras de su plaza.
+**Escenario.** Se abre el 24 de diciembre. El 3 de enero Papá compra el regalo de Reyes de Marta. Marta abre «Ver qué me regalaron» y lo ve con título y «de parte de Papá». Tras la primera apertura, X tiene un canal permanente sobre las compras de su plaza.
 
 **Corrección.** Revelar solo lo comprado antes de abrir:
 
@@ -773,7 +773,7 @@ Las reglas de `gift` (modos, unidades, aportaciones, `paidBy`, `unbuy`), `contri
 
 - **Corregidos:** V-8 (`gift`, aportaciones y borrado de regalos releen y comprueban dentro de la transacción), V-9 (migración `1762870000_endurecer.js`: etiqueta `GET /api/lazo/received/`), V-10 (no se puede borrar la cuenta con una plaza ocupada ni siendo dueño), V-11 (la plaza del tesorero o del suplente no se borra), V-12 (`buyMode` obligatorio; `drawRounds` a 0 al crear), V-13 a–e (liberar limpia `approvedBy` y las solicitudes; el traspaso mueve `items.createdBy`; rechazar borra la solicitud y el cliente lo lee como «rechazada»; sin nombres repetidos al crear plazas ni al aceptar; compra y aportación sobre un retirado → 400) y V-15 (paridad de la demo: `saveItem`, `deleteItem`, `purchases`, `inviteInfo`, `releasePlaza`, `decideJoin` y traspaso de sorpresas).
 - **V-14:** se mantiene como diferencia documentada con la spec (sin impacto de seguridad).
-- `server/test/rules.test.mjs`: **22/22 en verde contra PocketBase 0.40.6**, con PB-2 (no interferencia byte a byte para Mamá), PB-3 (plaza con historial antes de reclamarla), PB-9 (20 reservas simultáneas → 1 fila), PB-14 (lotes con `expand` y `_via_`), PB-17 (enlace usado ≡ falso) y una prueba de V-9/V-10/V-11/V-13.
+- `server/test/rules.test.mjs`: **22/22 en verde contra PocketBase 0.40.6**, con PB-2 (no interferencia byte a byte para Marta), PB-3 (plaza con historial antes de reclamarla), PB-9 (20 reservas simultáneas → 1 fila), PB-14 (lotes con `expand` y `_via_`), PB-17 (enlace usado ≡ falso) y una prueba de V-9/V-10/V-11/V-13.
 - PB-13 (2026-11-11): las cuentas de la hucha (`core/hucha`) de cada miembro, calculadas con lo que el servidor le entrega, coinciden con las esperadas y no cambian por lo que pasa en su plaza. **23/23 en verde.** No queda ninguna prueba pendiente.
 
 ## Auditoría v0.5 (Fable 5.2)
@@ -828,7 +828,7 @@ Son las únicas rutas de colección que usa `src/api/pocketbase.ts`. Validar con
 
 `trusted_proxies static private_ranges` no confía solo en cloudflared: confía en todo el que llegue desde una IP privada. Eso incluye la wifi de casa (`192.168.x`) y la pasarela de Docker, que es lo que ve Caddy cuando la conexión entra por `docker-proxy` (IPv6 sin NAT de Docker, Docker sin root). Además `cloudflared` y `pocketbase` comparten la red `publica`.
 
-**Escenario.** X, desde la wifi de casa, manda `CF-Connecting-IP: 203.0.113.N` con un N distinto en cada petición: ningún límite por IP le cuenta (`*:auth`, `device-claim`, `join`, `/api/`). O pone la IP del móvil de Mamá y le agota `POST /api/lazo/join` (10 por minuto): Mamá no puede entrar. Aparte: quien controle el panel de Cloudflare puede apuntar el túnel a `pocketbase:8090` y saltarse todos los bloqueos de Caddy.
+**Escenario.** X, desde la wifi de casa, manda `CF-Connecting-IP: 203.0.113.N` con un N distinto en cada petición: ningún límite por IP le cuenta (`*:auth`, `device-claim`, `join`, `/api/`). O pone la IP del móvil de Marta y le agota `POST /api/lazo/join` (10 por minuto): Marta no puede entrar. Aparte: quien controle el panel de Cloudflare puede apuntar el túnel a `pocketbase:8090` y saltarse todos los bloqueos de Caddy.
 
 **Arreglo.** Confiar en una sola IP, la de cloudflared, en una red propia.
 
@@ -905,7 +905,7 @@ He probado esta variante en una copia (con topes de 2000 y 1000): los seis fiche
 
 `seenFacts` guarda `Facts` en `lazo:avisos:<id>`, con `due` en céntimos, y nadie lo borra: no hay cierre de sesión, y cuando el token caduca o se anula (`resume()`), la clave se queda. Hasta la v0.4 `localStorage` no guardaba nada derivado de respuestas (tabla de vías de fuga, fila «`localStorage` del cliente real»).
 
-**Escenario.** Papá usó Lazo en el ordenador del salón; su sesión ya no vale (pulsó «cerrar sesión en todos los dispositivos» desde el móvil). Mamá abre su enlace personal en ese navegador y entra con su cuenta. En las herramientas del navegador lee `lazo:avisos:<id de Papá>` → `due`. Lo que debe Papá es la suma de sus partes en todas las plazas menos la suya, **incluida la de Mamá**. Mamá conoce las demás plazas, resta y obtiene cuánto se ha gastado con la hucha en sus regalos (exacto si Papá aún no ha pagado nada o si Mamá es la tesorera). Rompe la regla por deducción. Hace falta navegador compartido: por eso no es alto.
+**Escenario.** Papá usó Lazo en el ordenador del salón; su sesión ya no vale (pulsó «cerrar sesión en todos los dispositivos» desde el móvil). Marta abre su enlace personal en ese navegador y entra con su cuenta. En las herramientas del navegador lee `lazo:avisos:<id de Papá>` → `due`. Lo que debe Papá es la suma de sus partes en todas las plazas menos la suya, **incluida la de Marta**. Marta conoce las demás plazas, resta y obtiene cuánto se ha gastado con la hucha en sus regalos (exacto si Papá aún no ha pagado nada o si Marta es la tesorera). Rompe la regla por deducción. Hace falta navegador compartido: por eso no es alto.
 
 **Arreglo.** Que lo visto muera con la sesión. En `src/core/avisos.ts`, dentro de `seenFacts`:
 
@@ -922,7 +922,7 @@ He probado esta variante en una copia (con topes de 2000 y 1000): los seis fiche
 
 y en `src/App.tsx`, al montar y cada vez que cambie `api.me()?.id`: `if (!api.demo) seenFacts.forget(api.me()?.id);` (la demo cambia de persona a propósito y no es frontera). Actualizar la fila de `localStorage` en la tabla de vías de fuga.
 
-**Prueba.** En `test/core/avisos.test.ts`, con un `localStorage` falso: `seenFacts.set('papa', …)`, `seenFacts.forget('mama')` → no queda ninguna clave `lazo:avisos:papa`; `seenFacts.forget()` → no queda ninguna.
+**Prueba.** En `test/core/avisos.test.ts`, con un `localStorage` falso: `seenFacts.set('papa', …)`, `seenFacts.forget('marta')` → no queda ninguna clave `lazo:avisos:papa`; `seenFacts.forget()` → no queda ninguna.
 
 ### V-20 · Bajo · `flujo.test.mjs` no cubre la regla entera, y la prueba de avisos solo corre contra la demo
 
@@ -1011,7 +1011,7 @@ El tope es de 5 MB **comprimidos**. Un `.xlsx` de ese tamaño puede inflarse a c
 
 No es una fuga: el mensaje solo lleva lo tuyo. Pero si quien organiza repite el sorteo, el mensaje que te reenviaste sigue diciendo el nombre antiguo y nada lo distingue.
 
-**Escenario.** Papá se envía «te toca regalar a Juan Carlos». Se repite el sorteo y ahora le toca Samira. Papá mira su chat, compra para Juan Carlos y Samira se queda sin regalo: se descubre que hubo dos sorteos y quién tenía a quién.
+**Escenario.** Papá se envía «te toca regalar a Javier». Se repite el sorteo y ahora le toca Samira. Papá mira su chat, compra para Javier y Samira se queda sin regalo: se descubre que hubo dos sorteos y quién tenía a quién.
 
 **Arreglo.** Pasar `drawRounds` a `shareMessage` y empezar por «Amigo invisible de {grupo} (sorteo n.º {n}): …». El aviso «Han hecho el sorteo» ya salta con cada sorteo nuevo.
 
@@ -1041,7 +1041,7 @@ No es una fuga: el mensaje solo lleva lo tuyo. Pero si quien organiza repite el 
 
 ### Estado de los bajos (2026-11-12, Opus 5.5): V-20 a V-25 corregidos
 
-- **V-20:** prueba nueva en `server/test/rules.test.mjs` («V-20: …»): `src/core/avisos.ts` empaquetado con esbuild (como PB-13) calcula los `Facts` de Mamá con las mismas consultas que `PocketBaseApi.hucha()` y `drawInfo()`. Con las filas del superusuario (sorpresas y reservas de su plaza incluidas) salen los mismos `Facts` que con su token, y tras sorpresas nuevas, reservas, una compra con la hucha y una reserva en su plaza no cambian ni dan aviso. Comprobado que falla si `buildFacts` deja pasar las sorpresas de la plaza propia. Siguen sin hacer los otros puntos de V-20 sobre `flujo.test.mjs` (`view()` antes y después, `PB_BIN` obligatorio en CI, pasos de entrega y de quitar un regalo reservado).
+- **V-20:** prueba nueva en `server/test/rules.test.mjs` («V-20: …»): `src/core/avisos.ts` empaquetado con esbuild (como PB-13) calcula los `Facts` de Marta con las mismas consultas que `PocketBaseApi.hucha()` y `drawInfo()`. Con las filas del superusuario (sorpresas y reservas de su plaza incluidas) salen los mismos `Facts` que con su token, y tras sorpresas nuevas, reservas, una compra con la hucha y una reserva en su plaza no cambian ni dan aviso. Comprobado que falla si `buildFacts` deja pasar las sorpresas de la plaza propia. Siguen sin hacer los otros puntos de V-20 sobre `flujo.test.mjs` (`view()` antes y después, `PB_BIN` obligatorio en CI, pasos de entrega y de quitar un regalo reservado).
 - **V-21:** `src/core/meta.ts`: `og:url` solo cuenta si es del mismo host que la página, y la tienda reconocida por dominio gana a `og:site_name`. Prueba en `test/core/meta.test.ts`.
 - **V-22:** `docs/HOMELAB.md` §2 pide `chmod 700 data/pb data/caddy data/backups` y `chmod 600 .env`, y §7 lo comprueba con `stat`. `server/backup/lazo-backup.sh` cifra las copias con `BACKUP_PASSPHRASE` (`openssl enc -aes-256-cbc -pbkdf2`, `lazo-….tar.gz.enc`), las descifra al restaurar (con una clave mala no borra nada) y rota `antes-de-restaurar-*` (se quedan tres). El contenedor `backup` lleva `no-new-privileges` y `openssl`. Prueba en `server/test/backup.test.mjs` (sh, tar y openssl de verdad; sqlite3 falso).
 - **V-23:** la opción C de la guía pide «Always Use HTTPS», y §7 lo comprueba (`curl -sI http://…` → 301). `cloudflared` queda en `2026.10.7@sha256:4955524a…`, y `alpine:3.22` (`duckdns` y `backup`) en `@sha256:49340b34…`, digests comprobados contra el registro de Docker Hub el 2026-11-12. `LAZO_BIND` vale `127.0.0.1` por defecto. Pendiente: el token de DuckDNS sigue en la línea de órdenes de `wget`.
@@ -1088,15 +1088,15 @@ Fecha: 2026-11-12 · Alcance: todo el producto en `main` (árbol de trabajo sobr
 
 Quitar un regalo propio responde siempre 204, pero si tenía reservas, compras o aportaciones la fila sigue existiendo, oculta («retirado»). PocketBase deja que el cliente elija el `id` al crear, y la unicidad del id se valida sin mirar reglas. La dueña conoce el id de su regalo.
 
-**Comprobado** en PocketBase 0.40.6 (sonda S1 y S2), con Mamá como dueña:
+**Comprobado** en PocketBase 0.40.6 (sonda S1 y S2), con Marta como dueña:
 
-| Petición de Mamá | Regalo que estaba cogido | Regalo que estaba libre |
+| Petición de Marta | Regalo que estaba cogido | Regalo que estaba libre |
 |---|---|---|
 | `DELETE items/records/ID` | 204 | 204 |
 | `POST items/records` con `"id":"ID"` | **400** `validation_not_unique` | **200** |
 | `POST /api/batch` con `PUT items/records` e `"id":"ID"` | **400** (dentro, 404) | **200** |
 
-**Escenario.** Mamá quiere saber si ya le han cogido la bicicleta. La quita de su lista y la vuelve a crear con el mismo id. Si responde 200, estaba libre, y el regalo queda como estaba, con el mismo id. Si responde 400, alguien la tenía reservada o comprada. Vale para cualquier regalo suyo, uno a uno, y también meses después para regalos que quitó en su día. Es la misma fuga que V-1 y V-2 por otra puerta.
+**Escenario.** Marta quiere saber si ya le han cogido la bicicleta. La quita de su lista y la vuelve a crear con el mismo id. Si responde 200, estaba libre, y el regalo queda como estaba, con el mismo id. Si responde 400, alguien la tenía reservada o comprada. Vale para cualquier regalo suyo, uno a uno, y también meses después para regalos que quitó en su día. Es la misma fuga que V-1 y V-2 por otra puerta.
 
 **Arreglo.** Nadie salvo el superusuario elige ids, y los lotes solo crean (el cliente no usa otra cosa: `importItems`). En `lazo.pb.js`, junto al cortafuegos:
 
@@ -1123,7 +1123,7 @@ onBatchRequest((e) => {
 
 `exportGroup` recorta la plaza de quien descarga, pero de las demás guarda `reservas` (quién, estado, cuánto pagó), `aportaciones`, `sorpresas`, `retirados` y `presupuestoCents`. Al restaurar no se usa nada de eso: `parseCopia` solo lee `regalos`. Es un archivo JSON en claro, con nombre `lazo-<grupo>-<fecha>.json`, en la carpeta de descargas.
 
-**Escenario.** Papá organiza y descarga la copia en el ordenador de casa, o se la manda a Mamá «para que la guarde». Mamá abre el archivo y lee sus sorpresas, quién le ha comprado qué, por cuánto y su presupuesto. No hacen falta herramientas ni sesión, y el archivo no caduca. Es la vía de V-19 (navegador compartido), más fácil y portátil. La copia lleva además el año de nacimiento de los niños.
+**Escenario.** Papá organiza y descarga la copia en el ordenador de casa, o se la manda a Marta «para que la guarde». Marta abre el archivo y lee sus sorpresas, quién le ha comprado qué, por cuánto y su presupuesto. No hacen falta herramientas ni sesión, y el archivo no caduca. Es la vía de V-19 (navegador compartido), más fácil y portátil. La copia lleva además el año de nacimiento de los niños.
 
 **Arreglo.** La copia lleva solo lo que se restaura: los regalos pedidos de cada lista. En `copia.ts`, borrar `GiftSeen`, `propia`, `sorpresas`, `retirados` y `presupuestoCents`, y dejar una sola rama:
 
@@ -1144,7 +1144,7 @@ En `Settings.tsx:148`: «La copia lleva solo los regalos que pidió cada persona
 
 El único `authStore.clear()` es el de `resume()` cuando el token ya no vale. No hay botón de salir, y `/api/lazo/logout-all` existe en el servidor pero nada del cliente lo llama, aunque `SECURITY.md` lo cita como medida. La sesión dura 180 días y se renueva sola.
 
-**Escenario 1.** Papá entra con un código en la tableta del salón para apuntar regalos. No puede salir. Mamá abre Lazo en la tableta, es Papá, y ve quién ha reservado qué en su lista.
+**Escenario 1.** Papá entra con un código en la tableta del salón para apuntar regalos. No puede salir. Marta abre Lazo en la tableta, es Papá, y ve quién ha reservado qué en su lista.
 
 **Escenario 2.** Roban o se pierde el móvil de quien organiza. Su plaza no se puede liberar (`plaza-release` excluye al dueño) y él no tiene desde dónde anular la sesión: quien tenga el móvil sigue dentro, como admin, hasta que alguien entre al servidor como superusuario.
 
@@ -1292,7 +1292,7 @@ Fecha: 2026-11-12 · Sobre `main` en `7e8a23d` (los arreglos entraron en `1c898c
 | V-30 | **Resuelto en el proceso, sin verificar el artefacto** | `scripts/firmar-apk.sh` hace `assembleRelease`, firma con una clave fuera del repo (contraseña por fichero, no en la línea de órdenes) y `dist-apk/` está ignorado. `versionName` ya es 1.0.0. No he construido ni abierto el APK firmado |
 | V-31 | **Resuelto** | `SECURITY.md` recoge el enlace de solo lectura, la copia, los lotes, la sesión, el APK y «Quien aloja el servidor» |
 
-**Lote `POST` con `?expand=…_via_`.** El cortafuegos **no** lo para: solo mira la URL exterior (`/api/batch`), y la petición interior responde 200. **No filtra nada**, porque cada salto del `expand` pasa por la regla de la colección de destino. Probado con Mamá creando un regalo en su lista (que tenía una reserva viva, un presupuesto, un regalo retirado y una sorpresa) con `expand=list.items_via_list.claims_via_item,list.budgets_via_list,list.items_via_list.contributions_via_item,claims_via_item`: la respuesta trae solo sus regalos visibles, sin reservas, presupuesto, retirado ni sorpresa. Control: la misma consulta hecha por Samira sí trae la reserva y el presupuesto. Un `filter` con `_via_` en la URL interior de un `POST` se ignora. El mismo `expand` fuera de un lote da 403.
+**Lote `POST` con `?expand=…_via_`.** El cortafuegos **no** lo para: solo mira la URL exterior (`/api/batch`), y la petición interior responde 200. **No filtra nada**, porque cada salto del `expand` pasa por la regla de la colección de destino. Probado con Marta creando un regalo en su lista (que tenía una reserva viva, un presupuesto, un regalo retirado y una sorpresa) con `expand=list.items_via_list.claims_via_item,list.budgets_via_list,list.items_via_list.contributions_via_item,claims_via_item`: la respuesta trae solo sus regalos visibles, sin reservas, presupuesto, retirado ni sorpresa. Control: la misma consulta hecha por Samira sí trae la reserva y el presupuesto. Un `filter` con `_via_` en la URL interior de un `POST` se ignora. El mismo `expand` fuera de un lote da 403.
 
 **Mejoras que no bloquean.**
 
@@ -1442,9 +1442,9 @@ No se quitan `<` ni `>`: el título se guarda tal cual y **se pinta siempre como
 - Los regalos los crea el cliente por el camino que ya existe (lote de `POST` troceado en 50, V-26), con las reglas de siempre: cada cual escribe solo en su plaza.
 - **El «ya lo tienes» se calcula en el cliente**, sobre los regalos que la dueña ve. El servidor nunca deduplica por ASIN.
 
-**Escenario.** Mamá quitó de su lista unos auriculares que ya estaban reservados: la fila sigue existiendo, oculta para ella. Reimporta su lista de Amazon. Si el servidor dijera «1 duplicado omitido», o creara 11 filas en vez de 12, sabría que alguien se los ha cogido. Es el oráculo de V-26 por otra puerta.
+**Escenario.** Marta quitó de su lista unos auriculares que ya estaban reservados: la fila sigue existiendo, oculta para ella. Reimporta su lista de Amazon. Si el servidor dijera «1 duplicado omitido», o creara 11 filas en vez de 12, sabría que alguien se los ha cogido. Es el oráculo de V-26 por otra puerta.
 
-**Prueba.** En `server/test/rules.test.mjs`, junto a PB-10: Mamá tiene dos regalos de Amazon, A (reservado por Samira) y B (libre); quita los dos; importa una lista que contiene ambos ASIN. La respuesta de `amazon-import` y la del lote de creación tienen el mismo estado y la misma forma para A y para B, se crean dos filas nuevas y `GET items` de Mamá muestra lo mismo en los dos casos. Además: `amazon-import` devuelve lo mismo llamada por Mamá que por Samira con el mismo enlace (no depende del estado de nadie).
+**Prueba.** En `server/test/rules.test.mjs`, junto a PB-10: Marta tiene dos regalos de Amazon, A (reservado por Samira) y B (libre); quita los dos; importa una lista que contiene ambos ASIN. La respuesta de `amazon-import` y la del lote de creación tienen el mismo estado y la misma forma para A y para B, se crean dos filas nuevas y `GET items` de Marta muestra lo mismo en los dos casos. Además: `amazon-import` devuelve lo mismo llamada por Marta que por Samira con el mismo enlace (no depende del estado de nadie).
 
 ### AMZ-12 · Límite por usuario y límite global
 

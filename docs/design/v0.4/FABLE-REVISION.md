@@ -30,7 +30,7 @@ La dirección está bien construida y el salto respecto a la v0.3 es real, pero 
 
 ## 3. ¿Genérico o hecho por IA?
 
-No. La etiqueta de precio girada, la cinta en cruz y el papel crema dan un mundo propio; la portada de grupos y el tablero de la lista son reconocibles. Quedan tres restos de plantilla, ninguno bloqueante: los enlaces de texto en terracota con icono suelto («Apuntar una sorpresa», «Ideas para Mamá»), el panel de presupuesto con cuatro líneas de contabilidad seguidas y la pantalla de ajustes, que es un formulario sin más.
+No. La etiqueta de precio girada, la cinta en cruz y el papel crema dan un mundo propio; la portada de grupos y el tablero de la lista son reconocibles. Quedan tres restos de plantilla, ninguno bloqueante: los enlaces de texto en terracota con icono suelto («Apuntar una sorpresa», «Ideas para Marta»), el panel de presupuesto con cuatro líneas de contabilidad seguidas y la pantalla de ajustes, que es un formulario sin más.
 
 ## 4. Composición, pantalla a pantalla
 
@@ -62,7 +62,7 @@ No. La etiqueta de precio girada, la cinta en cruz y el papel crema dan un mundo
 
 7. **«Deshacer» ilegible en oscuro.** `.toast .btn-link { color: var(--oro); }` da 1,6:1 sobre el fondo crema del aviso en oscuro. Cambiar a `color: var(--oro-suave);`: contraste alto en los dos modos.
 
-8. **Avisos de frase entera a 16 px.** En la lista propia y en la hucha, sustituir `VisibilityNote` (`.vis`, 14 px) por `<p className="notice">` con el mismo icono, para «Tú no ves quién te regala qué. Los demás sí.» y «Aquí no sale lo que se gasta en ti». `.vis` queda solo para «Mamá no ve esto».
+8. **Avisos de frase entera a 16 px.** En la lista propia y en la hucha, sustituir `VisibilityNote` (`.vis`, 14 px) por `<p className="notice">` con el mismo icono, para «Tú no ves quién te regala qué. Los demás sí.» y «Aquí no sale lo que se gasta en ti». `.vis` queda solo para «Marta no ve esto».
 
 9. **Unirse: que los abuelos reconozcan a la familia.** En `Join.tsx`, bajo el `h1`, añadir una fila `.faces` con un `Avatar size="md"` por miembro del grupo. En cada `label.choice` de plaza (línea 104), añadir un `Avatar` de 40 px entre el radio y el nombre. En `styles.css`, `.choice { min-height: 64px; }`.
 
@@ -103,7 +103,7 @@ Con esos dos cambios y una captura nueva de `sorteo-375.png` que muestre el tít
 | 5 | Rejilla de personas | Resuelto | Las seis en una fila a 1280 px. |
 | 6 | Sorteo | **Parcial, bloquea** | Lazo y textos nuevos puestos, pero el título queda tapado. Además sigue «sobre» en `Draw.tsx`, líneas 49, 68 y 148. |
 | 7 | «Deshacer» en oscuro | Resuelto en código | `.toast .btn-link { color: var(--oro-suave); }`. Sin captura. |
-| 8 | Avisos a 16 px | Resuelto | Lista propia y hucha usan `.notice`; «Mamá no ve esto» sigue en pastilla. |
+| 8 | Avisos a 16 px | Resuelto | Lista propia y hucha usan `.notice`; «Marta no ve esto» sigue en pastilla. |
 | 9 | Unirse | Parcial, no bloquea | `.choice` mide 64 px. Faltan la fila de avatares (tarea 8, aceptada) y el avatar en cada opción. |
 | 10 | Cabecera | Resuelto | El ojo no se encoge, «faltan 42 días» va junto y los enlaces de volver nombran el destino. Las tres etiquetas me valen. |
 

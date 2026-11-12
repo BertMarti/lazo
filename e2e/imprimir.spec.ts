@@ -12,12 +12,12 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('imprimir la lista de Mamá: QR y ningún estado, aunque Samira los vea', async ({ page }) => {
-  await page.goto('/#/l/l-mama');
+test('imprimir la lista de Marta: QR y ningún estado, aunque Samira los vea', async ({ page }) => {
+  await page.goto('/#/l/l-marta');
   await expect(page.getByText('Lo reserva Alberto')).toBeVisible(); // Samira sí ve los estados en la app
   await page.getByRole('button', { name: 'Imprimir la lista' }).click();
-  await expect(page).toHaveURL(/#\/imprimir\/l-mama$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Mamá' })).toBeVisible();
+  await expect(page).toHaveURL(/#\/imprimir\/l-marta$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Marta' })).toBeVisible();
   await expect(page.locator('.catalog-qr').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Imprimir o guardar en PDF' })).toBeVisible();
   const text = await page.locator('main').innerText();
@@ -48,7 +48,7 @@ test('compartir mi lista en solo lectura y abrirla en #/ver', async ({ page }) =
 });
 
 test('en papel: dice qué es, una columna, marca en color y QR explicado', async ({ page }) => {
-  await page.goto('/#/imprimir/l-juancarlos');
+  await page.goto('/#/imprimir/l-javier');
   await expect(page.getByText(/^Lista de regalos · /)).toBeVisible();
   await expect(page.getByText('apunta al cuadrado con la cámara del móvil')).toBeVisible();
   await expect(page.locator('.catalog-brand')).toBeHidden(); // en pantalla ya está la de la cabecera
@@ -61,6 +61,6 @@ test('en papel: dice qué es, una columna, marca en color y QR explicado', async
   if (process.env.PAPEL && test.info().project.name === 'escritorio') {
     await page.waitForLoadState('networkidle');
     await page.waitForFunction(() => document.fonts.status === 'loaded' && [...document.images].every((i) => i.complete));
-    await page.pdf({ path: `${process.env.PAPEL}/imprimir-juancarlos.pdf`, format: 'A4' });
+    await page.pdf({ path: `${process.env.PAPEL}/imprimir-javier.pdf`, format: 'A4' });
   }
 });

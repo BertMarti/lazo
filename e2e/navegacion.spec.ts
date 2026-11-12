@@ -14,13 +14,13 @@ test('desde Tus grupos se entra en el grupo y se vuelve', async ({ page }) => {
   await expect(page).toHaveURL(/#\/g\/navidad$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Navidad en familia' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Familia' })).toBeVisible();
-  await page.getByRole('link', { name: /Mamá/ }).first().click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Mamá' })).toBeVisible();
+  await page.getByRole('link', { name: /Marta/ }).first().click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Marta' })).toBeVisible();
   await page.goBack();
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Tus grupos' })).toBeVisible();
-  await page.getByRole('link', { name: /Cumpleaños de Mamá/ }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Cumpleaños de Mamá' })).toBeVisible();
+  await page.getByRole('link', { name: /Cumpleaños de Marta/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Cumpleaños de Marta' })).toBeVisible();
 });
 
 // «Entrar en otro móvil»: en Ajustes se pide un código y se ve en grande con su caducidad.
