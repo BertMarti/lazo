@@ -30,9 +30,11 @@ IN=android/app/build/outputs/apk/release/app-release-unsigned.apk
 OUT="dist-apk/lazo-$VER.apk"
 mkdir -p dist-apk
 "$BT/zipalign" -f -p 4 "$IN" dist-apk/alineado.apk
-"$BT/apksigner" sign --ks "$KS" --ks-key-alias lazo --ks-pass "file:$PASS" --key-pass "file:$PASS" --out "$OUT" dist-apk/alineado.apk
+"$BT/apksigner" sign --ks "$KS" --ks-key-alias lazo --ks-pass "file:$PASS" --out "$OUT" dist-apk/alineado.apk
 rm -f dist-apk/alineado.apk "$OUT.idsig"
 "$BT/apksigner" verify --print-certs "$OUT" | grep -E "Signer #1 certificate (DN|SHA-256)"
 grep -q '"webContentsDebuggingEnabled": *false' android/app/src/main/assets/capacitor.config.json || { echo "¡WebView depurable!" >&2; exit 1; }
+# Condición de publicación de la auditoría final: el APK no puede ser depurable.
+[ "$("$BT/aapt2" dump badging "$OUT" | grep -c debuggable || true)" = "0" ] || { echo "¡APK depurable!" >&2; exit 1; }
 sha256sum "$OUT"
 echo "APK firmado: $OUT"

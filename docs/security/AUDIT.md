@@ -1276,3 +1276,28 @@ V-29 y V-31 pueden ir en la misma versión o en la siguiente. Con los puntos 1 y
 - **V-30:** el APK de release lo firma `scripts/firmar-apk.sh` (clave fuera del repo). `SECURITY.md` cuenta cómo se firma y la comprobación `aapt2 … | grep -c debuggable` → 0 antes de publicar. No se ha ejecutado aquí. Sigue `versionName "0.5.1"` en `android/app/build.gradle`.
 - **V-31:** `SECURITY.md` al día: lo que sale sin sesión (`shared` e `invite-info`), filas de enlace de solo lectura, copia del grupo, tiempo real, lotes, sesiones con los botones reales y APK; párrafo «Quien aloja el servidor» junto a R1; lista de pruebas con las de `server/test/*.test.mjs`.
 - **Pruebas:** `server/test/*.test.mjs` 63/63 contra PocketBase 0.40.6; `npm run check` en verde (194 pruebas de vitest, 4 saltadas); Playwright sin capturas 112 en verde y 8 saltadas.
+
+### Verificación final (Fable 5.2)
+
+Fecha: 2026-11-12 · Sobre `main` en `7e8a23d` (los arreglos entraron en `1c898ca`, merge `07ef237`).
+
+**Método.** Lectura del diff `1c5af63..HEAD`. Ejecutado: `server/test/*.test.mjs` contra PocketBase 0.40.6 (63/63), `test/core/copia.test.ts` y `test/api/signout.test.ts` (17/17), y una sonda nueva contra un PocketBase temporal con los hooks y migraciones actuales. Sin secretos en los commits nuevos. **No ejecutado:** `scripts/firmar-apk.sh`, el resto de vitest ni Playwright (doy por buenas las cifras de quien aplicó los arreglos), Caddy ni Docker. No se ha tocado código.
+
+| Id | Estado | Comprobación |
+|---|---|---|
+| V-26 | **Resuelto** | Sonda: `POST items/records` con el id de un regalo quitado da el mismo 400 y el mismo cuerpo estuviera cogido o libre, en JSON y en `multipart`. Lotes con `PUT`, `PATCH` y `DELETE`: el mismo 403 en los dos casos. PB-10 y PB-14 lo cubren |
+| V-27 | **Resuelto** | `exportGroup` tiene una sola rama y solo copia `name`, `kind`, `birthYear` y los regalos pedidos. La prueba exige que la copia sea idéntica la descargue quien la descargue |
+| V-28 | **Resuelto** | `signOut` y el bloque «Sesión» de Ajustes. Sonda: tras `logout-all`, `auth-refresh` con el token viejo da 401 y con el devuelto 200; el cliente no guarda el devuelto |
+| V-29 | **Resuelto** | Sonda: cinco `restore` seguidos dan 200, 200, 200, 429, 429 |
+| V-30 | **Resuelto en el proceso, sin verificar el artefacto** | `scripts/firmar-apk.sh` hace `assembleRelease`, firma con una clave fuera del repo (contraseña por fichero, no en la línea de órdenes) y `dist-apk/` está ignorado. `versionName` ya es 1.0.0. No he construido ni abierto el APK firmado |
+| V-31 | **Resuelto** | `SECURITY.md` recoge el enlace de solo lectura, la copia, los lotes, la sesión, el APK y «Quien aloja el servidor» |
+
+**Lote `POST` con `?expand=…_via_`.** El cortafuegos **no** lo para: solo mira la URL exterior (`/api/batch`), y la petición interior responde 200. **No filtra nada**, porque cada salto del `expand` pasa por la regla de la colección de destino. Probado con Mamá creando un regalo en su lista (que tenía una reserva viva, un presupuesto, un regalo retirado y una sorpresa) con `expand=list.items_via_list.claims_via_item,list.budgets_via_list,list.items_via_list.contributions_via_item,claims_via_item`: la respuesta trae solo sus regalos visibles, sin reservas, presupuesto, retirado ni sorpresa. Control: la misma consulta hecha por Samira sí trae la reserva y el presupuesto. Un `filter` con `_via_` en la URL interior de un `POST` se ignora. El mismo `expand` fuera de un lote da 403.
+
+**Mejoras que no bloquean.**
+
+- Segunda capa en `onBatchRequest`: rechazar también las peticiones interiores cuya `url` case `/_via_|@collection/i` tras descodificarla, para que el lote no dependa solo de las reglas.
+- `firmar-apk.sh` no comprueba `debuggable` por sí mismo; hoy es un paso manual de `SECURITY.md`. Añadir al script `"$BT/aapt2" dump badging "$OUT" | grep -q application-debuggable && exit 1`.
+- Siguen los bajos antiguos (G-12, G-4, V-20, token de DuckDNS, copias sin autenticación).
+
+**Veredicto: apto.** Con V-26 a V-29 corregidos y probados contra PocketBase real, no conozco ninguna vía por la que alguien vea o deduzca el estado de su propia lista desde su sesión, ni hay secretos en el repositorio o en los builds. Condición de publicación: el APK de la release sale de `scripts/firmar-apk.sh` y `aapt2 dump badging … | grep -c debuggable` da 0 antes de subirlo.
