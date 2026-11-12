@@ -621,3 +621,6 @@ table.map-table td { white-space: normal; vertical-align: middle; }
 table.map-table th[scope='row'] { background: none; font-weight: 700; white-space: normal; }
 .map-example { display: block; font-weight: 500; overflow-wrap: anywhere; }
 table.map-table .select { min-width: 9rem; }
+
+/* v10-copia */
+.copia .btn { max-width: 100%; height: auto; min-height: var(--btn-h); padding-block: var(--s-2); white-space: normal; line-height: 1.2; text-align: center; }

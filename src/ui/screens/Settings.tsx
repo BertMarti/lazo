@@ -1,10 +1,11 @@
-import { ArrowSquareOut, DeviceMobile } from '@phosphor-icons/react';
+import { ArrowSquareOut, DeviceMobile, DownloadSimple, UploadSimple } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { loadAi, PRESETS, saveAi, type AiSettings } from '../../ai/provider';
 import { suggestIdeas } from '../../ai/tasks';
-import { Button, ButtonGroup, ButtonLink } from '../Button';
-import { useApi } from '../ctx';
-import { errorText, useToast } from '../kit';
+import { COPIA_MAX, CopiaError, downloadCopia, exportGroup, parseCopia, restoreCopia } from '../../core/copia';
+import { Button, ButtonGroup, ButtonLink, FileButton } from '../Button';
+import { go, useApi } from '../ctx';
+import { errorText, useLoad, useToast } from '../kit';
 
 /** Ajustes de la IA. Opcional: sin IA, Lazo funciona igual (sinónimos para Excel e ideas de un catálogo local). */
 export function Settings() {
@@ -34,6 +35,7 @@ export function Settings() {
   return (
     <div className="stack-lg" style={{ maxWidth: 640 }}>
       <OtherDevice />
+      <GroupCopy />
       <section className="panel stack" aria-labelledby="ia">
         <h2 id="ia" className="h-section">Inteligencia artificial</h2>
         <p className="lead">Opcional: Lazo funciona igual sin IA. Ayuda a entender Excel raros y a pensar ideas de regalo. La clave se guarda solo en este dispositivo; el servidor de Lazo nunca la ve.</p>
@@ -74,6 +76,84 @@ export function Settings() {
         </ButtonGroup>
       </section>
     </div>
+  );
+}
+
+/** «Copia del grupo»: descargar lo que ves de un grupo que organizas y crear un grupo nuevo desde una copia. */
+function GroupCopy() {
+  const api = useApi();
+  const toast = useToast();
+  const me = api.me();
+  const { data } = useLoad(async () => {
+    const out = [];
+    for (const g of await api.groups()) {
+      const d = await api.groupDetail(g.id);
+      if (d.members.some((m) => m.id === me?.id && m.role === 'admin')) out.push(g);
+    }
+    return out;
+  }, [api, me?.id]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+  const download = async (id: string) => {
+    setBusy(id);
+    setErr('');
+    try {
+      downloadCopia(await exportGroup(api, id));
+      toast('Copia descargada.');
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const restore = async (file?: File) => {
+    if (!file) return;
+    setBusy('restore');
+    setErr('');
+    try {
+      if (file.size > COPIA_MAX.bytes) throw new CopiaError('El archivo es demasiado grande para ser una copia de Lazo.');
+      const id = await restoreCopia(api, parseCopia(await file.text()));
+      toast('Grupo creado. Envía a cada persona su enlace.');
+      go(`/g/${id}`);
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const groups = data ?? [];
+  return (
+    <section className="panel stack copia" aria-labelledby="copia">
+      <h2 id="copia" className="h-section">Copia del grupo</h2>
+      <p className="lead">Para empezar otra Navidad con las mismas personas y sus listas, o para llevaros el grupo a otro servidor. No es la copia de seguridad del servidor: esa la hace quien lo instala.</p>
+      {groups.length > 0 && (
+        <>
+          <p className="meta">La copia lleva lo que tú ves. De tu propia lista, solo los regalos que pediste: nada de lo que te preparan.</p>
+          <ButtonGroup>
+            {groups.map((g) => (
+              <Button key={g.id} variant="secondary" icon={DownloadSimple} loading={busy === g.id} onClick={() => download(g.id)}>
+                {groups.length === 1 ? 'Descargar copia' : `Descargar copia de ${g.name}`}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </>
+      )}
+      <p className="meta">Al crear un grupo desde una copia salen las mismas personas, con sitios libres para reenviarles el enlace, y los regalos que pidió cada una. Las reservas, compras y aportaciones no se copian: empezáis de cero.</p>
+      {err && <p className="notice notice-error" role="alert">{err}</p>}
+      <ButtonGroup>
+        <FileButton
+          variant="secondary"
+          icon={UploadSimple}
+          loading={busy === 'restore'}
+          input={<input type="file" className="sr-only" accept=".json,application/json" onChange={(e) => {
+            void restore(e.target.files?.[0]);
+            e.target.value = '';
+          }} />}
+        >
+          Crear un grupo desde una copia
+        </FileButton>
+      </ButtonGroup>
+    </section>
   );
 }
 

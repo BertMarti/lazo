@@ -96,6 +96,9 @@ export class PocketBaseApi implements Api {
       return drafts.length;
     });
 
+  restoreItems = (groupId: Id, lists: { list: Id; items: ItemInput[] }[]) =>
+    this.run(async () => (await this.pb.send<{ created: number }>('/api/lazo/restore', { method: 'POST', body: { group: groupId, lists } })).created);
+
   gift = (a: GiftAction) => this.run(async () => void (await this.pb.send('/api/lazo/gift', { method: 'POST', body: a })));
 
   contribute = (itemId: Id, amountCents: Cents) =>

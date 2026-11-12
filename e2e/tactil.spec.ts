@@ -23,7 +23,7 @@ for (const url of routes) {
           const r = (stretched ? (el.offsetParent as HTMLElement) : el).getBoundingClientRect();
           if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden') return false;
           if (el.closest('p, li > span, small, .meta')) return false; // enlace dentro de texto corrido
-          if (el.matches('input[type=radio], input[type=checkbox]') && el.closest('label')) return false; // cuenta la etiqueta
+          if (el.matches('input[type=radio], input[type=checkbox], input[type=file]') && el.closest('label')) return false; // cuenta la etiqueta (FileButton)
           return r.height < 44;
         })
         .map((el) => `${el.tagName.toLowerCase()}.${el.className} «${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30)}» ${Math.round(el.getBoundingClientRect().height)}px`),
