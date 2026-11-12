@@ -1,4 +1,5 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import { guardaCompartido } from './ui/compartido';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
@@ -49,6 +50,18 @@ async function start(srv: string | null) {
   render(<App api={pb} />);
 }
 void start(server);
+
+// Android: «Compartir → Lazo» con texto (la lista de Amazon seleccionada y compartida). Plugin propio en MainActivity.
+if (native) {
+  const share = registerPlugin<{ take(): Promise<{ text?: string }>; addListener(e: 'share', f: (d: { text?: string }) => void): Promise<unknown> }>('LazoShare');
+  const open = (text?: string) => {
+    if (!text) return;
+    guardaCompartido(text);
+    location.hash = '/amazon';
+  };
+  share.take().then((r) => open(r.text), () => {});
+  void share.addListener('share', (d) => open(d.text));
+}
 
 if (import.meta.env.PROD && !native && 'serviceWorker' in navigator) {
   void navigator.serviceWorker.register('sw.js').catch(() => {});

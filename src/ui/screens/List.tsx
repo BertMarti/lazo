@@ -27,7 +27,7 @@ import { ShareSheet } from './Printable';
 const SEEN_KEY = 'lazo:vista-explicada';
 
 /** Lista = elegir regalo. Ajena: presupuesto, «Disponibles» y «Ya cogidos», acciones de 1 toque. Propia: sin estado. */
-export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolean; onTitle: (t: Title) => void }) {
+export function ListScreen({ id, adding, amazon, onTitle }: { id: string; adding: boolean; amazon?: boolean; onTitle: (t: Title) => void }) {
   const api = useApi();
   const me = api.me();
   const toast = useToast();
@@ -324,7 +324,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
           }}
         />
       )}
-      {adding && d.canEdit && <AddGift listId={id} onClose={() => go(`/l/${id}`)} onSaved={reload} onImport={() => { go(`/l/${id}`); setImporting(true); }} />}
+      {adding && d.canEdit && <AddGift key={amazon ? 'amazon' : 'nuevo'} amazon={amazon} listId={id} onClose={() => go(`/l/${id}`)} onSaved={reload} onImport={() => { go(`/l/${id}`); setImporting(true); }} />}
       {importing && <ImportSheet listId={id} onClose={() => setImporting(false)} onDone={() => { setImporting(false); reload(); }} />}
       {sharing && <ShareSheet listId={id} who={who} mine={mine} onClose={() => setSharing(false)} />}
       {ideas && <IdeasSheet list={d.list} canAdd={d.canEdit} onClose={() => setIdeas(false)} onAdded={reload} />}

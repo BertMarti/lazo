@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 // Repaso con taste-skill (SKILLS.md): todo control fuera del texto corrido mide al menos 44 px de alto
 // en el móvil, y nada se sale de la pantalla a 320 px.
-const routes = ['/#/', '/#/g/navidad', '/#/l/l-mama', '/#/l/l-alberto', '/#/hucha/navidad', '/#/compras', '/#/sorteo/navidad', '/#/ajustes'];
+const routes = ['/#/', '/#/g/navidad', '/#/l/l-mama', '/#/l/l-alberto', '/#/l/l-alberto/amazon', '/#/hucha/navidad', '/#/compras', '/#/sorteo/navidad', '/#/ajustes'];
 
 for (const url of routes) {
   test(`tamaño táctil y sin desbordes: ${url}`, async ({ page }, info) => {

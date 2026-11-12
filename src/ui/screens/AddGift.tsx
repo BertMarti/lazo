@@ -7,21 +7,41 @@ import { Button, ButtonGroup } from '../Button';
 import { useApi } from '../ctx';
 import { PRIORITY } from '../Gift';
 import { errorText, Sheet, useToast } from '../kit';
+import { listaId, parseListaPegada, soloEnlace } from '../../core/amazonLista';
+import { leeCompartido } from '../compartido';
+import { AmazonLista } from './AmazonLista';
 import { ItemForm } from './ItemForm';
 
 /** Primera URL de un texto («Mira esto en Amazon https://amzn.eu/d/…» → la URL). */
 export const firstUrl = (text: string): string | null => text.match(/https?:\/\/[^\s<>"']+/i)?.[0]?.replace(/[),.;]+$/, '') ?? null;
 
-type Step = { kind: 'idle'; hint?: string } | { kind: 'reading' } | { kind: 'added'; item: Item } | { kind: 'manual'; url?: string; hint?: string };
+type Pegado = { text: string; html?: string };
+type Step =
+  | { kind: 'idle'; hint?: string }
+  | { kind: 'reading' }
+  | { kind: 'added'; item: Item }
+  | { kind: 'manual'; url?: string; hint?: string }
+  | { kind: 'amazon'; aviso?: string; pegado?: Pegado };
+
+const ENLACE_DE_LISTA = 'Es el enlace de una lista de Amazon. Lazo no entra en Amazon por ti, así que necesita el texto de la página: sigue estos pasos.';
+
+/** ¿Lo pegado es una lista de Amazon (su enlace, o la página copiada entera)? */
+function comoLista(p: Pegado): Step | null {
+  if (soloEnlace(p.text) || (listaId(p.text) && !parseListaPegada(p.text, p.html).length)) return { kind: 'amazon', aviso: ENLACE_DE_LISTA };
+  return parseListaPegada(p.text, p.html).length >= 2 ? { kind: 'amazon', pegado: p } : null;
+}
 
 /**
  * Añadir en 2 toques: «Añadir regalo» → «Pegar enlace». Lee el portapapeles, rellena con la tienda y GUARDA.
  * También vale pegar (Ctrl/Cmd+V) en cualquier punto de la hoja.
  */
-export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string; onClose: () => void; onSaved: () => void; onImport: () => void }) {
+export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId: string; onClose: () => void; onSaved: () => void; onImport: () => void; amazon?: boolean }) {
   const api = useApi();
   const toast = useToast();
-  const [step, setStep] = useState<Step>({ kind: 'idle' });
+  const [step, setStep] = useState<Step>(() => {
+    const text = amazon ? leeCompartido() : null;
+    return amazon ? { kind: 'amazon', pegado: text ? { text } : undefined } : { kind: 'idle' };
+  });
   const [manualUrl, setManualUrl] = useState('');
   const [peek, setPeek] = useState<string | null>(null);
   const busyRef = useRef(false);
@@ -40,6 +60,7 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
 
   const fromUrl = async (url: string) => {
     if (busyRef.current) return;
+    if (listaId(url)) return setStep({ kind: 'amazon', aviso: ENLACE_DE_LISTA });
     busyRef.current = true;
     setStep({ kind: 'reading' });
     try {
@@ -67,7 +88,10 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
 
   const paste = async () => {
     try {
-      const url = firstUrl(await navigator.clipboard.readText());
+      const text = await navigator.clipboard.readText();
+      const lista = comoLista({ text });
+      if (lista) return setStep(lista);
+      const url = firstUrl(text);
       if (url) return fromUrl(url);
       setStep({ kind: 'idle', hint: 'No encuentro ningún enlace copiado. Vuelve a la tienda, cópialo y pégalo en este campo.' });
     } catch {
@@ -78,8 +102,15 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
   // Pegar en cualquier punto de la hoja.
   useEffect(() => {
     const on = (e: ClipboardEvent) => {
-      const url = firstUrl(e.clipboardData?.getData('text') ?? '');
-      if (url && (step.kind === 'idle' || step.kind === 'reading')) {
+      if (step.kind !== 'idle' && step.kind !== 'reading') return;
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      const lista = comoLista({ text, html: e.clipboardData?.getData('text/html') || undefined });
+      if (lista) {
+        e.preventDefault();
+        return setStep(lista);
+      }
+      const url = firstUrl(text);
+      if (url) {
         e.preventDefault();
         void fromUrl(url);
       }
@@ -87,6 +118,10 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
     document.addEventListener('paste', on);
     return () => document.removeEventListener('paste', on);
   });
+
+  if (step.kind === 'amazon') {
+    return <AmazonLista listId={listId} aviso={step.aviso} compartido={step.pegado} onClose={onClose} onSaved={onSaved} />;
+  }
 
   if (step.kind === 'manual') {
     return <ItemForm listId={listId} initialUrl={step.url} hint={step.hint} onClose={onClose} onSaved={() => { onSaved(); onClose(); }} />;
@@ -128,6 +163,9 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
       <div className="stack" style={{ gap: 0 }}>
         <Button variant="link" onClick={() => setStep({ kind: 'manual' })}>
           Escribirlo a mano
+        </Button>
+        <Button variant="link" onClick={() => setStep({ kind: 'amazon' })}>
+          Importar lista de Amazon
         </Button>
         <Button variant="link" onClick={onImport}>
           Importar desde Excel
