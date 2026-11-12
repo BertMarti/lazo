@@ -12,6 +12,8 @@ test('copia del grupo: descargar y crear un grupo desde ella', async ({ page }) 
     sessionStorage.setItem('lazo:inicio', '1');
   });
   await page.goto('/#/ajustes');
+  // V-28: en la demo no hay sesión que cerrar, solo un aviso.
+  await expect(page.getByRole('region', { name: 'Sesión' })).toContainText('En la demo no hay sesión que cerrar');
   const block = page.getByRole('region', { name: 'Copia del grupo' });
   await expect(block).toContainText('Las reservas, compras y aportaciones no se copian');
 
@@ -22,10 +24,10 @@ test('copia del grupo: descargar y crear un grupo desde ella', async ({ page }) 
   const text = readFileSync((await file.path())!, 'utf8');
   const copia = JSON.parse(text);
   expect(copia).toMatchObject({ lazo: 'copia-grupo', version: 1 });
-  const mine = copia.listas.find((l: { propia: boolean }) => l.propia);
-  expect(mine.name).toBe('Alberto');
-  expect(Object.keys(mine).sort()).toEqual(['kind', 'name', 'propia', 'regalos']);
-  expect(JSON.stringify(mine)).not.toMatch(/reservas|aportaciones|presupuesto/);
+  const mine = copia.listas.find((l: { name: string }) => l.name === 'Alberto');
+  expect(Object.keys(mine).sort()).toEqual(['kind', 'name', 'regalos']);
+  // V-27: ni de la propia plaza ni de las ajenas: solo los regalos pedidos.
+  expect(text).not.toMatch(/reservas|aportaciones|sorpresas|retirados|presupuesto/);
 
   await block.locator('input[type=file]').setInputFiles({ name: 'copia.json', mimeType: 'application/json', buffer: Buffer.from(text, 'utf8') });
   await expect(page).toHaveURL(/#\/g\/(?!navidad)\w+$/);

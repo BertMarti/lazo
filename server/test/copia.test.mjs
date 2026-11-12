@@ -31,6 +31,12 @@ const ok = async (...a) => {
   return r.json;
 };
 const gift = (title, o = {}) => ({ title, priority: 2, quantity: 1, ...o });
+let restoreRule;
+async function setRestoreLimit(max) {
+  const rules = (await ok('GET', '/api/settings', null, su)).rateLimits.rules;
+  restoreRule ??= rules.find((r) => r.label === 'POST /api/lazo/restore');
+  await ok('PATCH', '/api/settings', { rateLimits: { rules: rules.map((r) => (r.label === 'POST /api/lazo/restore' ? { ...r, maxRequests: max } : r)) } }, su);
+}
 const itemsOf = async (list) => (await ok('GET', `/api/collections/items/records?perPage=500&filter=${encodeURIComponent(`list = "${list}"`)}`, null, su)).items;
 
 describe('copia del grupo: POST /api/lazo/restore', { skip: !BIN && 'Falta PB_BIN (binario de PocketBase)' }, () => {
@@ -53,6 +59,8 @@ describe('copia del grupo: POST /api/lazo/restore', { skip: !BIN && 'Falta PB_BI
       await new Promise((r) => setTimeout(r, 100));
     }
     su = (await ok('POST', '/api/collections/_superusers/auth-with-password', { identity: 'su@lazo.invalid', password: 'superuser-de-pruebas-123' })).token;
+    // V-29: estas pruebas llaman a restore muchas veces seguidas; el límite real se prueba al final.
+    await setRestoreLimit(1000);
     for (const [who, name] of [['ana', 'Ana'], ['bea', 'Bea']]) {
       const u = await ok('POST', '/api/collections/users/records', { email: `${who}@lazo.invalid`, password: 'x'.repeat(20), passwordConfirm: 'x'.repeat(20), name }, su);
       uid[who] = u.id;
@@ -126,5 +134,15 @@ describe('copia del grupo: POST /api/lazo/restore', { skip: !BIN && 'Falta PB_BI
     assert.equal(r.status, 400);
     assert.match(r.json.message, /recién creado/);
     assert.equal((await itemsOf(lists.Carlos.id)).length, 0);
+  });
+
+  test('V-29: la cuarta llamada a restore en un minuto responde 429', async () => {
+    assert.deepEqual({ ...restoreRule, id: undefined }, { label: 'POST /api/lazo/restore', maxRequests: 3, duration: 60, audience: '@auth', id: undefined });
+    await setRestoreLimit(3);
+    const body = { group: group.id, lists: [{ list: lists.Carlos.id, items: [gift('Tren')] }] };
+    const codes = [];
+    for (let i = 0; i < 4; i++) codes.push((await call('POST', '/api/lazo/restore', body, tok.ana)).status);
+    assert.equal(codes[3], 429, codes.join(','));
+    assert.ok(codes.slice(0, 3).every((c) => c !== 429), codes.join(','));
   });
 });

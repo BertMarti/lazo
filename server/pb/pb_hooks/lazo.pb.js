@@ -15,6 +15,17 @@ routerUse((e) => {
   return e.next();
 });
 
+// V-26: un id elegido por el cliente delata si una fila oculta (un regalo retirado) sigue existiendo.
+onRecordCreateRequest((e) => {
+  if (!(e.auth && e.auth.isSuperuser()) && e.requestInfo().body.id) throw new BadRequestError('Failed to create record.');
+  e.next();
+});
+// El upsert de los lotes (PUT) hace la misma pregunta: 404 si existe oculto, 200 si no. Los lotes solo crean.
+onBatchRequest((e) => {
+  if (!(e.auth && e.auth.isSuperuser()) && e.batch.some((r) => String(r.method).toUpperCase() !== 'POST')) throw new ForbiddenError('Consulta no permitida.');
+  e.next();
+});
+
 // Tiempo real (auditoría R-1): solo «coleccion/*» o «coleccion/id». Sin ?options= no hay filter, sort ni expand
 // que vigilar (PocketBase descodifica las opciones del topic en dos capas que un filtro de texto no ve).
 onRealtimeSubscribeRequest((e) => {

@@ -277,6 +277,23 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.equal(g1.text, g2.text);
     const seen = await ok('GET', `/api/collections/items/records/${taken}`, null, tok.samira);
     assert.equal(seen.removed, true);
+    // V-26: recrearlo con el mismo id (POST o PUT en un lote) responde igual esté oculto (cogido) o borrado (libre).
+    const body = (id) => ({ ...(id ? { id } : {}), list: ids['l-juancarlos'], title: 'Otra vez', priceCents: 100, priority: 2, quantity: 1, createdBy: ids.juancarlos });
+    const p1 = await call('POST', '/api/collections/items/records', body(taken), t);
+    const p2 = await call('POST', '/api/collections/items/records', body(free), t);
+    assert.equal(p1.status, 400);
+    assert.equal(p2.status, p1.status);
+    assert.equal(p2.text, p1.text);
+    const lote = (id) => call('POST', '/api/batch', { requests: [{ method: 'PUT', url: '/api/collections/items/records', body: body(id) }] }, t);
+    const b1 = await lote(taken);
+    const b2 = await lote(free);
+    assert.equal(b1.status, 403);
+    assert.equal(b2.status, b1.status);
+    assert.equal(b2.text, b1.text);
+    assert.equal((await call('GET', `/api/collections/items/records/${free}`, null, t)).status, 404);
+    // Un lote de POST sin id (importar) sigue funcionando.
+    const imp = await call('POST', '/api/batch', { requests: [{ method: 'POST', url: '/api/collections/items/records', body: body('') }] }, t);
+    assert.equal(imp.status, 200, imp.text);
   });
 
   test('V-4: una solicitud pendiente no lista ni filtra nada del grupo', async () => {
@@ -526,9 +543,12 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
 
   test('PB-14: un lote no sirve para sondear con _via_ ni expand', async () => {
     const A = ids['b-papa'];
+    // V-26: los lotes solo crean; un PATCH se rechaza con 403 antes de mirar nada.
     const r = await call('POST', '/api/batch', { requests: [{ method: 'PATCH', url: `/api/collections/items/records/${A}?expand=claims_via_item,contributions_via_item`, body: { notes: 'lote' } }] }, tok.papa);
+    assert.equal(r.status, 403);
     assert.doesNotMatch(r.text, /amountCents|"status":"reserved"|"status":"bought"/);
     const f = await call('POST', '/api/batch', { requests: [{ method: 'PATCH', url: `/api/collections/items/records/${A}?filter=${encodeURIComponent('claims_via_item.id != ""')}`, body: { notes: 'lote2' } }] }, tok.papa);
+    assert.equal(f.status, 403);
     assert.doesNotMatch(f.text, /amountCents|"status":"reserved"/);
   });
 
@@ -567,5 +587,21 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     const plaza = await ok('GET', `/api/collections/lists/records/${ids['l-samira']}`, null, su);
     assert.equal(plaza.approvedBy, '', 'V-13 a');
     assert.equal((await call('DELETE', `/api/collections/lists/records/${ids['l-samira']}`, null, tok.alberto)).status, 400, 'V-11');
+  });
+
+  test('V-28: logout-all anula los tokens viejos; el devuelto sí vale', async () => {
+    const u = await ok('POST', '/api/collections/users/records', { email: 'tableta@lazo.invalid', password: 'x'.repeat(20), passwordConfirm: 'x'.repeat(20), name: 'Tableta' }, su);
+    const old = (await ok('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 3600 }, su)).token;
+    const other = (await ok('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 3600 }, su)).token;
+    await ok('POST', '/api/collections/groups/records', { name: 'Salón', occasion: 'otro', buyMode: 'mixto' }, old);
+    assert.equal((await ok('GET', '/api/collections/groups/records', null, other)).totalItems, 1);
+    assert.equal((await call('POST', '/api/lazo/logout-all')).status, 401);
+    const fresh = (await ok('POST', '/api/lazo/logout-all', null, old)).token;
+    for (const t of [old, other]) {
+      assert.equal((await ok('GET', '/api/collections/groups/records', null, t)).totalItems, 0);
+      assert.equal((await call('POST', '/api/collections/users/auth-refresh', null, t)).status, 401);
+    }
+    assert.equal((await ok('GET', '/api/collections/groups/records', null, fresh)).totalItems, 1);
+    assert.equal((await call('POST', '/api/collections/users/auth-refresh', null, fresh)).status, 200);
   });
 });

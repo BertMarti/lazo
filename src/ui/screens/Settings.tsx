@@ -1,4 +1,4 @@
-import { ArrowSquareOut, DeviceMobile, DownloadSimple, UploadSimple } from '@phosphor-icons/react';
+import { ArrowSquareOut, DeviceMobile, DownloadSimple, SignOut, UploadSimple } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { loadAi, PRESETS, saveAi, type AiSettings } from '../../ai/provider';
 import { suggestIdeas } from '../../ai/tasks';
@@ -90,13 +90,62 @@ export function Settings() {
           ))}
         </ButtonGroup>
       </section>
+      <Session />
     </div>
+  );
+}
+
+/** «Sesión» (V-28): salir en este móvil o en todos. Pide confirmación: para volver hace falta un código o un enlace. */
+function Session() {
+  const api = useApi();
+  const [ask, setAsk] = useState<'here' | 'all' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const out = async (everywhere: boolean) => {
+    setBusy(true);
+    setErr('');
+    try {
+      await api.signOut(everywhere);
+      location.hash = '/';
+      location.reload();
+    } catch (e) {
+      setErr(errorText(e));
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="panel stack" aria-labelledby="sesion">
+      <h2 id="sesion" className="h-section">Sesión</h2>
+      {api.demo ? (
+        <p className="lead">En la demo no hay sesión que cerrar: cambia de persona arriba.</p>
+      ) : (
+        <>
+          <p className="lead">Si has entrado en un móvil o una tableta que no es tuyo, cierra la sesión al terminar. Si has perdido el móvil, ciérrala en todos desde otro.</p>
+          {err && <p className="notice notice-error" role="alert">{err}</p>}
+          {ask ? (
+            <div role="alertdialog" aria-labelledby="sesion-q" aria-describedby="sesion-d" className="stack">
+              <p id="sesion-q" style={{ fontWeight: 700 }}>{ask === 'all' ? '¿Cerrar sesión en todos los móviles, también en este?' : '¿Cerrar sesión en este móvil?'}</p>
+              <p id="sesion-d" className="meta">Para volver a entrar necesitarás un código desde otro móvil o un enlace nuevo de quien organiza.</p>
+              <ButtonGroup>
+                <Button variant="danger" loading={busy} onClick={() => out(ask === 'all')}>Sí, cerrar sesión</Button>
+                <Button variant="secondary" disabled={busy} onClick={() => setAsk(null)}>No</Button>
+              </ButtonGroup>
+            </div>
+          ) : (
+            <ButtonGroup>
+              <Button variant="secondary" icon={SignOut} onClick={() => setAsk('here')}>Cerrar sesión en este móvil</Button>
+              <Button variant="ghost" onClick={() => setAsk('all')}>Cerrar sesión en todos los móviles</Button>
+            </ButtonGroup>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
 const LEGAL = 'https://github.com/BertMarti/lazo/blob/main/docs/legal';
 
-/** «Copia del grupo»: descargar lo que ves de un grupo que organizas y crear un grupo nuevo desde una copia. */
+/** «Copia del grupo»: descargar los regalos pedidos de un grupo que organizas y crear un grupo nuevo desde una copia. */
 function GroupCopy() {
   const api = useApi();
   const toast = useToast();
@@ -145,7 +194,7 @@ function GroupCopy() {
       <p className="lead">Para empezar otra Navidad con las mismas personas y sus listas, o para llevaros el grupo a otro servidor. No es la copia de seguridad del servidor: esa la hace quien lo instala.</p>
       {groups.length > 0 && (
         <>
-          <p className="meta">La copia lleva lo que tú ves. De tu propia lista, solo los regalos que pediste: nada de lo que te preparan.</p>
+          <p className="meta">La copia lleva solo los regalos que pidió cada persona: nada de reservas, compras, sorpresas ni presupuestos.</p>
           <ButtonGroup>
             {groups.map((g) => (
               <Button key={g.id} variant="secondary" icon={DownloadSimple} loading={busy === g.id} onClick={() => download(g.id)}>
