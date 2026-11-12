@@ -5,7 +5,16 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 ## [Sin publicar]
 
 ### Añadido
+- Amigo invisible: el paquete se abre con una animación (el lazo se deshace, la cinta se retira y aparece la persona), se puede volver a tapar y puedes enviarte el resultado a ti mismo («Enviármelo» o «Copiar»), con un aviso para no reenviarlo al grupo.
+- Importar desde Excel o CSV con una tabla para elegir qué es cada columna (adivinada sin IA, en español e inglés) y una vista previa antes de importar. Los CSV en windows-1252 ya no rompen las tildes.
+- Mejor lectura de enlaces de Amazon.es, El Corte Inglés, PcComponentes, Zara y Decathlon (solo metadatos públicos). Si una tienda no deja ver los datos, el enlace se guarda y lo escribes a mano.
+- Puesta en marcha en casa: guía paso a paso en `docs/HOMELAB.md`, copias de seguridad automáticas con rotación y restauración, HTTPS con Caddy, y acceso desde fuera con DuckDNS, dominio propio o Cloudflare Tunnel.
 - Avisos del grupo: una campana en la cabecera con lo nuevo desde la última vez (regalos que alguien añade a su lista, quién entra, la cuenta atrás a 10, 3 y 1 día, lo que te toca poner en la hucha y el sorteo). Se calculan en tu móvil con lo que ya puedes ver: nunca dicen nada de tu propia lista.
+
+### Seguridad
+- El proxy bloquea más rutas de administración de PocketBase y pasa la IP real del cliente (también detrás de Cloudflare Tunnel).
+- Nueva prueba contra PocketBase real del flujo completo (crear grupo, invitar, reclamar plaza, reservar, hucha y ajuste de cuentas), comprobando en cada paso que nadie ve lo suyo.
+- Prueba de que ningún aviso cambia por lo que otros hacen en tu lista.
 
 ## [0.4.0] - 2026-11-11 · El catálogo de juguetes
 
