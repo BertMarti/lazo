@@ -11,7 +11,7 @@ ARG PB_VERSION=0.40.6
 RUN apk add --no-cache ca-certificates unzip wget \
  && wget -q "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').zip" -O /tmp/pb.zip \
  && unzip /tmp/pb.zip pocketbase -d /usr/local/bin && rm /tmp/pb.zip \
- && adduser -D -H lazo && mkdir -p /pb/pb_data && chown lazo /pb/pb_data
+ && adduser -D -H -u 1000 lazo && mkdir -p /pb/pb_data && chown lazo /pb/pb_data
 WORKDIR /pb
 COPY server/pb/pb_migrations ./pb_migrations
 COPY server/pb/pb_hooks ./pb_hooks
