@@ -46,7 +46,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
         <div className="empty">
           <Bow size={88} />
           <h2>Todavía no hay sorteo</h2>
-          <p>{isAdmin ? 'Elige quién participa y qué parejas no pueden tocarse.' : 'Cuando quien organiza el grupo lo haga, aquí verás tu sobre.'}</p>
+          <p>{isAdmin ? 'Elige quién participa y qué parejas no pueden tocarse.' : 'Cuando quien organiza el grupo lo haga, aquí verás a quién te toca regalar.'}</p>
         </div>
       )}
       {isAdmin && !setup && (
@@ -65,7 +65,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
           onCancel={() => setSetup(false)}
           onRun={async (participants, exclusions, budget) => {
             await api.runDraw(groupId, participants, exclusions, budget);
-            toast('Sorteo hecho. Cada uno ya tiene su sobre.');
+            toast('Sorteo hecho. Cada uno ya sabe a quién regala.');
             setSetup(false);
             setOpened(false);
             reload();
@@ -145,7 +145,7 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
         <input className="input" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="30" />
       </label>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
-      {sure && <p className="notice" role="alert">El sorteo anterior se borrará y cada persona tendrá un sobre nuevo. Pulsa otra vez para confirmar.</p>}
+      {sure && <p className="notice" role="alert">El sorteo anterior se borrará y a cada persona le tocará alguien nuevo. Pulsa otra vez para confirmar.</p>}
       <ButtonGroup>
         <Button variant="primary" icon={Shuffle} loading={busy} disabled={chosen.size < 3} onClick={run}>{sure ? 'Sí, sortear de nuevo' : `Sortear entre ${chosen.size}`}</Button>
         <Button variant="ghost" icon={X} onClick={onCancel}>Cancelar</Button>

@@ -3,7 +3,7 @@ import { Bow, Loading } from '../Bow';
 import type { InviteInfo } from '../../api/types';
 import { Button } from '../Button';
 import { go, useApi } from '../ctx';
-import { errorText, useLoad } from '../kit';
+import { Avatar, errorText, useLoad } from '../kit';
 
 const DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' });
 
@@ -103,6 +103,7 @@ function General({ token, info, onPending }: { token: string; info: InviteInfo; 
           {info.free.map((f) => (
             <label key={f.list} className="choice">
               <input type="radio" name="plaza" value={f.list} checked={choice === f.list} onChange={() => setChoice(f.list)} />
+              <Avatar user={{ name: f.name, color: 'almendra' }} />
               {f.name}
             </label>
           ))}

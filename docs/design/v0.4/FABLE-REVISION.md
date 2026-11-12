@@ -70,3 +70,54 @@ No. La etiqueta de precio girada, la cinta en cruz y el papel crema dan un mundo
     - `.vis-line svg { flex: none; }`, para que el ojo de «Tu lista» no se encoja.
     - En `App.tsx` (línea 94), envolver `faltan <b>{d}</b> días` en `<span style={{ whiteSpace: 'nowrap' }}>`, para que «días» no quede huérfano.
     - En `App.tsx` (línea 83), cambiar el texto «Volver» por el nombre del destino («Navidad en familia»), y dejar «Volver» solo si no hay nombre.
+
+---
+
+## Verificación (Fable 5.2)
+
+### Veredicto: **no apto**, por un solo fallo
+
+Nueve de los diez arreglos están bien. Bloquea el sorteo en móvil: el título «Te ha tocado…» sale tapado («Te … o…») en `despues/sorteo-375.png`.
+
+**Qué he revisado.** Las catorce capturas nuevas (seis a 375 px y dos a 1280 px en claro, tres en oscuro, tres de primera pantalla a 390 px), `styles.css`, `Draw.tsx` y las llamadas a `Avatar`, `VisibilityNote` y `backLabel` en `src`.
+
+**Qué no he comprobado.** El aviso efímero no sale en ninguna captura; el arreglo 7 lo doy por bueno por el CSS. El sorteo solo lo he visto a 375 px y cerrado. Los dos valores que propongo abajo salen de la geometría de la captura, no de un render.
+
+### Lo que impide publicar
+
+En `styles.css`, línea 518, el selector `.envelope .cover > :not(.bow)` alcanza también al envoltorio `.cover-bow`, que es un `span` y no lleva la clase `.bow`. Le pone fondo abeto y relleno, y esa pastilla tapa el centro del título y corta la banda horizontal a los lados del lazo.
+
+1. Cambiar el selector de la línea 518 a `.envelope .cover > :not(.cover-bow)`.
+2. Añadir `.envelope { min-height: 380px; align-content: center; }`. Sin la pastilla, las colas del lazo aún pisarían unos 17 px del título; con 380 px de alto quedan unos 20 px libres entre lazo y título.
+
+Con esos dos cambios y una captura nueva de `sorteo-375.png` que muestre el título entero, es apto.
+
+### Los diez arreglos
+
+| N.º | Arreglo | Estado | Lo que se ve |
+|---|---|---|---|
+| 1 | Hucha en móvil | Resuelto | Filas legibles, avatares de 40 px, el botón baja de línea. Igual en oscuro. |
+| 2 | Borde en oscuro | Resuelto | Todas las tarjetas tienen borde y «Lo llevas tú» recupera su aro. |
+| 3 | Lazo de la cinta | Resuelto | Lazo crema con sombra en claro, oscuro sobre la banda en oscuro; se lee sobre el chal rojo. La regla muerta ya no está. |
+| 4 | «Sorpresa» y precio | Resuelto | A 375 px el precio baja bajo la etiqueta; a 1280 px no chocan. |
+| 5 | Rejilla de personas | Resuelto | Las seis en una fila a 1280 px. |
+| 6 | Sorteo | **Parcial, bloquea** | Lazo y textos nuevos puestos, pero el título queda tapado. Además sigue «sobre» en `Draw.tsx`, líneas 49, 68 y 148. |
+| 7 | «Deshacer» en oscuro | Resuelto en código | `.toast .btn-link { color: var(--oro-suave); }`. Sin captura. |
+| 8 | Avisos a 16 px | Resuelto | Lista propia y hucha usan `.notice`; «Mamá no ve esto» sigue en pastilla. |
+| 9 | Unirse | Parcial, no bloquea | `.choice` mide 64 px. Faltan la fila de avatares (tarea 8, aceptada) y el avatar en cada opción. |
+| 10 | Cabecera | Resuelto | El ojo no se encoge, «faltan 42 días» va junto y los enlaces de volver nombran el destino. Las tres etiquetas me valen. |
+
+### Pendiente que no bloquea
+
+- Cambiar «sobre» por «paquete» en las tres cadenas de `Draw.tsx` (líneas 49, 68 y 148).
+- En Unirse, el avatar con la inicial en cada opción de plaza se puede pintar con el nombre que ya se muestra, sin esperar a la tarea 8, si se acepta un color neutro.
+- En el grupo a 375 px, el punto medio queda colgado al final de «24 de diciembre ·».
+
+## Cierre (Opus 5.5)
+
+- Aplicados los dos cambios del sorteo (`.envelope .cover > :not(.cover-bow)` y `.envelope { min-height: 380px; align-content: center; }`). La captura nueva `despues/sorteo-375.png` muestra «Te ha tocado…» entero y la banda sin cortes, que era la condición para darlo por **apto**.
+- Aplicado también lo que no bloqueaba:
+  - Fuera la palabra «sobre» en el sorteo.
+  - El punto medio va unido a «faltan N días».
+  - Avatar con la inicial en cada opción de Unirse, en color neutro.
+- Pruebas: 30 de 30 en e2e, tipos y lint limpios.
