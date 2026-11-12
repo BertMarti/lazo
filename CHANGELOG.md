@@ -4,6 +4,20 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [0.5.1] - 2026-11-12 · Probado con la familia
+
+Arreglos que salen de recorrer Lazo en el móvil como lo harían un abuelo, alguien con prisa y una madre con la hucha, y lo que faltaba para montarlo en casa de verdad.
+
+### Añadido
+- `lazo-alta`: un comando que crea a quien organiza y su primer grupo en una instalación nueva, y da un código para entrar desde el móvil.
+- «Tengo un código» en la pantalla de inicio (y en la primera pantalla de Android), y «Entrar en otro móvil» en Ajustes.
+- `docs/PRUEBA-REAL.md`: guía de 15 minutos para montarlo en casa y probar con la familia que la sorpresa funciona.
+
+### Cambiado
+- Entrar por el enlace: el código de espera se lee mejor, sale tu nombre, se puede reenviar por WhatsApp a quien organiza y sigue ahí si vuelves a abrir el enlace.
+- Hucha: no se puede apuntar el mismo pago dos veces, la hoja recuerda que Lazo no mueve dinero y los textos dicen con quién estás al día y cómo dar el dinero.
+- Añadir pegando un enlace: textos más claros, el lazo cuando no hay foto y la prioridad se puede dejar como está.
+
 ## [0.5.0] - 2026-11-12 · Lista para Navidad
 
 Lazo se puede montar en casa para la familia de verdad, entiende mejor las tiendas y las hojas de cálculo, avisa de lo nuevo sin estropear sorpresas y el amigo invisible se abre como un regalo.

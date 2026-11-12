@@ -97,7 +97,7 @@ test('al volver a abrir el enlace general sigue el código, sin pedir entrar otr
   await expect(page.getByRole('heading', { name: 'Ya casi estás, Tía Loli' })).toBeVisible();
   await expect(page.locator('.code')).toHaveText(code);
   await expect(page.getByRole('heading', { name: '¿Quién eres?' })).toHaveCount(0);
-  const wa = page.getByRole('link', { name: 'Enviar el código por WhatsApp' });
+  const wa = page.getByRole('link', { name: 'Mandar por WhatsApp' });
   await expect(wa).toHaveAttribute('href', `https://wa.me/?text=${encodeURIComponent(`Hola, Alberto. Soy Tía Loli. Mi código de Lazo es ${code}.`)}`);
 });
 

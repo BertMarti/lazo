@@ -216,7 +216,7 @@ function Pending({ request, code, group, name, organizer, onJoined, onDecided }:
             rel="noopener noreferrer"
             href={`https://wa.me/?text=${encodeURIComponent(`Hola, ${organizer}. Soy ${name}. Mi código de Lazo es ${code}.`)}`}
           >
-            Enviar el código por WhatsApp
+            Mandar por WhatsApp
           </ButtonLink>
           <p className="meta" role="status">Esperando a {organizer}… Esta pantalla cambiará sola cuando te acepte.</p>
           <p className="meta">Si la cierras, no pasa nada: cuando te acepte, abre Lazo y ya estarás dentro.</p>
