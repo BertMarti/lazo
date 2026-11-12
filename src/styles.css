@@ -61,6 +61,7 @@
   --sombra-1: 0 1px 2px rgb(74 45 20 / 0.08), 0 2px 8px rgb(74 45 20 / 0.06);
   --sombra-2: 0 4px 10px rgb(74 45 20 / 0.10), 0 12px 28px rgb(74 45 20 / 0.10);
   --borde-tarjeta: 0 0 0 transparent;
+  --velo: rgb(42 29 20 / 0.5);
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
@@ -95,6 +96,7 @@
     --sombra-1: 0 0 0 0 transparent;
     --sombra-2: 0 12px 32px rgb(0 0 0 / 0.45);
     --borde-tarjeta: 0 0 0 1px var(--linea);
+    --velo: rgb(8 5 3 / 0.72);
   }
 }
 
@@ -450,15 +452,16 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
 
 /* ————— Hoja (dialog nativo) ————— */
 dialog.sheet {
-  width: min(100%, 560px); max-height: min(92dvh, 880px); margin: auto auto 0; padding: 0; border: 0; border-radius: var(--r-l) var(--r-l) 0 0;
-  background: var(--tarjeta); color: var(--tinta); box-shadow: var(--sombra-2); overflow: hidden;
+  /* max-width: el del navegador (100% − 2em) dejaba la hoja del móvil flotando a medias. */
+  width: 100%; max-width: 100%; max-height: min(92dvh, 880px); margin: auto 0 0; padding: 0; border: 0; border-radius: var(--r-l) var(--r-l) 0 0;
+  background: var(--tarjeta); color: var(--tinta); box-shadow: var(--sombra-2), var(--borde-tarjeta); overflow: hidden;
 }
 dialog.sheet[open] { display: grid; grid-template-rows: auto 1fr auto; animation: sheet-in 220ms var(--ease-drawer); }
-dialog.sheet::backdrop { background: rgb(42 29 20 / 0.45); animation: fade 200ms ease; }
+dialog.sheet::backdrop { background: var(--velo); backdrop-filter: blur(3px); animation: fade 200ms ease; }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes fade { from { opacity: 0; } }
 @media (min-width: 720px) {
-  dialog.sheet { margin: auto; border-radius: var(--r-l); }
+  dialog.sheet { width: min(100% - 2 * var(--s-6), 560px); max-height: min(86dvh, 880px); margin: auto; border-radius: var(--r-l); }
   dialog.sheet[open] { animation: sheet-in-desk 220ms var(--ease-out); }
   @keyframes sheet-in-desk { from { transform: translateY(12px) scale(0.98); opacity: 0; } to { transform: none; opacity: 1; } }
 }
@@ -467,6 +470,15 @@ dialog.sheet::backdrop { background: rgb(42 29 20 / 0.45); animation: fade 200ms
 .sheet-head h2 { font-family: var(--f-display); font-weight: 400; font-size: var(--t-2); line-height: 1.2; }
 .sheet-body { overflow-y: auto; padding: var(--s-2) var(--s-5) var(--s-5); display: grid; gap: var(--s-5); align-content: start; }
 .sheet-foot { padding: var(--s-3) var(--s-5) calc(var(--s-4) + env(safe-area-inset-bottom)); border-top: 1px solid var(--linea); background: var(--tarjeta); display: grid; gap: var(--s-2); }
+/* Importar lista de Amazon */
+.amz-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.amz-pasos li { display: flex; align-items: center; gap: var(--s-4); }
+.amz-dibujo { flex: none; color: var(--tinta-2); background: var(--hundido); border-radius: var(--r-m); }
+.amz-vista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.amz-vista .check { align-items: center; padding: var(--s-2) 0; border-bottom: 1px solid var(--linea); }
+.amz-vista .gift-thumb { width: 56px; height: 56px; }
+.amz-titulo { display: block; font-weight: 700; overflow-wrap: anywhere; }
+.amz-dup { color: var(--terracota-tinta); font-weight: 700; }
 .sheet-photo { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-m); overflow: hidden; background: var(--hundido); }
 .sheet-photo img { width: 100%; height: 100%; object-fit: cover; }
 

@@ -7,6 +7,7 @@ import { IconButton } from './ui/Button';
 import { ApiCtx, go, lastGroup, useRoute } from './ui/ctx';
 import { Brand } from './ui/Bow';
 import { Avatar, daysUntil, OfflineBand, ToastProvider } from './ui/kit';
+import { AmazonDestino } from './ui/screens/AmazonLista';
 import { DrawScreen } from './ui/screens/Draw';
 import { GroupScreen } from './ui/screens/Group';
 import { Home } from './ui/screens/Home';
@@ -34,7 +35,8 @@ export function App({ api }: { api: Api }) {
   let screen;
   let t: Title = title.key === routeKey ? title : { name: '' };
   if (section === 'g' && id) screen = <GroupScreen id={id} onTitle={onTitle} />;
-  else if (section === 'l' && id) screen = <ListScreen id={id} adding={extra === 'nuevo'} onTitle={onTitle} />;
+  else if (section === 'l' && id) screen = <ListScreen id={id} adding={extra === 'nuevo' || extra === 'amazon'} amazon={extra === 'amazon'} onTitle={onTitle} />;
+  else if (section === 'amazon') screen = <AmazonDestino />;
   else if (section === 'compras') {
     screen = <Purchases />;
     t = { name: 'Mis compras', sub: 'Solo lo ves tú' };

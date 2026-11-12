@@ -133,3 +133,20 @@ export const DEMO_UNFURL: { match: RegExp; meta: { title: string; priceCents?: n
   { match: /amazon\./i, meta: { title: 'Altavoz inteligente compacto', priceCents: 5499, store: 'Amazon' } },
   { match: /./, meta: { title: 'Producto de ejemplo', priceCents: 2500, store: 'Tienda de ejemplo' } },
 ];
+
+/** Lista de Amazon de ejemplo (inventada) para probar la importación en la demo: como si se hubiera copiado la página. */
+export const DEMO_AMAZON_LISTA = 'https://www.amazon.es/hz/wishlist/ls/LAZODEMO2026X?ref_=wl_share';
+const demoFicha = (asin: string, title: string, price: string) =>
+  `<li data-itemid="I${asin}" data-price="${price}"><a id="itemName_I${asin}" title="${title}" href="/dp/${asin}/?coliid=I${asin}&amp;ref_=lv_ov">${title}</a><span class="a-offscreen">${price.replace('.', ',')} €</span></li>`;
+export const DEMO_AMAZON_HTML = `<ul>${[
+  ['B0LAZODM01', 'Teclado mecánico compacto', '79.00'],
+  ['B0LAZODM02', 'Termo de acero inoxidable de 750 ml', '24.95'],
+  ['B0LAZODM03', 'Juego de mesa de estrategia para 2 a 4 personas', '39.99'],
+  ['B0LAZODM04', 'Lámpara de lectura con pinza y luz cálida', '18.49'],
+  ['B0LAZODM05', 'Mochila impermeable de 20 litros', '45.00'],
+  ['B0LAZODM06', 'Libro de recetas de cocina de temporada', '22.90'],
+  ['B0LAZODM07', 'Calcetines de lana merino (pack de 3)', '19.99'],
+  ['B0LAZODM08', 'Puzle de 1000 piezas con mapa antiguo', '16.95'],
+]
+  .map(([a, t, p]) => demoFicha(a!, t!, p!))
+  .join('')}</ul>`;

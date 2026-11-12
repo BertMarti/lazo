@@ -4,6 +4,14 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Lo nuevo
+- **Trae tu lista de Amazon.** En «Añadir a tu lista», «Importar lista de Amazon»: abre tu lista en el navegador, selecciónalo todo, cópialo y toca «Pegar». Lazo te enseña los productos que ha encontrado, deja sin marcar los que ya tienes y añade los que elijas. Hay pasos con dibujos para Android, iPhone y ordenador. Lazo no se conecta a Amazon: solo lee lo que pegas, en tu móvil.
+- **En la app de Android**, selecciona el texto de tu lista y elige «Compartir → Lazo»: se abre directamente la vista previa.
+- Si pegas solo el enlace de la lista (lo que da la app de Amazon), Lazo te explica qué falta y cómo copiarlo.
+
+### Más claro
+- La hoja «Añadir a tu lista» se ve centrada y con el fondo atenuado en el ordenador, y ocupa todo el ancho abajo en el móvil.
+
 ## [1.0.0] - 2026-11-12 · Nochebuena
 
 Lazo está listo para que tu familia lo use esta Navidad: sin regalos repetidos, sin un solo chivatazo y con todo en tu casa.
