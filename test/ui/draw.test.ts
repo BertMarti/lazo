@@ -8,6 +8,9 @@ describe('shareMessage', () => {
     expect(m.url).toBe('https://x.test/#/l/l-juancarlos');
     expect(m.copy).toBe('Amigo invisible de Navidad en familia: te toca regalar a Juan Carlos. https://x.test/#/l/l-juancarlos');
   });
+  it('lleva el número de sorteo para no confundir uno viejo (V-25)', () => {
+    expect(shareMessage('G', 'Ana', undefined, 2).text).toBe('Amigo invisible de G (sorteo n.º 2): te toca regalar a Ana.');
+  });
   it('sin lista, solo el texto', () => {
     expect(shareMessage('G', 'Ana').copy).toBe('Amigo invisible de G: te toca regalar a Ana.');
   });

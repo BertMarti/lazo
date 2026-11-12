@@ -129,3 +129,30 @@ export function rowsToDrafts(rows: unknown[][], map: ColumnMap): ItemDraft[] {
   }
   return out;
 }
+
+/** Tope de lo que puede ocupar un .xlsx/.ods una vez descomprimido (V-24): 5 MB comprimidos pueden inflarse a GB. */
+export const MAX_INFLATED = 50 * 1024 * 1024;
+
+/**
+ * Suma los tamaños descomprimidos que declara el directorio central de un ZIP (xlsx, ods). `null` si no es un ZIP
+ * (csv, xls antiguo). Un ZIP64 o un directorio roto cuentan como «demasiado grande».
+ * ponytail: se fía de los tamaños declarados; un ZIP que mienta en su directorio lo frena el límite de filas.
+ */
+export function zipInflatedSize(buf: ArrayBuffer): number | null {
+  const v = new DataView(buf);
+  if (v.byteLength < 22 || v.getUint32(0, true) !== 0x04034b50) return null;
+  let eocd = -1;
+  for (let i = v.byteLength - 22; i >= Math.max(0, v.byteLength - 22 - 0xffff); i--)
+    if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) return Infinity;
+  let at = v.getUint32(eocd + 16, true);
+  let total = 0;
+  for (let n = v.getUint16(eocd + 10, true); n > 0; n--) {
+    if (at + 46 > v.byteLength || v.getUint32(at, true) !== 0x02014b50) return Infinity;
+    const size = v.getUint32(at + 24, true);
+    if (size === 0xffffffff) return Infinity;
+    total += size;
+    at += 46 + v.getUint16(at + 28, true) + v.getUint16(at + 30, true) + v.getUint16(at + 32, true);
+  }
+  return total;
+}

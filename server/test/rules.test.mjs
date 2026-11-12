@@ -361,6 +361,52 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.ok(sums('papa', await rows(tok.papa)).shares.some((s) => s.list === ids['l-mama'] && s.spent === 1400), 'la compra cuenta para los demás');
   });
 
+  test('V-20: lo que pasa en la plaza de Mamá no cambia sus avisos (core/avisos contra el servidor real)', async () => {
+    // core/avisos tal cual lo usa la app, empaquetado con esbuild (como PB-13).
+    const out = join(dir, 'avisos.mjs');
+    (await import('esbuild')).buildSync({ entryPoints: [resolve(import.meta.dirname, '..', '..', 'src/core/avisos.ts')], bundle: true, format: 'esm', outfile: out, logLevel: 'silent' });
+    const A = await import(pathToFileURL(out).href);
+    const today = new Date();
+    const soon = new Date(today.getTime() + 3 * 86_400_000);
+    const iso = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
+    await ok('PATCH', `/api/collections/groups/records/${ids.group}`, { date: iso }, tok.alberto); // cuenta atrás activa
+    const get = async (col, t, f) => (await ok('GET', `/api/collections/${col}/records?perPage=500&sort=id&filter=${encodeURIComponent(f)}`, null, t)).items;
+    const opt = (v) => v || undefined;
+    // Lo mismo que PocketBaseApi.hucha() + drawInfo(): las mismas consultas, con el token de quien mira.
+    const facts = async (who, t) => {
+      const g = await ok('GET', `/api/collections/groups/records/${ids.group}?expand=members`, null, t);
+      const h = {
+        group: { id: g.id, name: g.name, date: opt(g.date), treasurer: opt(g.treasurer), deputy: opt(g.deputy) },
+        members: g.expand.members.map((m) => ({ id: m.id, name: m.name })),
+        lists: (await get('lists', t, `group = "${ids.group}"`)).map((l) => ({ id: l.id, name: l.name, user: opt(l.user) })),
+        items: (await get('items', t, `list.group = "${ids.group}"`)).map((i) => ({ id: i.id, list: i.list, priceCents: i.priceCents || undefined, createdBy: i.createdBy, secret: !!i.secret, removed: !!i.removed, quantity: i.quantity || 1 })),
+        claims: (await get('claims', t, `item.list.group = "${ids.group}" && kind = "pot"`)).map((c) => ({ id: c.id, item: c.item, user: c.user, kind: c.kind, status: c.status, units: c.units || 1, paidBy: opt(c.paidBy), paidCents: c.status === 'bought' ? c.paidCents : undefined })),
+        // El superusuario ve todos los pagos; quien mira, solo aquellos en los que es parte (PB-12).
+        payments: (await get('payments', t, `group = "${ids.group}"`)).filter((p) => t !== su || p.from === ids[who] || p.to === ids[who]).map((p) => ({ id: p.id, from: p.from, to: p.to, amountCents: p.amountCents, sub: !!p.sub })),
+      };
+      const draw = (await get('draws', t, `group = "${ids.group}"`))[0]?.id;
+      return A.buildFacts(ids[who], h, draw, today);
+    };
+    const m1 = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Bufanda V-20', priceCents: 2500, priority: 2, quantity: 1, createdBy: ids.mama }, tok.mama);
+    const before = await facts('mama', tok.mama);
+    assert.equal(before.stage, 3);
+    // buildFacts descarta solo lo de su plaza: con TODAS las filas (superusuario, sorpresas y reservas incluidas) sale lo mismo.
+    assert.deepEqual(await facts('mama', su), before, 'filas sin filtrar de su plaza');
+    // Los demás hacen de todo en la plaza de Mamá: sorpresas nuevas, reservas, hucha y compra.
+    const s1 = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Sorpresa V-20', priceCents: 1200, priority: 2, quantity: 1, createdBy: ids.papa, secret: true }, tok.papa);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s1.id, kind: 'pot' }, tok.papa);
+    const s2 = await ok('POST', '/api/collections/items/records', { list: ids['l-mama'], title: 'Otra sorpresa V-20', priceCents: 800, priority: 2, quantity: 1, createdBy: ids.juancarlos, secret: true }, tok.juancarlos);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s2.id, kind: 'self' }, tok.juancarlos);
+    const pot = (await get('claims', tok.papa, `item = "${s1.id}"`))[0];
+    await ok('POST', '/api/lazo/gift', { action: 'buy', claim: pot.id, paidCents: 1200, paidBy: ids.papa }, tok.papa);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: m1.id, kind: 'self' }, tok.samira);
+    const after = await facts('mama', tok.mama);
+    assert.deepEqual(after, before, 'Mamá no nota nada de su plaza');
+    assert.equal(A.notices([before], [after]).length, 0, 'ni un aviso nuevo');
+    // Las filas existen y el servidor se las da a los demás: la prueba no pasa por no mirar nada.
+    assert.equal((await get('claims', tok.samira, `item.list = "${ids['l-mama']}" && (item = "${s1.id}" || item = "${s2.id}" || item = "${m1.id}")`)).length, 3);
+  });
+
   test('PB-9: veinte reservas a la vez del mismo regalo dejan una sola fila', async () => {
     await ok('PATCH', '/api/settings', { rateLimits: { enabled: false } }, su);
     try {

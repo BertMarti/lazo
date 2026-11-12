@@ -29,6 +29,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
           receiver={info.receiver}
           groupName={detail.group.name}
           budgetCents={info.draw?.budgetCents}
+          round={info.draw?.round}
           listId={detail.lists.find((x) => x.user === info.receiver!.id)?.id}
           opened={opened}
           setOpened={setOpened}
@@ -69,9 +70,9 @@ export function DrawScreen({ groupId }: { groupId: string }) {
   );
 }
 
-/** Texto para reenviárselo uno mismo: solo tu persona y su lista, nada del resto del sorteo. */
-export function shareMessage(groupName: string, receiver: string, listUrl?: string) {
-  const text = `Amigo invisible de ${groupName}: te toca regalar a ${receiver}.`;
+/** Texto para reenviárselo uno mismo: solo tu persona y su lista, nada del resto del sorteo. Lleva el n.º de sorteo (V-25). */
+export function shareMessage(groupName: string, receiver: string, listUrl?: string, round?: number) {
+  const text = `Amigo invisible de ${groupName}${round ? ` (sorteo n.º ${round})` : ''}: te toca regalar a ${receiver}.`;
   return { text, url: listUrl, copy: listUrl ? `${text} ${listUrl}` : text };
 }
 
@@ -80,10 +81,11 @@ export function shareMessage(groupName: string, receiver: string, listUrl?: stri
  * deshace, las dos bandas de cinta salen por los bordes, la tapa se levanta y aparece la persona.
  * «Taparlo» lo cierra al momento. Con reduced-motion, fundido de 150 ms.
  */
-function Package({ receiver, groupName, budgetCents, listId, opened, setOpened }: {
+function Package({ receiver, groupName, budgetCents, round, listId, opened, setOpened }: {
   receiver: { name: string; color: string };
   groupName: string;
   budgetCents?: number;
+  round?: number;
   listId?: Id;
   opened: boolean;
   setOpened: (o: boolean) => void;
@@ -98,7 +100,7 @@ function Package({ receiver, groupName, budgetCents, listId, opened, setOpened }
   }, [opened]);
 
   const listUrl = listId ? `${location.origin}${location.pathname}#/l/${listId}` : undefined;
-  const msg = shareMessage(groupName, receiver.name, listUrl);
+  const msg = shareMessage(groupName, receiver.name, listUrl, round);
   const canShare = typeof navigator.share === 'function';
   const send = async () => {
     if (canShare) {

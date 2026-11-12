@@ -491,10 +491,11 @@ export class DemoApi implements Api {
   async runDraw(groupId: Id, participants: Id[], exclusions: [Id, Id][], budgetCents?: Cents) {
     this.admin(groupId);
     const pairs = drawPairs(participants, exclusions, cryptoRand);
-    const old = this.db.draws.filter((d) => d.group === groupId).map((d) => d.id);
+    const prev = this.db.draws.filter((d) => d.group === groupId);
+    const old = prev.map((d) => d.id);
     this.db.draws = this.db.draws.filter((d) => d.group !== groupId);
     this.db.assignments = this.db.assignments.filter((a) => !old.includes(a.draw));
-    const draw = { id: uid(), group: groupId, budgetCents, exclusions, participants, createdBy: this.viewer };
+    const draw = { id: uid(), group: groupId, budgetCents, exclusions, participants, createdBy: this.viewer, round: Math.max(0, ...prev.map((d) => d.round ?? 1)) + 1 };
     this.db.draws.push(draw);
     for (const [giver, receiver] of pairs) this.db.assignments.push({ draw: draw.id, giver, receiver });
     this.save();

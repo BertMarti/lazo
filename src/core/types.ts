@@ -147,6 +147,8 @@ export interface Draw {
   exclusions: [Id, Id][];
   participants: Id[];
   createdBy: Id;
+  /** N.º de sorteo del grupo (1, 2, 3…): distingue un mensaje viejo de uno nuevo (V-25). */
+  round?: number;
 }
 
 export interface Assignment {

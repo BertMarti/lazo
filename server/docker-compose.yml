@@ -41,10 +41,10 @@ services:
     environment:
       # Con dominio propio o DuckDNS: milazo.duckdns.org. Con Cloudflare Tunnel: http://lazo.tudominio.es
       LAZO_DOMAIN: ${LAZO_DOMAIN:?Falta LAZO_DOMAIN en .env (p. ej. milazo.duckdns.org)}
-    # Con Cloudflare Tunnel pon LAZO_BIND=127.0.0.1 y no abras puertos en el router.
+    # Si abres los puertos 80 y 443 en el router pon LAZO_BIND=0.0.0.0. Por defecto solo la propia máquina (V-23).
     ports:
-      - "${LAZO_BIND:-0.0.0.0}:80:80"
-      - "${LAZO_BIND:-0.0.0.0}:443:443"
+      - "${LAZO_BIND:-127.0.0.1}:80:80"
+      - "${LAZO_BIND:-127.0.0.1}:443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./data/caddy:/data
@@ -57,10 +57,14 @@ services:
     container_name: lazo-backup
     restart: unless-stopped
     network_mode: none
+    security_opt:
+      - no-new-privileges:true
     environment:
       TZ: ${TZ:-Europe/Madrid}
       BACKUP_CRON: ${BACKUP_CRON:-30 3 * * *}
       BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      # Con clave, las copias salen cifradas (.tar.gz.enc). Vacía: sin cifrar.
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
     volumes:
       - ./data/pb:/pb_data
       - ./data/backups:/backups
@@ -70,7 +74,7 @@ services:
   # Mantiene tu subdominio de DuckDNS apuntando a la IP de casa (si HEIMDALL ya lo hace, no lo actives).
   duckdns:
     profiles: [duckdns]
-    image: alpine:3.22
+    image: alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
     container_name: lazo-duckdns
     restart: unless-stopped
     read_only: true
@@ -88,7 +92,8 @@ services:
   # Alternativa sin abrir puertos: Cloudflare Tunnel hasta Caddy (http://caddy:80).
   cloudflared:
     profiles: [tunnel]
-    image: cloudflare/cloudflared:2025.1.0
+    # Versión y digest comprobados en Docker Hub (2026-11-12). Al actualizar, cambia los dos.
+    image: cloudflare/cloudflared:2026.10.7@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
     container_name: lazo-cloudflared
     restart: unless-stopped
     read_only: true
