@@ -178,7 +178,7 @@ routerAdd(
   $apis.requireAuth('users'),
 );
 
-// ——— Qué abre un enlace: nombre del grupo, quién organiza y la plaza personal o las libres. Nada más ———
+// ——— Qué abre un enlace: nombre del grupo, quién organiza, la plaza personal o las libres y las caras de quien ya está. Nada más ———
 routerAdd('POST', '/api/lazo/invite-info', (e) => {
   const L = require(`${__hooks}/lib/lazo.cjs`);
   const inv = L.findInvite($app, String(e.requestInfo().body.token || ''));
@@ -189,21 +189,35 @@ routerAdd('POST', '/api/lazo/invite-info', (e) => {
   } catch {
     /* ya no está */
   }
+  const colorOf = (userId) => {
+    if (!userId) return '';
+    try {
+      return $app.findRecordById('users', userId).getString('color');
+    } catch {
+      return '';
+    }
+  };
   const listId = inv.getString('list');
   let personal = null;
   if (listId) {
     const plaza = $app.findRecordById('lists', listId);
     if (plaza.getString('user')) throw new BadRequestError(L.BAD_INVITE);
-    personal = { list: plaza.id, name: plaza.getString('name') };
+    personal = { list: plaza.id, name: plaza.getString('name'), color: colorOf(plaza.getString('prevUser')) };
   }
   const free = listId
     ? []
-    : $app.findRecordsByFilter('lists', 'group = {:g} && kind = "person" && user = ""', 'name', 0, 0, { g: g.id }).map((l) => ({ list: l.id, name: l.getString('name') }));
+    : $app.findRecordsByFilter('lists', 'group = {:g} && kind = "person" && user = ""', 'name', 0, 0, { g: g.id }).map((l) => ({ list: l.id, name: l.getString('name'), color: colorOf(l.getString('prevUser')) }));
+  // Quien ya está dentro: solo inicial y color (ni ids, ni nombres, ni correos), como mucho 12.
+  const { initial } = require(`${__hooks}/lib/plazas.cjs`);
+  const faces = $app
+    .findRecordsByFilter('lists', 'group = {:g} && kind = "person" && user != ""', 'claimedAt', 12, 0, { g: g.id })
+    .map((l) => ({ initial: initial(l.getString('name')), color: colorOf(l.getString('user')) }));
   return e.json(200, {
     group: { id: g.id, name: g.getString('name'), occasion: g.getString('occasion'), date: g.getString('date') || undefined },
     organizer,
     personal,
     free,
+    faces,
     allowNewNames: !listId && g.getBool('allowNewNames'),
   });
 });

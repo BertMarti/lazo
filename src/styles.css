@@ -621,3 +621,8 @@ table.map-table td { white-space: normal; vertical-align: middle; }
 table.map-table th[scope='row'] { background: none; font-weight: 700; white-space: normal; }
 .map-example { display: block; font-weight: 500; overflow-wrap: anywhere; }
 table.map-table .select { min-width: 9rem; }
+
+/* v10-plaza */
+.join-hero .faces { flex-wrap: wrap; justify-content: center; row-gap: var(--s-2); }
+.rows > li.plaza-lost { flex-wrap: wrap; }
+.plaza-lost-confirm { flex: 1 1 100%; gap: var(--s-2); }

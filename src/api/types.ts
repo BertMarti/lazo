@@ -60,10 +60,12 @@ export interface NewGroup {
 export interface InviteInfo {
   group: { id: Id; name: string; occasion: Occasion; date?: string };
   organizer: string;
-  /** Enlace personal: la plaza a la que da entrada. */
-  personal: { list: Id; name: string } | null;
+  /** Enlace personal: la plaza a la que da entrada. `color`: el de quien la tuvo antes (plaza liberada), si lo hay. */
+  personal: { list: Id; name: string; color?: string } | null;
   /** Enlace general: plazas libres para elegir. */
-  free: { list: Id; name: string }[];
+  free: { list: Id; name: string; color?: string }[];
+  /** Quien ya está dentro: solo inicial y color, como mucho 12. */
+  faces: { initial: string; color: string }[];
   allowNewNames: boolean;
 }
 

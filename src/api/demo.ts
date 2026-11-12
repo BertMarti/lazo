@@ -2,7 +2,7 @@ import { amazonInfo } from '../core/amazon';
 import type { ItemDraft } from '../core/columns';
 import { cryptoRand, drawPairs } from '../core/draw';
 import type { PageMeta } from '../core/meta';
-import { joinCode, normName, parsePlazas } from '../core/plazas';
+import { initial, joinCode, normName, parsePlazas } from '../core/plazas';
 import type { Cents, Claim, GiftList, Group, Id, Item, JoinRequest, Received, User } from '../core/types';
 import { LIMITS } from '../core/types';
 import { canEditList, canSeeStatus } from '../core/visibility';
@@ -321,11 +321,17 @@ export class DemoApi implements Api {
     const g = this.db.groups.find((x) => x.id === inv.group)!;
     const personal = inv.list ? this.db.lists.find((l) => l.id === inv.list) : undefined;
     if (inv.list && (!personal || personal.user)) throw new ApiError(BAD_INVITE);
+    const colorOf = (id?: Id) => this.db.users.find((u) => u.id === id)?.color ?? '';
     return {
       group: { id: g.id, name: g.name, occasion: g.occasion, date: g.date },
       organizer: this.user(inv.createdBy).name,
-      personal: personal ? { list: personal.id, name: personal.name } : null,
-      free: inv.list ? [] : this.db.lists.filter((l) => l.group === g.id && l.kind === 'person' && !l.user).map((l) => ({ list: l.id, name: l.name })),
+      personal: personal ? { list: personal.id, name: personal.name, color: colorOf(personal.prevUser) } : null,
+      free: inv.list ? [] : this.db.lists.filter((l) => l.group === g.id && l.kind === 'person' && !l.user).map((l) => ({ list: l.id, name: l.name, color: colorOf(l.prevUser) })),
+      faces: this.db.lists
+        .filter((l) => l.group === g.id && l.kind === 'person' && l.user)
+        .sort((a, b) => (a.claimedAt ?? 0) - (b.claimedAt ?? 0))
+        .slice(0, 12)
+        .map((l) => ({ initial: initial(l.name), color: colorOf(l.user) })),
       allowNewNames: !!g.allowNewNames && !inv.list,
     };
   }

@@ -1,8 +1,11 @@
 import { Check, CircleHalf, EyeSlash, Gift, PiggyBank, X, type Icon } from '@phosphor-icons/react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { initial } from '../core/plazas';
 import type { ItemStatus } from '../core/status';
 import type { User } from '../core/types';
 import { Button, IconButton } from './Button';
+
+export { initial };
 
 export const FLAVORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'] as const;
 export type Flavor = (typeof FLAVORS)[number];
@@ -16,7 +19,6 @@ export function Avatar({ user, size }: { user: Pick<User, 'name' | 'color'>; siz
   );
 }
 
-export const initial = (name: string) => [...name.replace(/^(abuela|abuelo|tía|tío)\s+/i, '').trim()][0]?.toUpperCase() ?? '·';
 
 const SEAL_LABEL: Record<ItemStatus['kind'], string> = {
   free: 'Libre',
