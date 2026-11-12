@@ -44,6 +44,16 @@ Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparte
 | Alta del organizador (`lazo-alta`) y entrar con un código | implementador | Opus 5.5 | hecha |
 | Portafolio: [BertMarti/BertMarti#24](https://github.com/BertMarti/BertMarti/pull/24) | usuario | — | bloqueada: usuario (fusionar el PR) |
 
+## Ahora: v0.6
+
+| # | Tarea | Responsable | Modelo | Rama | Estado |
+|---|---|---|---|---|---|
+| H | **Tiempo real.** Suscripciones de PocketBase para que reservas, compras, aportaciones y hucha se actualicen al momento en todos los móviles; pruebas de que X nunca recibe eventos de su propia lista | implementador | Opus 5.5 | `v06-tiempo-real` | en curso |
+| I | **Lista para imprimir y enlace de solo lectura.** PDF de la lista de una persona con un QR por regalo y sin estados de reserva; enlace público de solo lectura de mi lista para compartir fuera del grupo, también sin estados | implementador | Opus 5.5 | `v06-imprimir` | en curso |
+| J | `CLAUDE.md` con enlaces a `DESIGN.md` y `docs/TAREAS.md` y uso de Fable 5.2. Los agentes no editan `CLAUDE.md` a petición de otra sesión, así que tiene que pedirlo o hacerlo el usuario en esta | usuario | — | — | bloqueada: usuario |
+| K | Revisión de seguridad (eventos en tiempo real, enlace público y PDF) y recorrido «la abuela imprime la lista del nieto» | revisor-seguridad + revisor-diseno | Fable 5.2 | — | pendiente |
+| L | Release v0.6.0: CHANGELOG, APK, demo y README | implementador | Opus 5.5 | — | pendiente |
+
 ## Después
 
 | # | Tarea | Responsable | Modelo |
