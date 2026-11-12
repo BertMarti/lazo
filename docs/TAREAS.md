@@ -16,10 +16,10 @@ Cola priorizada. Cada tarea indica quién la hace y con qué modelo. Las que no 
 | 1 | Tres direcciones de arte y elección | revisor-diseno | Fable 5.2 | hecha |
 | 2 | Implementar «El catálogo de juguetes» en todas las pantallas | implementador | Opus 5.5 | hecha |
 | 3 | Revisión final y sus 10 arreglos (`docs/design/v0.4/FABLE-REVISION.md`) | revisor-diseno → implementador | Fable 5.2 → Opus 5.5 | hecha |
-| 4 | Veredicto «apto» sobre las capturas nuevas | revisor-diseno | Fable 5.2 | en curso |
+| 4 | Veredicto «apto» sobre las capturas nuevas | revisor-diseno | Fable 5.2 | hecha |
 | 5 | DESIGN.md, SKILLS.md, CHANGELOG y README | implementador | Opus 5.5 | hecha |
-| 6 | Merge a `main` y release v0.4.0 con el APK | implementador | Opus 5.5 | pendiente |
-| 7 | Demo en Cloudflare Pages (`scripts/pages-deploy.sh` → `lazo-demo.pages.dev`), porque GitHub Pages y Actions están bloqueados por facturación | implementador | Opus 5.5 | pendiente |
+| 6 | Merge a `main` y release v0.4.0 con el APK | implementador | Opus 5.5 | hecha |
+| 7 | Demo en Cloudflare Pages (`scripts/pages-deploy.sh` → `lazo-demo.pages.dev`), porque GitHub Pages y Actions están bloqueados por facturación. El control de seguridad deniega crear la superficie pública: la publica el usuario con `bash scripts/wsl.sh 'bash scripts/pages-deploy.sh'` | usuario | — | bloqueada: usuario |
 
 ## Siguiente (v0.5)
 
