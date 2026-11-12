@@ -26,15 +26,15 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 **Lazo lo arregla con una regla muy sencilla:** ves qué está libre, reservado o comprado en las listas de los demás, **pero nunca en la tuya**. Ni en la pantalla ni por detrás: el servidor no se lo envía a tu móvil.
 
 <p align="center">
-  <img src="docs/design/v0.4/readme/grupo-390.png" width="270" alt="La familia en tarjetas con su cara y su presupuesto (la tuya no lo muestra) y lo más deseado en fotos" />
+  <img src="docs/design/v0.5/readme/grupo-390.png" width="270" alt="La familia en tarjetas con su cara y su presupuesto (la tuya no lo muestra) y lo más deseado en fotos" />
   &nbsp;
-  <img src="docs/design/v0.4/readme/lista-390.png" width="270" alt="Lista de Mamá vista por Alberto: tablero de fotos con su precio; lo cogido lleva cinta y lazo" />
+  <img src="docs/design/v0.5/readme/lista-390.png" width="270" alt="Lista de Mamá vista por Alberto: tablero de fotos con su precio; lo cogido lleva cinta y lazo" />
   &nbsp;
-  <img src="docs/design/v0.4/readme/hucha-390.png" width="270" alt="La hucha común en frases: cuánto te falta poner y a quién se lo das" />
+  <img src="docs/design/v0.5/readme/sorteo-390.png" width="270" alt="El amigo invisible: un paquete atado con cinta y lazo que se abre solo cuando tú quieres" />
 </p>
 
 <p align="center">
-  <img src="docs/design/v0.4/readme/lista-1280.png" width="820" alt="En el escritorio: cabecera con pestañas y la lista de Mamá como tablero de fotos" />
+  <img src="docs/design/v0.5/readme/lista-1280.png" width="820" alt="En el escritorio: cabecera con pestañas y la lista de Mamá como tablero de fotos" />
 </p>
 
 ## Qué puedes hacer
@@ -46,6 +46,8 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 - **Regalos a medias.** Para el regalo caro de los abuelos, cada uno apunta lo que pone, Lazo te dice cuánto falta y quién debe qué a quién cuando alguien lo compra.
 - **Amigo invisible.** Un sorteo con exclusiones (que las parejas no se toquen entre sí). Cada persona solo ve su sobre; ni quien organiza ve los demás.
 - **Listas de niños.** Los peques no necesitan cuenta: su lista la llevan sus padres, que sí ven lo reservado para coordinarse.
+- **Avisos sin chivatazos.** Una campana te cuenta lo nuevo del grupo («Papá ha añadido 3 regalos», «faltan 10 días») y nunca dice nada de tu propia lista.
+- **En tu casa.** Guía paso a paso para montarlo en una Raspberry o un mini PC con copias de seguridad, HTTPS y acceso desde fuera para la familia: [docs/HOMELAB.md](docs/HOMELAB.md).
 - **Entrar sin contraseñas.** Te llega un enlace por WhatsApp, escribes tu nombre y ya estás dentro.
 - **Mis compras.** Todo lo que has reservado o comprado y cuánto llevas gastado, en una sola pantalla.
 

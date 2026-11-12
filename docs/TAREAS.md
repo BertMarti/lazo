@@ -33,7 +33,7 @@ Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparte
 | D | **Amigo invisible.** Animación de revelado y opción de reenviar el resultado en privado | implementador | Opus 5.5 | `v05-sorteo` | hecha |
 | E | Integrar A a D en `main` y pasar todas las pruebas | Opus | Opus 5.5 | — | hecha |
 | F | Revisión de seguridad y de UX de todo lo nuevo, accesibilidad (axe) y capturas | revisor-seguridad + revisor-diseno | Fable 5.2 | — | hecha (seguridad: V-16 a V-19 corregidos; UX: apto, con 8 arreglos aplicados) |
-| G | Release v0.5.0: CHANGELOG, APK, demo, README y CI mínimo | implementador | Opus 5.5 | — | pendiente |
+| G | Release v0.5.0: CHANGELOG, APK, demo, README y CI mínimo | implementador | Opus 5.5 | — | hecha |
 
 ## Después
 
