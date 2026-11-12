@@ -1,6 +1,6 @@
-import { Shuffle, X } from '@phosphor-icons/react';
+import { CopySimple, EyeSlash, PaperPlaneTilt, Shuffle, Warning, X } from '@phosphor-icons/react';
 import { Bow, Loading } from '../Bow';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DrawImpossible } from '../../core/draw';
 import { formatMoney, parseAmount } from '../../core/money';
 import type { Id } from '../../core/types';
@@ -25,21 +25,14 @@ export function DrawScreen({ groupId }: { groupId: string }) {
     <div className="stack-lg">
       <p className="lead">Solo tú sabes a quién regalas. Ni quien organiza ve el resto.</p>
       {info.receiver ? (
-        <div className="envelope" data-open={opened || undefined}>
-          <p className="meta">Te ha tocado regalar a</p>
-          <Avatar user={info.receiver} size="lg" />
-          <p className="who">{info.receiver.name}</p>
-          {info.draw?.budgetCents ? <p>Presupuesto: <span className="money">{formatMoney(info.draw.budgetCents)}</span></p> : null}
-          {(() => {
-            const l = detail.lists.find((x) => x.user === info.receiver!.id);
-            return l && opened ? <ButtonLink variant="primary" href={`#/l/${l.id}`}>Ver la lista de {info.receiver.name}</ButtonLink> : null;
-          })()}
-          <button type="button" className="cover" onClick={() => setOpened(true)} aria-label="Abrir tu regalo del amigo invisible">
-            <span className="cover-bow"><Bow size={96} /></span>
-            <span className="h-section">Te ha tocado…</span>
-            <span>Abrir · mira que nadie te esté mirando</span>
-          </button>
-        </div>
+        <Package
+          receiver={info.receiver}
+          groupName={detail.group.name}
+          budgetCents={info.draw?.budgetCents}
+          listId={detail.lists.find((x) => x.user === info.receiver!.id)?.id}
+          opened={opened}
+          setOpened={setOpened}
+        />
       ) : info.draw ? (
         <p className="notice">Este grupo ya tiene sorteo, pero tú no participas.</p>
       ) : (
@@ -72,6 +65,75 @@ export function DrawScreen({ groupId }: { groupId: string }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Texto para reenviárselo uno mismo: solo tu persona y su lista, nada del resto del sorteo. */
+export function shareMessage(groupName: string, receiver: string, listUrl?: string) {
+  const text = `Amigo invisible de ${groupName}: te toca regalar a ${receiver}.`;
+  return { text, url: listUrl, copy: listUrl ? `${text} ${listUrl}` : text };
+}
+
+/**
+ * El paquete en abeto atado con cinta dorada. Al abrirlo (≈900 ms, solo transform y opacity): el lazo se
+ * deshace, las dos bandas de cinta salen por los bordes, la tapa se levanta y aparece la persona.
+ * «Taparlo» lo cierra al momento. Con reduced-motion, fundido de 150 ms.
+ */
+function Package({ receiver, groupName, budgetCents, listId, opened, setOpened }: {
+  receiver: { name: string; color: string };
+  groupName: string;
+  budgetCents?: number;
+  listId?: Id;
+  opened: boolean;
+  setOpened: (o: boolean) => void;
+}) {
+  const toast = useToast();
+  const coverRef = useRef<HTMLButtonElement>(null);
+  const whoRef = useRef<HTMLParagraphElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    (opened ? whoRef : coverRef).current?.focus({ preventScroll: true });
+  }, [opened]);
+
+  const listUrl = listId ? `${location.origin}${location.pathname}#/l/${listId}` : undefined;
+  const msg = shareMessage(groupName, receiver.name, listUrl);
+  const canShare = typeof navigator.share === 'function';
+  const send = async () => {
+    if (canShare) {
+      try { await navigator.share({ title: 'Amigo invisible', text: msg.text, url: msg.url }); } catch { /* cancelado */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(msg.copy);
+      toast('Copiado. Pégatelo en un chat contigo mismo');
+    } catch {
+      toast('No se ha podido copiar. Apúntatelo a mano.');
+    }
+  };
+
+  return (
+    <div className="envelope" data-open={opened || undefined}>
+      <div className="envelope-inside" inert={!opened} aria-hidden={!opened}>
+        <p className="meta">Te ha tocado regalar a</p>
+        <Avatar user={receiver} size="lg" />
+        <p className="who" ref={whoRef} tabIndex={-1}>{receiver.name}</p>
+        {budgetCents ? <p>Presupuesto: <span className="money">{formatMoney(budgetCents)}</span></p> : null}
+        {listId && <ButtonLink variant="primary" href={`#/l/${listId}`}>Ver la lista de {receiver.name}</ButtonLink>}
+        <p className="notice envelope-warn"><Warning size={20} weight="bold" aria-hidden />Es solo para ti: no lo reenvíes al grupo de la familia.</p>
+        <ButtonGroup align="stretch">
+          <Button variant="secondary" icon={canShare ? PaperPlaneTilt : CopySimple} onClick={send}>{canShare ? 'Enviármelo' : 'Copiar'}</Button>
+          <Button variant="ghost" icon={EyeSlash} onClick={() => setOpened(false)}>Taparlo</Button>
+        </ButtonGroup>
+      </div>
+      <button ref={coverRef} type="button" className="cover" inert={opened} onClick={() => setOpened(true)} aria-label="Abrir el paquete del amigo invisible">
+        <span className="ribbon ribbon-v" aria-hidden />
+        <span className="ribbon ribbon-h" aria-hidden />
+        <span className="cover-bow"><Bow size={96} /></span>
+        <span className="h-section">Te ha tocado…</span>
+        <span>Abrir · mira que nadie te esté mirando</span>
+      </button>
     </div>
   );
 }
