@@ -17,6 +17,9 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 - Con mala cobertura, lo que se lee se intenta otra vez (hasta 3 veces) antes de rendirse; lo que se guarda nunca se repite solo, para no reservar ni pagar dos veces, y el aviso dice que no se ha guardado.
 - El tiempo real recarga la pantalla al reconectar, por si se perdió algún cambio mientras estaba cortado.
 
+### Añadido
+- «Copia del grupo» en Ajustes: quien organiza descarga un archivo con lo que ve del grupo (de su propia lista, solo los regalos que pidió) y puede crear con él un grupo nuevo para otra Navidad o para mudarse de servidor. Se copian las personas, con sitios libres para reenviar los enlaces, y los regalos que pidió cada una; las reservas, compras y aportaciones no.
+
 ## [0.5.1] - 2026-11-12 · Probado con la familia
 
 Arreglos que salen de recorrer Lazo en el móvil como lo harían un abuelo, alguien con prisa y una madre con la hucha, y lo que faltaba para montarlo en casa de verdad.

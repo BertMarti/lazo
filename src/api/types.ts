@@ -113,6 +113,8 @@ export interface Api {
   deleteItem(id: Id): Promise<void>;
   setBudget(listId: Id, amountCents: Cents | null): Promise<void>;
   importItems(listId: Id, drafts: ItemDraft[]): Promise<number>;
+  /** Copia del grupo: regalos pedidos en las plazas de un grupo recién creado en el que aún no ha entrado nadie más. */
+  restoreItems(groupId: Id, lists: { list: Id; items: ItemInput[] }[]): Promise<number>;
   gift(a: GiftAction): Promise<void>;
   contribute(itemId: Id, amountCents: Cents): Promise<void>;
   setContributionPaid(id: Id, paid: boolean): Promise<void>;

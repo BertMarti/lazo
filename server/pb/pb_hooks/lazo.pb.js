@@ -779,3 +779,72 @@ routerAdd(
   },
   $apis.requireAuth('users'),
 );
+
+// ——— Copia del grupo: los regalos pedidos de cada plaza, en un grupo recién creado (solo está quien organiza) ———
+// Solo crea regalos normales (ni sorpresas, ni reservas, ni compras, ni aportaciones) y nunca mira qué hay ya en
+// una lista: en la propia plaza eso delataría sorpresas o retirados. Todo o nada, en una transacción.
+routerAdd(
+  'POST',
+  '/api/lazo/restore',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const C = require(`${__hooks}/lib/copia.cjs`);
+    const body = e.requestInfo().body;
+    const me = e.auth.id;
+    let group;
+    try {
+      group = $app.findRecordById('groups', String(body.group || ''));
+    } catch {
+      throw new ForbiddenError('Solo quien organiza el grupo.');
+    }
+    if (!L.isAdmin(group, me)) throw new ForbiddenError('Solo quien organiza el grupo.');
+    const members = group.getStringSlice('members');
+    if (members.length !== 1 || members[0] !== me) throw new BadRequestError('Solo se puede restaurar en un grupo recién creado.');
+    const lists = body.lists;
+    if (!Array.isArray(lists) || lists.length > C.COPIA_MAX.lists) throw new BadRequestError('La copia tiene demasiadas personas.');
+    const plan = [];
+    const used = {};
+    let total = 0;
+    for (const x of lists) {
+      const items = x && x.items;
+      if (!Array.isArray(items) || items.length > C.COPIA_MAX.itemsPerList) throw new BadRequestError('Esa copia no encaja en este grupo.');
+      total += items.length;
+      if (total > C.COPIA_MAX.items) throw new BadRequestError('La copia tiene demasiados regalos.');
+      let l;
+      try {
+        l = $app.findRecordById('lists', String(x.list || ''));
+      } catch {
+        throw new BadRequestError('Esa copia no encaja en este grupo.');
+      }
+      const kind = l.getString('kind');
+      const fits = l.getString('group') === group.id && !used[l.id] && (kind === 'child' ? l.getStringSlice('managers').includes(me) : kind === 'person' && (!l.getString('user') || l.getString('user') === me));
+      if (!fits) throw new BadRequestError('Esa copia no encaja en este grupo.');
+      used[l.id] = true;
+      let clean;
+      try {
+        clean = items.map((i) => C.cleanGift(i));
+      } catch {
+        throw new BadRequestError('Este archivo no es una copia de Lazo válida.');
+      }
+      plan.push({ list: l.id, items: clean });
+    }
+    const col = $app.findCollectionByNameOrId('items');
+    const fields = ['title', 'url', 'image', 'priceCents', 'store', 'size', 'color', 'priority', 'notes', 'quantity'];
+    $app.runInTransaction((tx) => {
+      for (const p of plan) {
+        for (const it of p.items) {
+          const r = new Record(col);
+          for (const f of fields) if (it[f] !== undefined) r.set(f, it[f]);
+          r.set('list', p.list);
+          r.set('createdBy', me);
+          r.set('currency', group.getString('currency') || 'EUR');
+          r.set('secret', false);
+          r.set('removed', false);
+          tx.save(r);
+        }
+      }
+    });
+    return e.json(200, { created: total });
+  },
+  $apis.requireAuth('users'),
+);

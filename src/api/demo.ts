@@ -1,4 +1,5 @@
 import { amazonInfo } from '../core/amazon';
+import { cleanGift, COPIA_MAX } from '../core/copia';
 import type { ItemDraft } from '../core/columns';
 import { cryptoRand, drawPairs } from '../core/draw';
 import type { PageMeta } from '../core/meta';
@@ -215,6 +216,27 @@ export class DemoApi implements Api {
   async importItems(listId: Id, drafts: ItemDraft[]) {
     for (const d of drafts) await this.saveItem(listId, d);
     return drafts.length;
+  }
+
+  /** Igual que POST /api/lazo/restore: todo o nada, solo en un grupo tuyo en el que aún no ha entrado nadie. */
+  async restoreItems(groupId: Id, lists: { list: Id; items: ItemInput[] }[]) {
+    const g = this.admin(groupId);
+    if (this.db.memberships.filter((m) => m.group === g.id).length !== 1) throw new ApiError('Solo se puede restaurar en un grupo recién creado.');
+    if (!Array.isArray(lists) || lists.length > COPIA_MAX.lists) throw new ApiError('La copia tiene demasiadas personas.');
+    const fresh: Item[] = [];
+    const used = new Set<Id>();
+    for (const { list: id, items } of lists) {
+      const l = this.db.lists.find((x) => x.id === id && x.group === g.id);
+      // No se mira qué regalos tiene ya la lista: en la propia plaza eso delataría sorpresas o retirados.
+      const ok = l && !used.has(l.id) && (l.kind === 'child' ? l.managers.includes(this.viewer) : !l.user || l.user === this.viewer);
+      if (!l || !ok || !Array.isArray(items) || items.length > COPIA_MAX.itemsPerList) throw new ApiError('Esa copia no encaja en este grupo.');
+      used.add(l.id);
+      for (const raw of items) fresh.push({ ...cleanGift(raw), id: uid(), list: l.id, currency: g.currency, createdBy: this.viewer });
+      if (fresh.length > COPIA_MAX.items) throw new ApiError('La copia tiene demasiados regalos.');
+    }
+    this.db.items.push(...fresh);
+    this.save();
+    return fresh.length;
   }
 
   /** Todas las transiciones de un regalo, con las validaciones de la spec §3.2. */
