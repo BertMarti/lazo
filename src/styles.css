@@ -621,3 +621,44 @@ table.map-table td { white-space: normal; vertical-align: middle; }
 table.map-table th[scope='row'] { background: none; font-weight: 700; white-space: normal; }
 .map-example { display: block; font-weight: 500; overflow-wrap: anywhere; }
 table.map-table .select { min-width: 9rem; }
+
+/* v06-imprimir */
+.print-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-6); }
+.print-bar .back { display: inline-flex; align-items: center; gap: var(--s-1); min-height: 44px; color: var(--tinta-2); font-weight: 700; text-decoration: none; }
+.catalog { max-width: 960px; margin: 0 auto; }
+.catalog-head { display: grid; gap: var(--s-1); padding-bottom: var(--s-4); margin-bottom: var(--s-6); border-bottom: 2px solid var(--oro); }
+.catalog-brand { display: inline-flex; align-items: center; gap: var(--s-2); font-family: var(--f-display); font-size: 1.25rem; color: var(--terracota-tinta); }
+.catalog-head h1 { font-family: var(--f-display); font-weight: 400; font-size: var(--t-display); line-height: 1.05; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.catalog-occasion { color: var(--tinta-2); font-size: var(--t-big); font-weight: 700; }
+.catalog-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: var(--s-4); }
+@media (min-width: 720px) { .catalog-items { grid-template-columns: 1fr 1fr; } }
+.catalog-item { display: grid; grid-template-columns: 88px 1fr auto; gap: var(--s-3); align-items: start; padding: var(--s-3); border-radius: var(--r-l); background: var(--tarjeta); border: 1px solid var(--linea); break-inside: avoid; page-break-inside: avoid; }
+.catalog-photo { width: 88px; aspect-ratio: 1; border-radius: var(--r-m); overflow: hidden; display: grid; place-items: center; background: var(--hundido); color: var(--oro); }
+.catalog-photo img { width: 100%; height: 100%; object-fit: cover; }
+.catalog-text { display: grid; gap: 2px; min-width: 0; color: var(--tinta-2); font-size: var(--t-meta); }
+.catalog-text h2 { font-size: var(--t-md); font-weight: 700; line-height: 1.3; color: var(--tinta); overflow-wrap: anywhere; }
+.catalog-text h2 a { color: inherit; }
+.catalog-prio { font-weight: 700; color: var(--oro-tinta); }
+.catalog-price { font-weight: 800; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.catalog-qr { width: 88px; height: 88px; border-radius: 4px; }
+.catalog-foot { margin-top: var(--s-6); color: var(--tinta-2); font-size: var(--t-meta); }
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+  :root { color-scheme: light; }
+  html, body, .app, main { background: #fff !important; color: #000 !important; }
+  .masthead, .tabbar, .demo-bar, .print-bar, .toast { display: none !important; }
+  main { max-width: none; padding: 0; }
+  .catalog { max-width: none; }
+  .catalog-head { border-bottom: 1.5pt solid #000; margin-bottom: 6mm; padding-bottom: 3mm; }
+  .catalog-brand, .catalog-occasion, .catalog-text, .catalog-prio, .catalog-price, .catalog-text h2, .catalog-foot { color: #000 !important; }
+  .catalog-head h1 { font-size: 26pt; }
+  .catalog-items { grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .catalog-item { grid-template-columns: 22mm 1fr 22mm; gap: 3mm; padding: 3mm; background: #fff; border: 0.75pt solid #555; border-radius: 3mm; }
+  .catalog-photo { width: 22mm; background: #fff; border: 0.5pt solid #999; color: #000; }
+  .catalog-qr { width: 22mm; height: 22mm; }
+  .catalog-text { font-size: 9.5pt; }
+  .catalog-text h2 { font-size: 10.5pt; }
+  .catalog-text h2 a { text-decoration: none; }
+  .catalog-foot { font-size: 9pt; }
+}

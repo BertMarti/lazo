@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 // Accesibilidad (axe, WCAG 2.1 A y AA) en las pantallas principales, en claro y en oscuro.
-const routes = ['/#/', '/#/g/navidad', '/#/l/l-mama', '/#/l/l-alberto', '/#/hucha/navidad', '/#/compras', '/#/sorteo/navidad', '/#/ajustes', '/#/unirse/demoGeneralNavidad2026xx'];
+const routes = ['/#/', '/#/g/navidad', '/#/l/l-mama', '/#/l/l-alberto', '/#/hucha/navidad', '/#/compras', '/#/sorteo/navidad', '/#/ajustes', '/#/unirse/demoGeneralNavidad2026xx', '/#/imprimir/l-mama', `/#/ver/${'a'.repeat(32)}`];
 
 for (const scheme of ['light', 'dark'] as const) {
   for (const url of routes) {
@@ -12,6 +12,7 @@ for (const scheme of ['light', 'dark'] as const) {
         localStorage.clear();
         localStorage.setItem('lazo-demo-v4:viewer', 'alberto');
         localStorage.setItem('lazo:explicado', '1');
+        localStorage.setItem('lazo-demo-v4:shares', JSON.stringify({ ['a'.repeat(32)]: 'l-alberto' }));
         sessionStorage.setItem('lazo:inicio', '1');
       });
       await page.goto(url);

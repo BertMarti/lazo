@@ -3,7 +3,7 @@ import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
 import { canEditList, canSeeStatus } from '../core/visibility';
-import { ApiError, type Api, type DrawInfo, type GiftAction, type GroupDetail, type HuchaData, type InviteInfo, type ItemInput, type JoinResult, type ListDetail, type NewGroup, type Purchase } from './types';
+import { ApiError, type Api, type DrawInfo, type GiftAction, type GroupDetail, type HuchaData, type InviteInfo, type ItemInput, type JoinResult, type ListDetail, type NewGroup, type Purchase, type SharedList } from './types';
 
 /**
  * Backend real (PocketBase). La regla de la sorpresa la impone el SERVIDOR (server/pb/pb_migrations):
@@ -215,6 +215,14 @@ export class PocketBaseApi implements Api {
       const pots = (await this.pb.collection('contributions').getFullList({ filter: mine, expand: 'item.list.group' })).map((r) => ({ ...ctx(r), contribution: contribution(r) }));
       return [...claims, ...pots];
     });
+
+  shareList = (listId: Id) =>
+    this.run(async () => {
+      const r = await this.pb.send<{ token: string }>('/api/lazo/share', { method: 'POST', body: { list: listId } });
+      return { url: `${this.pb.baseURL.replace(/\/$/, '')}/#/ver/${r.token}` };
+    });
+  unshareList = (listId: Id) => this.run(async () => void (await this.pb.send('/api/lazo/share', { method: 'DELETE', body: { list: listId } })));
+  sharedList = (token: string) => this.run(() => this.pb.send<SharedList>(`/api/lazo/shared/${encodeURIComponent(token)}`, { method: 'GET' }));
 
   private async run<T>(fn: () => Promise<T>): Promise<T> {
     try {

@@ -326,11 +326,79 @@ routerAdd(
         inv.set('revoked', true);
         tx.save(inv);
       }
+      // Su enlace de solo lectura no pasa a quien ocupe la plaza después.
+      for (const s of tx.findRecordsByFilter('shares', 'list = {:l}', '', 0, 0, { l: plaza.id })) tx.delete(s);
     });
     return e.json(200, { ok: true });
   },
   $apis.requireAuth('users'),
 );
+
+// ——— Enlace de solo lectura de MI lista (o la de un niño que llevo). Crear otra vez rota el token; solo se guarda el hash ———
+routerAdd(
+  'POST',
+  '/api/lazo/share',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const plaza = L.ownList($app, e.requestInfo().body.list, e.auth.id);
+    const token = $security.randomString(32);
+    let rec;
+    try {
+      rec = $app.findFirstRecordByData('shares', 'list', plaza.id);
+    } catch {
+      rec = new Record($app.findCollectionByNameOrId('shares'));
+      rec.set('list', plaza.id);
+    }
+    rec.set('tokenHash', $security.sha256(token));
+    $app.save(rec);
+    return e.json(200, { token });
+  },
+  $apis.requireAuth('users'),
+);
+
+routerAdd(
+  'DELETE',
+  '/api/lazo/share',
+  (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
+    const plaza = L.ownList($app, e.requestInfo().body.list, e.auth.id);
+    for (const s of $app.findRecordsByFilter('shares', 'list = {:l}', '', 0, 0, { l: plaza.id })) $app.delete(s);
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Lista compartida (pública): nombre, ocasión y regalos. Ni estado, ni sorpresas, ni retirados, ni ids.
+// Token falso, rotado o revocado: la MISMA respuesta. Se ordena por prioridad y título (nunca por estado).
+routerAdd('GET', '/api/lazo/shared/{token}', (e) => {
+  const L = require(`${__hooks}/lib/lazo.cjs`);
+  const bad = () => new NotFoundError(L.BAD_SHARE);
+  const token = String(e.request.pathValue('token') || '');
+  if (!/^[A-Za-z0-9]{32}$/.test(token)) throw bad();
+  let share;
+  try {
+    share = $app.findFirstRecordByData('shares', 'tokenHash', $security.sha256(token));
+  } catch {
+    throw bad();
+  }
+  const list = $app.findRecordById('lists', share.getString('list'));
+  const group = $app.findRecordById('groups', list.getString('group'));
+  const opt = (v) => v || undefined;
+  const items = $app.findRecordsByFilter('items', 'list = {:l} && secret = false && removed = false', '', 0, 0, { l: list.id }).map((i) => ({
+    title: i.getString('title'),
+    image: opt(i.getString('image')),
+    store: opt(i.getString('store')),
+    priceCents: i.getInt('priceCents') || undefined,
+    currency: i.getString('currency') || 'EUR',
+    priority: i.getInt('priority') || 2,
+    size: opt(i.getString('size')),
+    color: opt(i.getString('color')),
+    url: opt(i.getString('url')),
+  }));
+  items.sort((a, b) => a.priority - b.priority || a.title.localeCompare(b.title, 'es'));
+  e.response.header().set('Cache-Control', 'no-store');
+  return e.json(200, { name: list.getString('name'), occasion: group.getString('occasion'), items });
+});
 
 // ——— Todas las transiciones de un regalo (spec §3.2). Orden: regalo → ¿es tuyo? (403 antes de leer estado) → grupo → transacción ———
 routerAdd(

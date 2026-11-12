@@ -1,4 +1,4 @@
-import { Gift as GiftIcon, FileXls, Lightbulb, Plus, X } from '@phosphor-icons/react';
+import { Gift as GiftIcon, FileXls, Lightbulb, Plus, Printer, ShareNetwork, X } from '@phosphor-icons/react';
 import { Bow, Loading } from '../Bow';
 import { useEffect, useState } from 'react';
 import type { ListDetail } from '../../api/types';
@@ -22,6 +22,7 @@ import { IdeasSheet } from './Ideas';
 import { ImportSheet } from './Import';
 import { ItemForm } from './ItemForm';
 import { ItemSheet } from './ItemSheet';
+import { ShareSheet } from './Printable';
 
 const SEEN_KEY = 'lazo:explicado';
 
@@ -44,6 +45,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [ideas, setIdeas] = useState(false);
   const [surprise, setSurprise] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [explained, setExplained] = useState(() => {
     try {
       return !!localStorage.getItem(SEEN_KEY);
@@ -241,6 +243,14 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
             Importar desde Excel
           </Button>
         )}
+        <Button variant="link" icon={Printer} onClick={() => go(`/imprimir/${id}`)}>
+          Imprimir la lista
+        </Button>
+        {d.canEdit && (
+          <Button variant="link" icon={ShareNetwork} onClick={() => setSharing(true)}>
+            {mine ? 'Compartir mi lista (solo lectura)' : `Compartir la lista de ${who} (solo lectura)`}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -296,6 +306,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
       )}
       {adding && d.canEdit && <AddGift listId={id} onClose={() => go(`/l/${id}`)} onSaved={reload} onImport={() => { go(`/l/${id}`); setImporting(true); }} />}
       {importing && <ImportSheet listId={id} onClose={() => setImporting(false)} onDone={() => { setImporting(false); reload(); }} />}
+      {sharing && <ShareSheet listId={id} who={who} mine={mine} onClose={() => setSharing(false)} />}
       {ideas && <IdeasSheet list={d.list} canAdd={d.canEdit} onClose={() => setIdeas(false)} onAdded={reload} />}
       {budgetOpen && <BudgetSheet list={d.list} budget={d.budget} onClose={() => setBudgetOpen(false)} onSaved={() => { setBudgetOpen(false); reload(); }} />}
     </div>
