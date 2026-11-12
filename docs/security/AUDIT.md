@@ -1047,3 +1047,222 @@ No es una fuga: el mensaje solo lleva lo tuyo. Pero si quien organiza repite el 
 - **V-23:** la opción C de la guía pide «Always Use HTTPS», y §7 lo comprueba (`curl -sI http://…` → 301). `cloudflared` queda en `2026.10.7@sha256:4955524a…`, y `alpine:3.22` (`duckdns` y `backup`) en `@sha256:49340b34…`, digests comprobados contra el registro de Docker Hub el 2026-11-12. `LAZO_BIND` vale `127.0.0.1` por defecto. Pendiente: el token de DuckDNS sigue en la línea de órdenes de `wget`.
 - **V-24:** `src/ui/screens/Import.tsx` lee con `sheetRows: LIMITS.importRows + 1` y, antes de abrir un `.xlsx`/`.ods`, `zipInflatedSize` (`src/core/columns.ts`) suma lo descomprimido que declara el ZIP: más de 50 MB se rechaza. Prueba en `test/ui/import.test.ts`: 100 000 filas se leen en menos de 2 s y dan 301; un ZIP que se infla por encima del tope se rechaza.
 - **V-25:** `shareMessage` lleva «(sorteo n.º N)», con el `round` que el hook ya guarda en cada sorteo (`Draw.round`, también en la demo). Prueba en `test/ui/draw.test.ts` y `e2e/sorteo.spec.ts`.
+
+## Auditoría final 1.0 (Fable 5.2)
+
+Fecha: 2026-11-12 · Alcance: todo el producto en `main` (árbol de trabajo sobre `1c5af63`, con cambios sin confirmar solo de texto y estilos en `Printable.tsx`, `Invite.tsx`, `styles.css` y dos E2E). Lo nuevo desde la v0.5 (`git diff 2c7afe5..HEAD`) y, otra vez, las colecciones, `/api/lazo/*`, tiempo real, lotes, enlaces, avisos, `localStorage`, la demo, el APK y los builds.
+
+**Método y límites.**
+
+- **Ejecutado:** las 61 pruebas de `server/test/*.test.mjs` contra PocketBase 0.40.6 en WSL (61/61 en verde). Tres sondas propias contra un PocketBase temporal con las migraciones y los hooks del repo: V-26 y V-29 salen de ahí, y el arreglo de V-26 está probado en una copia temporal de los hooks. `npm audit --omit=dev`: 0 vulnerabilidades.
+- **Secretos:** patrones de claves (Google, Anthropic, NVIDIA, Groq, OpenRouter, GitHub, JWT, claves privadas, `UNFURL_KEY`, tokens del túnel y de DuckDNS) sobre los ficheros versionados, todo el historial (`git log --all -p`), `dist`, `dist-demo` y los recursos del APK. Los valores de `.env.local` se han comparado sin imprimirlos: no aparecen en ningún fichero versionado, commit, build ni APK.
+- **No ejecutado:** Caddy, Docker, gitleaks (no está instalado aquí; corre en CI), Playwright, vitest ni un navegador. Las capturas PNG no se han revisado a ojo, tampoco las carpetas sin versionar de `docs/design/v1.0/`: conviene mirarlas antes de subirlas. No se ha tocado código.
+
+### Resumen
+
+| Severidad | N.º | Hallazgos |
+|---|---|---|
+| Crítico | 0 | — |
+| Alto | 1 | V-26 |
+| Medio | 2 | V-27, V-28 |
+| Bajo | 3 | V-29, V-30, V-31 |
+
+### Lo que he comprobado y está bien
+
+- **Tiempo real.** Al quitar un regalo propio, la dueña no recibe ningún evento, esté cogido o libre; los demás reciben `update` (retirado) y, si estaba libre, `delete` (sonda S4). `watch` se suscribe solo a `coleccion/*`, sin opciones. Tras `logout-all`, una conexión de tiempo real ya abierta con el token anulado no recibe nada más (sonda S7).
+- **Enlace de solo lectura.** `shared` devuelve nombre, ocasión y regalos sin ids, estado, sorpresas ni retirados: lo mismo que ya ve la dueña. Token de unos 190 bits del que solo se guarda el hash, misma respuesta para falso, rotado y revocado, `no-store`, 30 peticiones por minuto. El token va en el fragmento (`#/ver/…`), así que no viaja en `Referer`. `shares` no se lee por la API ni está en la lista blanca de Caddy. Liberar la plaza borra el enlace.
+- **Imprimir.** `PrintScreen` pasa por `toShared`: ningún estado, tampoco al imprimir la lista de otra persona. Enlaces y QR solo `http(s)`.
+- **Lotes y hooks.** Los hooks que usan `$app` dentro de un lote (borrar regalo, aportar, crear grupo o plaza) no bloquean la base de datos (sonda S6).
+- **Errores idénticos.** Aportar en lo propio (regalo vivo, retirado o inexistente) y poner presupuesto propio (haya o no) dan el mismo 400 (sonda S3). `filter=secret=true`, `removed=true`, `sort=@rowid` y `skipTotal` no enseñan nada oculto a la dueña; `filter=@rowid` se rechaza (sonda S9).
+- **Alta y códigos.** `lazo-alta` solo existe como orden de consola. Código de 40 bits, un uso, borrado también si ha caducado, 10 intentos por minuto e IP.
+- **`invite-info`.** Las caras son inicial y color, como mucho 12, sin ids ni nombres.
+- **`restore`.** Solo en un grupo con un único miembro, solo regalos normales, nunca lee lo que ya hay en una lista.
+- **Avisos y `net.ts`.** `seenFacts.forget` se llama al montar y al cambiar de persona, también sin sesión. Solo se reintentan los `GET`; nada se guarda en disco.
+- **Enlaces de regalos.** PocketBase acepta `javascript://x@example.com/…` y `ftp://` en `items.url` (sonda S8), pero los tres sitios donde se pinta (`ItemSheet.tsx:151`, `Catalog` y el QR) exigen `http(s)`, React 19 bloquea `javascript:` y la CSP no admite scripts en línea.
+- **Builds.** `dist` y `dist-demo` sin mapas de fuentes, sin correos ni direcciones privadas; `__lazoDemo` solo en la demo. Las claves de `.env.local` no llevan prefijo `VITE_`, así que Vite no las incrusta. `.dockerignore` deja fuera `.env*` y `server/data`.
+- **Homelab.** `Referrer-Policy: no-referrer`, lista blanca de colecciones, Caddy confía solo en la IP de cloudflared, PocketBase en `127.0.0.1`, imágenes de Caddy, cloudflared y Alpine con digest. Copias cifradas con la clave por variable de entorno, no en la línea de órdenes.
+
+### V-26 · Alto · Crear un regalo con el id de uno que quitaste dice si estaba cogido
+
+`server/pb/pb_hooks/lazo.pb.js:105-128` · `server/pb/pb_migrations/1762860000_plazas_hucha.js:53` · `1762850000_lazo.js:215` (lotes)
+
+Quitar un regalo propio responde siempre 204, pero si tenía reservas, compras o aportaciones la fila sigue existiendo, oculta («retirado»). PocketBase deja que el cliente elija el `id` al crear, y la unicidad del id se valida sin mirar reglas. La dueña conoce el id de su regalo.
+
+**Comprobado** en PocketBase 0.40.6 (sonda S1 y S2), con Mamá como dueña:
+
+| Petición de Mamá | Regalo que estaba cogido | Regalo que estaba libre |
+|---|---|---|
+| `DELETE items/records/ID` | 204 | 204 |
+| `POST items/records` con `"id":"ID"` | **400** `validation_not_unique` | **200** |
+| `POST /api/batch` con `PUT items/records` e `"id":"ID"` | **400** (dentro, 404) | **200** |
+
+**Escenario.** Mamá quiere saber si ya le han cogido la bicicleta. La quita de su lista y la vuelve a crear con el mismo id. Si responde 200, estaba libre, y el regalo queda como estaba, con el mismo id. Si responde 400, alguien la tenía reservada o comprada. Vale para cualquier regalo suyo, uno a uno, y también meses después para regalos que quitó en su día. Es la misma fuga que V-1 y V-2 por otra puerta.
+
+**Arreglo.** Nadie salvo el superusuario elige ids, y los lotes solo crean (el cliente no usa otra cosa: `importItems`). En `lazo.pb.js`, junto al cortafuegos:
+
+```js
+// V-26: un id elegido por el cliente delata si una fila oculta (un regalo retirado) sigue existiendo.
+onRecordCreateRequest((e) => {
+  if (!(e.auth && e.auth.isSuperuser()) && e.requestInfo().body.id) throw new BadRequestError('Failed to create record.');
+  e.next();
+});
+// El upsert de los lotes (PUT) hace la misma pregunta: 404 si existe oculto, 200 si no.
+onBatchRequest((e) => {
+  if (!(e.auth && e.auth.isSuperuser()) && e.batch.some((r) => String(r.method).toUpperCase() !== 'POST')) throw new ForbiddenError('Consulta no permitida.');
+  e.next();
+});
+```
+
+**Probado** en una copia temporal de los hooks: los dos `POST` dan el mismo 400 con el mismo cuerpo, los dos `PUT` el mismo 403, y los lotes de `POST` sin id (importar, aportar, crear grupo) siguen funcionando. PB-14 usa `PATCH` dentro de un lote: hay que cambiar lo que espera a 403.
+
+**Prueba.** Ampliar PB-10 en `server/test/rules.test.mjs`: tras quitar un regalo cogido y uno libre, `POST items/records` con cada id y el lote con `PUT` devuelven estado y cuerpo idénticos en los dos casos. Hoy falla.
+
+### V-27 · Medio · La copia del grupo deja en un archivo las reservas, compras, sorpresas y presupuestos de los demás
+
+`src/core/copia.ts:31-34, 77-91` · `src/ui/screens/Settings.tsx:148` · `test/core/copia.test.ts:86-94`
+
+`exportGroup` recorta la plaza de quien descarga, pero de las demás guarda `reservas` (quién, estado, cuánto pagó), `aportaciones`, `sorpresas`, `retirados` y `presupuestoCents`. Al restaurar no se usa nada de eso: `parseCopia` solo lee `regalos`. Es un archivo JSON en claro, con nombre `lazo-<grupo>-<fecha>.json`, en la carpeta de descargas.
+
+**Escenario.** Papá organiza y descarga la copia en el ordenador de casa, o se la manda a Mamá «para que la guarde». Mamá abre el archivo y lee sus sorpresas, quién le ha comprado qué, por cuánto y su presupuesto. No hacen falta herramientas ni sesión, y el archivo no caduca. Es la vía de V-19 (navegador compartido), más fácil y portátil. La copia lleva además el año de nacimiento de los niños.
+
+**Arreglo.** La copia lleva solo lo que se restaura: los regalos pedidos de cada lista. En `copia.ts`, borrar `GiftSeen`, `propia`, `sorpresas`, `retirados` y `presupuestoCents`, y dejar una sola rama:
+
+```ts
+for (const l of d.lists) {
+  const x = await api.listDetail(l.id);
+  listas.push({ name: l.name, kind: l.kind ?? (l.user ? 'person' : 'child'), ...(l.birthYear ? { birthYear: l.birthYear } : {}), regalos: x.items.filter((i) => !i.secret && !i.removed).map(strip) });
+}
+```
+
+En `Settings.tsx:148`: «La copia lleva solo los regalos que pidió cada persona: nada de reservas, compras, sorpresas ni presupuestos.» Así el archivo no contiene nada que su dueño no sepa ya, lo descargue quien lo descargue.
+
+**Prueba.** En `test/core/copia.test.ts`, sustituir el caso «de las listas ajenas sí lleva…» por: `JSON.stringify(copia.listas)` es idéntico para todas las personas del grupo, y la copia entera no casa `/reservas|aportaciones|sorpresas|retirados|presupuesto/` ni contiene el título de la sorpresa. La misma expresión sobre el archivo completo en `e2e/copia.spec.ts`.
+
+### V-28 · Medio · No se puede cerrar sesión, ni en este dispositivo ni en todos
+
+`src/api/pocketbase.ts:38-40` · `src/ui/screens/Settings.tsx` · `SECURITY.md:64`
+
+El único `authStore.clear()` es el de `resume()` cuando el token ya no vale. No hay botón de salir, y `/api/lazo/logout-all` existe en el servidor pero nada del cliente lo llama, aunque `SECURITY.md` lo cita como medida. La sesión dura 180 días y se renueva sola.
+
+**Escenario 1.** Papá entra con un código en la tableta del salón para apuntar regalos. No puede salir. Mamá abre Lazo en la tableta, es Papá, y ve quién ha reservado qué en su lista.
+
+**Escenario 2.** Roban o se pierde el móvil de quien organiza. Su plaza no se puede liberar (`plaza-release` excluye al dueño) y él no tiene desde dónde anular la sesión: quien tenga el móvil sigue dentro, como admin, hasta que alguien entre al servidor como superusuario.
+
+**Arreglo.** En `Api`, `signOut(everywhere: boolean)`. En `pocketbase.ts`:
+
+```ts
+signOut = (everywhere: boolean) =>
+  this.run(async () => {
+    if (everywhere) await this.pb.send('/api/lazo/logout-all', { method: 'POST' }); // el token nuevo no se guarda
+    this.pb.authStore.clear();
+    try {
+      for (const k of Object.keys(localStorage)) if (/^lazo:(avisos|pendiente):|^lazo:last-group$/.test(k)) localStorage.removeItem(k);
+    } catch {
+      /* sin almacenamiento */
+    }
+  });
+```
+
+En la demo, no hace nada. En `Settings.tsx`, un bloque «Sesión» con «Salir en este dispositivo» y «Salir en todos los dispositivos», con el aviso «Para volver a entrar necesitarás un código desde otro móvil o un enlace nuevo de quien organiza», y después `location.hash = '/'` y recargar.
+
+**Prueba.** `server/test/rules.test.mjs`: tras `logout-all`, el token viejo no lista nada y `auth-refresh` da 401; el devuelto sí vale (hoy no hay ninguna prueba de este endpoint). Unitaria: tras `signOut(false)`, `api.me()` es nulo y no queda `pocketbase_auth` ni ninguna clave `lazo:avisos:` en `localStorage`.
+
+### V-29 · Bajo · `restore` no tiene límite de peticiones
+
+`server/pb/pb_hooks/lazo.pb.js:786-850` · `server/pb/pb_migrations/1762880000_compartir.js:26-30`
+
+Cualquier cuenta puede crear un grupo (`groups.createRule` solo pide sesión), y en un grupo recién creado es admin y único miembro. También una cuenta pendiente que solo tiene el enlace general.
+
+**Medido** (sonda S5): 25 llamadas seguidas con 600 regalos cada una crean 15 000 filas en 3 s, y la reserva de otra persona lanzada mientras tanto tarda 1,6 s en vez de 4 ms. No filtra nada.
+
+**Escenario.** Alguien con un enlace general reenviado deja un bucle llamando a `restore`: las reservas de la familia se atascan y el disco de la Raspberry se llena; con el disco lleno fallan también las copias.
+
+**Arreglo.** Migración nueva (`1762890000_limite_restore.js`) que añade a `rateLimits.rules`: `{ label: 'POST /api/lazo/restore', maxRequests: 3, duration: 60, audience: '@auth' }`. Restaurar una copia es una sola llamada.
+
+**Prueba.** `server/test/copia.test.mjs`: la cuarta llamada en un minuto responde 429.
+
+### V-30 · Bajo · El único APK que sabe hacer el repo es de depuración
+
+`scripts/build-apk.sh:18` · `android/app/build.gradle:10-11, 19-24`
+
+El script solo lanza `assembleDebug`. He abierto el `app-debug.apk` local: su manifiesto lleva `debuggable`, y va firmado con la clave de depuración de la máquina. `build.gradle` no tiene configuración de firma de `release` y sigue en `versionName "0.5.1"`. El script comprueba `webContentsDebuggingEnabled` y `allowBackup`, no `debuggable`.
+
+**Escenario.** Se publica ese APK como 1.0. En un móvil con depuración USB activa, quien lo conecte a un ordenador ejecuta `adb shell run-as com.bertmarti.lazo` y copia el `localStorage` con el token de 180 días. Y si la clave de depuración se pierde, nadie puede actualizar la app sin desinstalarla.
+
+**Arreglo.** En `build-apk.sh`, modo `release`: `./gradlew assembleRelease` con `signingConfigs.release` leído de un fichero fuera del repo (ruta en `LAZO_KEYSTORE_PROPS`), y antes de dar el APK por bueno:
+
+```bash
+"$ANDROID_HOME"/build-tools/*/aapt2 dump badging "$APK" | grep -q 'application-debuggable' && { echo "¡APK depurable!" >&2; exit 1; }
+"$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$APK"
+```
+
+Subir `versionCode` y `versionName` a la 1.0.0. Añadir `keystore.properties` a `.gitignore` (`*.jks` y `*.keystore` ya están). Publicar solo `app-release.apk`.
+
+**Prueba.** La comprobación de arriba dentro del script, y en la lista de la release: `aapt2 dump badging lazo-1.0.0.apk | grep -c debuggable` → 0.
+
+### V-31 · Bajo · `SECURITY.md` no cuenta lo nuevo y promete algo que no está
+
+`SECURITY.md:16, 64`
+
+- Dice que la única excepción a «el servidor solo entrega filas» es la entrega. Ahora también salen datos del grupo sin sesión por `shared/{token}` e `invite-info` (caras), y existe la copia del grupo. Ninguno aparece.
+- «Cerrar sesión en todos los dispositivos» figura como medida y no tiene botón (V-28).
+- No dice que quien administra el servidor (superusuario, `data.db`, copias) lo lee todo, también su propia lista. Es inherente a alojarlo en casa, y debe estar escrito junto al riesgo R1.
+
+**Arreglo.** Añadir a la tabla «Otras medidas» las filas del enlace de solo lectura (qué lleva, hash, rotación, revocación), de la copia del grupo (tras V-27: solo regalos pedidos) y del tiempo real (solo `coleccion/*`, regla por evento); y un párrafo «Quien aloja el servidor» en riesgos declarados.
+
+**Prueba.** Revisión del texto en la PR de la 1.0.
+
+### Vías de fuga y su estado
+
+| Vía | Estado | Por qué |
+|---|---|---|
+| Lectura directa de `claims`, `contributions`, `budgets` (lista, id, `totalItems`, `fields`, `skipTotal`) | Cubierta | Reglas `SEE_ITEM` y `SEE_LIST`; 61/61 y sonda S9 |
+| `expand`, `filter` y `sort` por `_via_` o `@collection` | Cubierta | Cortafuegos y regla de la colección de destino |
+| Sorpresas y retirados de la propia plaza | Cubierta | Regla `VIS`; `filter=secret=true` devuelve 0 a la dueña |
+| Tiempo real con opciones en el topic | Cubierta | Lista blanca de topics (R-1) |
+| Tiempo real, eventos de la propia plaza | Cubierta | Regla por evento; al quitar un regalo la dueña no recibe nada (S4) |
+| Tiempo real con la sesión anulada | Cubierta | La conexión abierta deja de recibir (S7) |
+| Quitar un regalo propio: código de respuesta | Cubierta | Siempre 204 (PB-10) |
+| **Quitar un regalo propio y reutilizar su id** | **NO cubierta → V-26** | 400 si estaba cogido, 200 si no |
+| **Lotes: upsert (`PUT`)** | **NO cubierta → V-26** | 404 dentro del lote si la fila oculta existe |
+| Lotes: `expand` y `_via_` | Cubierta | PB-14 |
+| `gift` sobre lo propio, retirado o inexistente | Cubierta | 403 o 404 antes de leer estado (V-1) |
+| Aportar o poner presupuesto en lo propio | Cubierta | Mismo 400 exista o no (S3) |
+| Agregados y recuentos | Cubierta | No hay ninguno que dependa de filas ocultas: `invite-info` cuenta personas, `shared` regalos visibles, `restore` lo que envías |
+| Hucha: tu parte, pagos, saldos | Cubierta | Tu parte depende solo de plazas ajenas; los pagos solo los ven sus dos partes (PB-12, PB-13) |
+| Entrega (`received`) | Según diseño | Dos llaves; solo lo comprado antes de abrir, sin precios |
+| Enlace de solo lectura | Cubierta | Sin estado, sorpresas, retirados ni ids; hash, rotación y revocación |
+| Vista para imprimir | Cubierta | `toShared`, sin estado |
+| Enlaces de invitación y códigos | Cubierta | Hash, un uso, caducidad, límite; token en el fragmento |
+| Recuperar la plaza (`plaza-release`) | Riesgo declarado R1 | Quien organiza puede liberar una plaza y ocuparla desde otro navegador. Cada entrada da el aviso «X ha entrado en el grupo» a los demás. Ver V-31 |
+| **Copia del grupo (archivo)** | **NO cubierta → V-27** | Lleva estados, sorpresas y presupuestos ajenos en claro |
+| `restore` | Cubierta | No lee listas; sin límite de peticiones (V-29, disponibilidad) |
+| Avisos | Cubierta | `buildFacts` descarta lo propio (V-20); lo visto se borra al cambiar de sesión (V-19) |
+| `localStorage` | Cubierta | Token, último grupo, ajustes, clave de IA, solicitud pendiente y avisos de la sesión actual |
+| **Dispositivo compartido** | **NO cubierta → V-28** | No se puede cerrar sesión |
+| Service worker | Cubierta | No guarda `/api/` |
+| Reintentos sin red | Cubierta | Solo `GET`, nada en disco |
+| XSS (leería la lista con la sesión de otro) | Cubierta | CSP `script-src 'self'`, React sin HTML inyectado, enlaces solo `http(s)` |
+| Demo | No es frontera | Datos ficticios en el navegador; sin claves ni URL privadas en `dist-demo` |
+| APK | Parcial → V-30 | `allowBackup=false` y WebView no depurable, pero el APK local es de depuración |
+| Secretos en el repositorio y en el historial | Cubierta | Solo marcadores en `.env.example`; `.env.local` ignorado y sin rastro |
+| Secretos en `dist`, `dist-demo` y APK | Cubierta | Ninguna coincidencia |
+| Superusuario, `data.db` y copias del servidor | Fuera de la regla | Quien aloja lo lee todo. Falta decirlo en `SECURITY.md` (V-31) |
+| Imagen del regalo como baliza (R-6) | Aceptado | La dueña ve quién abre su lista, no el estado |
+
+### Pendientes de auditorías anteriores
+
+Siguen abiertos, todos bajos y ninguno bloquea: G-12 (`server/Dockerfile` con `node:24-alpine` y `alpine:3.22` sin digest, PocketBase sin `sha256sum`, sin `cap_drop` ni `read_only`, acciones de GitHub y `gitleaks:latest` por etiqueta); G-4 (los códigos de dispositivo caducados no se borran); V-20 (sin `PB_BIN` las suites se saltan en verde: falta el `throw` en CI); V-23 (el token de DuckDNS va en la línea de órdenes de `wget`). Las copias cifradas usan AES-CBC sin autenticación: una copia manipulada no se detecta al descifrar (alternativa: `age`).
+
+### Veredicto
+
+**No apto.** V-26 rompe la regla desde la propia sesión de la dueña con dos peticiones, y está confirmado contra PocketBase real.
+
+Para **apto**:
+
+1. **V-26** corregido, con PB-10 ampliada en verde y PB-14 adaptada. El arreglo son dos hooks y ya está probado en una copia.
+2. **V-27** corregido: la copia del grupo es nueva en la 1.0 y hoy escribe en disco justo lo que la regla esconde.
+3. **V-28** corregido, o declarado en `SECURITY.md` como riesgo conocido si se deja para la 1.0.1.
+4. La release publica un APK de `release` firmado, no el de depuración (V-30).
+
+V-29 y V-31 pueden ir en la misma versión o en la siguiente. Con los puntos 1 y 2 hechos y las pruebas de servidor en verde, no conozco ninguna vía por la que alguien vea o deduzca el estado de su propia lista desde su sesión.
