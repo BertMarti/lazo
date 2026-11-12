@@ -54,23 +54,23 @@ Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparte
 | K | Revisión de seguridad (eventos en tiempo real, enlace público y PDF) y recorrido «la abuela imprime la lista del nieto» | revisor-seguridad + revisor-diseno | Fable 5.2 | — | pendiente |
 | L | Release v0.6.0: CHANGELOG, APK, demo y README | implementador | Opus 5.5 | — | pendiente |
 
-## v1.0 «Nochebuena» (plan aprobado por el usuario; alcance congelado)
+## v1.0 «Nochebuena»: publicada el 2026-11-12 (https://github.com/BertMarti/lazo/releases/tag/v1.0.0)
 
 Distribución: APK firmado en GitHub Releases más la web instalable (sin Play Store). Servidor: PocketBase en el homelab del usuario. Fecha: lo antes posible. Alcance: lo que hay, más H e I, más lo de esta tabla. Nada más.
 
 | # | Tarea | Responsable | Modelo | Rama | Estado |
 |---|---|---|---|---|---|
-| M | Integrar H (tiempo real) e I (imprimir y solo lectura) | Opus | Opus 5.5 | — | pendiente |
-| N | **Pulido del móvil.** Presupuesto con una cifra grande y el resto en «Ver cuentas»; el aviso «X ve su lista, pero no…» en una línea, explicado solo la primera vez; rejilla de 2 columnas; banda de la demo y cabecera | implementador | Opus 5.5 | `v10-movil` | pendiente (tras M) |
-| O | **Casos reales:** recuperar la plaza si se pierde el móvil (antes 16) y avatares al entrar por el enlace (antes 8) | implementador | Opus 5.5 | `v10-plaza` | en curso |
-| P | **Sin conexión:** reintentos y mensajes claros | implementador | Opus 5.5 | `v10-red` | pendiente (tras M) |
-| Q | **Copia y restauración del grupo** (exportar e importar desde Ajustes, para quien organiza) | implementador | Opus 5.5 | `v10-copia` | pendiente (tras M) |
-| S | **Seguridad baja:** V-20 a V-25 | implementador | Opus 5.5 | `v10-seguridad` | en curso |
-| T | **Legal en sencillo:** política de privacidad, aviso RGPD de menores (nombre de pila, sin cuenta ni foto) y términos de uso, enlazados en la app y en el README | implementador | Opus 5.5 | `v10-legal` | en curso |
-| U | Validación en seco del homelab (`caddy validate`, `docker compose config`) y `PRUEBA-REAL.md` como checklist | Opus | Opus 5.5 | — | pendiente |
-| V | E2E de punta a punta con 5 miembros, rendimiento en un Android modesto y accesibilidad AA | implementador | Opus 5.5 | — | pendiente |
-| W | **Auditoría FINAL** de seguridad de todo el producto y revisión final de UX: veredicto «apto», obligatorio para etiquetar | revisor-seguridad + revisor-diseno | Fable 5.2 | — | pendiente |
-| X | Release 1.0.0: CHANGELOG para usuarios, README con capturas finales, demo, APK firmado (clave en WSL, fuera del repo, como Gestorín), PR del portafolio y perfil | Opus | Opus 5.5 | — | pendiente |
+| M | Integrar H (tiempo real) e I (imprimir y solo lectura) | Opus | Opus 5.5 | — | hecha |
+| N | **Pulido del móvil.** Presupuesto con una cifra grande y el resto en «Ver cuentas»; el aviso «X ve su lista, pero no…» en una línea, explicado solo la primera vez; rejilla de 2 columnas; banda de la demo y cabecera | implementador | Opus 5.5 | `v10-movil` | hecha |
+| O | **Casos reales:** recuperar la plaza si se pierde el móvil (antes 16) y avatares al entrar por el enlace (antes 8) | implementador | Opus 5.5 | `v10-plaza` | hecha |
+| P | **Sin conexión:** reintentos y mensajes claros | implementador | Opus 5.5 | `v10-red` | hecha |
+| Q | **Copia y restauración del grupo** (exportar e importar desde Ajustes, para quien organiza) | implementador | Opus 5.5 | `v10-copia` | hecha |
+| S | **Seguridad baja:** V-20 a V-25 | implementador | Opus 5.5 | `v10-seguridad` | hecha |
+| T | **Legal en sencillo:** política de privacidad, aviso RGPD de menores (nombre de pila, sin cuenta ni foto) y términos de uso, enlazados en la app y en el README | implementador | Opus 5.5 | `v10-legal` | hecha |
+| U | Validación en seco del homelab (`caddy validate`, `docker compose config`) y `PRUEBA-REAL.md` como checklist | usuario | — | — | bloqueada: usuario (en este equipo no hay Docker ni Caddy; `PRUEBA-REAL.md` está listo) |
+| V | E2E de punta a punta con 5 miembros, rendimiento en un Android modesto y accesibilidad AA | implementador | Opus 5.5 | — | hecha |
+| W | **Auditoría FINAL** de seguridad de todo el producto y revisión final de UX: veredicto «apto», obligatorio para etiquetar | revisor-seguridad + revisor-diseno | Fable 5.2 | — | hecha |
+| X | Release 1.0.0: CHANGELOG para usuarios, README con capturas finales, demo, APK firmado (clave en WSL, fuera del repo, como Gestorín), PR del portafolio y perfil | Opus | Opus 5.5 | — | hecha |
 | 15 | Montarlo en el homelab real con `PRUEBA-REAL.md` | usuario | — | — | bloqueada: usuario (no frena la etiqueta) |
 
 ## v1.1 «Lista de Amazon» (después de publicar la 1.0)
