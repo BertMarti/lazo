@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["dist", "dist-demo", "android", "node_modules", ".superpowers", "server/pb/pb_hooks/lib", "server/unfurl/meta.mjs"] },
+  { ignores: ["dist", "dist-demo", "android", "node_modules", ".superpowers", "server/pb/pb_hooks/lib", "server/unfurl/meta.mjs", ".claude", ".impeccable"] },
   js.configs.recommended,
   { files: ["server/unfurl/**/*.mjs", "server/test/**/*.mjs"], languageOptions: { globals: globals.node } },
   { files: ["server/pb/**/*.js"], languageOptions: { globals: { migrate: "readonly", Collection: "readonly", TextField: "readonly", Record: "readonly", routerAdd: "readonly", routerUse: "readonly", onRecordCreateRequest: "readonly", onRecordCreate: "readonly", onRealtimeSubscribeRequest: "readonly", $app: "readonly", $apis: "readonly", $security: "readonly", $http: "readonly", $os: "readonly", __hooks: "readonly", require: "readonly", BadRequestError: "readonly", ForbiddenError: "readonly", UnauthorizedError: "readonly", NotFoundError: "readonly", Field: "readonly", onRecordDeleteRequest: "readonly", module: "writable" } } },

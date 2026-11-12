@@ -27,11 +27,20 @@ async function meddle(api: DemoApi, x: string) {
       const pot = group.buyMode !== 'individual';
       const self = group.buyMode !== 'hucha';
       const a = free.shift();
-      if (a) await api.gift({ action: 'reserve', item: a.id, kind: self ? 'self' : 'pot' }), done++;
+      if (a) {
+        await api.gift({ action: 'reserve', item: a.id, kind: self ? 'self' : 'pot' });
+        done++;
+      }
       const b = free.shift();
-      if (b && pot) await api.gift({ action: 'buy', item: b.id, kind: 'pot', paidCents: 4321, paidBy: y }), done++;
+      if (b && pot) {
+        await api.gift({ action: 'buy', item: b.id, kind: 'pot', paidCents: 4321, paidBy: y });
+        done++;
+      }
       const c = free.shift();
-      if (c && self && pot) await api.contribute(c.id, 1500), done++;
+      if (c && self && pot) {
+        await api.contribute(c.id, 1500);
+        done++;
+      }
     }
   }
   return done;
