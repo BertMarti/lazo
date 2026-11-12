@@ -4,7 +4,7 @@ import type { BuyMode, Occasion } from '../../core/types';
 import { Button, ButtonGroup } from '../Button';
 import { go, useApi } from '../ctx';
 import { Bow, Loading } from '../Bow';
-import { Avatar, daysUntil, errorText, OCCASION, Sheet, useLoad } from '../kit';
+import { Avatar, CodeForm, daysUntil, errorText, OCCASION, Sheet, useLoad } from '../kit';
 
 export function Home() {
   const api = useApi();
@@ -26,6 +26,15 @@ export function Home() {
           <h2>Aún no tienes ningún grupo</h2>
           <p>Crea uno para Navidad, un cumpleaños o una boda, o pide a alguien de tu familia que te invite.</p>
         </div>
+      )}
+      {groups && groups.length === 0 && (
+        <CodeForm
+          claim={async (code) => {
+            await api.claimDevice(code);
+            location.hash = '/';
+            location.reload();
+          }}
+        />
       )}
       {!groups && !error && <Loading />}
       <div className="groups">

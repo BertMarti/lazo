@@ -123,6 +123,14 @@ export class PocketBaseApi implements Api {
       return m.pending ? { pending: true, request: m.request!, code: m.code!, group: m.group } : { group: m.group };
     });
 
+  claimDevice = (code: string) =>
+    this.run(async () => {
+      const r = await this.pb.send<{ token: string; record: RecordModel }>('/api/lazo/device-claim', { method: 'POST', body: { code } });
+      this.pb.authStore.save(r.token, r.record);
+    });
+
+  deviceCode = () => this.run(() => this.pb.send<{ code: string; minutes: number }>('/api/lazo/device-code', { method: 'POST' }));
+
   // Al rechazar, el servidor borra la solicitud (V-13 c): un 404 es «rechazada».
   requestStatus = (requestId: Id) =>
     this.run(async () => {

@@ -330,6 +330,14 @@ export class DemoApi implements Api {
     };
   }
 
+  async claimDevice(): Promise<void> {
+    throw new ApiError('En la demo no hace falta: elige a quién ver arriba.');
+  }
+
+  async deviceCode() {
+    return { code: 'DEMO2345', minutes: 10 };
+  }
+
   /** En la demo, entrar crea siempre una cuenta nueva (como abrir el enlace en otro móvil) y pasa a verla. */
   async join(token: string, choice: { list?: Id; name?: string }): Promise<JoinResult> {
     const inv = this.invite(token);

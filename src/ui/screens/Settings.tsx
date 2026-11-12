@@ -1,8 +1,9 @@
-import { ArrowSquareOut } from '@phosphor-icons/react';
+import { ArrowSquareOut, DeviceMobile } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { loadAi, PRESETS, saveAi, type AiSettings } from '../../ai/provider';
 import { suggestIdeas } from '../../ai/tasks';
 import { Button, ButtonGroup, ButtonLink } from '../Button';
+import { useApi } from '../ctx';
 import { errorText, useToast } from '../kit';
 
 /** Ajustes de la IA. Opcional: sin IA, Lazo funciona igual (sinónimos para Excel e ideas de un catálogo local). */
@@ -32,6 +33,7 @@ export function Settings() {
 
   return (
     <div className="stack-lg" style={{ maxWidth: 640 }}>
+      <OtherDevice />
       <section className="panel stack" aria-labelledby="ia">
         <h2 id="ia" className="h-section">Inteligencia artificial</h2>
         <p className="lead">Opcional: Lazo funciona igual sin IA. Ayuda a entender Excel raros y a pensar ideas de regalo. La clave se guarda solo en este dispositivo; el servidor de Lazo nunca la ve.</p>
@@ -72,5 +74,43 @@ export function Settings() {
         </ButtonGroup>
       </section>
     </div>
+  );
+}
+
+/** «Entrar en otro móvil»: un código de un solo uso para «Tengo un código» en el otro móvil. */
+function OtherDevice() {
+  const api = useApi();
+  const [code, setCode] = useState<{ code: string; minutes: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const ask = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      setCode(await api.deviceCode());
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="panel stack" aria-labelledby="movil">
+      <h2 id="movil" className="h-section">Entrar en otro móvil</h2>
+      <p className="lead">En el otro móvil, abre Lazo, toca «Tengo un código» y escribe el código que verás aquí.</p>
+      {code && (
+        <p role="status">
+          <span className="code" style={{ fontSize: 'var(--t-display)' }}>{code.code}</span>
+          <br />
+          <span className="meta">Caduca en {code.minutes} minutos</span>
+        </p>
+      )}
+      {err && <p className="notice notice-error" role="alert">{err}</p>}
+      <ButtonGroup>
+        <Button variant={code ? 'secondary' : 'primary'} icon={DeviceMobile} loading={busy} onClick={ask}>
+          {code ? 'Otro código' : 'Entrar en otro móvil'}
+        </Button>
+      </ButtonGroup>
+    </section>
   );
 }

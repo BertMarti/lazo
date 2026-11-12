@@ -167,3 +167,47 @@ export const OCCASION: Record<string, string> = {
 };
 
 export const errorText = (e: unknown) => (e instanceof Error ? e.message : 'Algo ha fallado. Inténtalo otra vez.');
+
+/** «Tengo un código»: entrar con el código de 8 caracteres de otro móvil o de `pocketbase lazo-alta`. */
+export function CodeForm({ claim, children }: { claim: (code: string) => Promise<void>; children?: ReactNode }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  return (
+    <form
+      className="panel stack"
+      style={{ maxWidth: 480, width: '100%', margin: '0 auto' }}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (code.length !== 8) return setErr('El código tiene 8 caracteres.');
+        setBusy(true);
+        setErr('');
+        try {
+          await claim(code);
+        } catch (x) {
+          setErr(errorText(x));
+          setBusy(false);
+        }
+      }}
+    >
+      <h2 className="h-section">Tengo un código</h2>
+      {children}
+      <label className="field">
+        <span>Código de 8 caracteres</span>
+        <input
+          className="input code"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+          autoComplete="one-time-code"
+          autoCapitalize="characters"
+          spellCheck={false}
+          maxLength={8}
+          placeholder="ABCD2345"
+        />
+        <small>Lo ves en «Ajustes → Entrar en otro móvil» del móvil donde ya tienes Lazo.</small>
+      </label>
+      {err && <p className="notice notice-error" role="alert">{err}</p>}
+      <Button type="submit" variant="primary" wide loading={busy}>Entrar</Button>
+    </form>
+  );
+}

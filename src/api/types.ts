@@ -113,6 +113,10 @@ export interface Api {
   inviteInfo(token: string): Promise<InviteInfo>;
   join(token: string, choice: { list?: Id; name?: string }): Promise<JoinResult>;
   requestStatus(requestId: Id): Promise<JoinRequest['status']>;
+  /** Entrar con un código de 8 caracteres (de otro móvil o de `pocketbase lazo-alta`). */
+  claimDevice(code: string): Promise<void>;
+  /** Código de un solo uso para entrar con esta cuenta en otro móvil. */
+  deviceCode(): Promise<{ code: string; minutes: number }>;
   joinRequests(groupId: Id): Promise<JoinRequest[]>;
   decideJoin(requestId: Id, accept: boolean): Promise<void>;
   hucha(groupId: Id): Promise<HuchaData>;
