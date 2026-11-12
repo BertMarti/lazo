@@ -567,3 +567,9 @@ table.preview th { background: var(--hundido); font-weight: 800; }
 .envelope .cover { place-content: end center; padding-bottom: var(--s-8); }
 .envelope .cover .cover-bow { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .envelope { min-height: 380px; align-content: center; }
+
+/* v05-importar */
+table.map-table td { white-space: normal; vertical-align: middle; }
+table.map-table th[scope='row'] { background: none; font-weight: 700; }
+table.map-table .select { min-width: 10rem; }
+.map-title { font-size: var(--t-md); font-weight: 800; }
