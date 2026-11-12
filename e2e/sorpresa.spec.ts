@@ -29,7 +29,7 @@ for (const [id, name] of FAMILY) {
     await expect(page.locator('.member .budget')).toHaveCount(5); // las otras 4 plazas + la plaza libre de Tía Loli
     // Su lista: sin sellos, precintos, estados ni presupuesto.
     await page.goto(`/#/l/l-${id}`);
-    await expect(page.getByText('Tú no ves quién te regala qué. Los demás sí.')).toBeVisible();
+    await expect(page.getByText('Lo que te regalan es sorpresa: aquí solo ves lo que has pedido.')).toBeVisible();
     await expect(page.locator('main .gifts .seal, main .gifts .band, main .gift-foot, main .budget-panel')).toHaveCount(0);
   });
 }

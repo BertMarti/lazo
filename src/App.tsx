@@ -1,9 +1,10 @@
-import { ArrowLeft, Gear, PiggyBank, ShoppingBag, Shuffle, UsersThree, type Icon } from '@phosphor-icons/react';
-import { useCallback, useState } from 'react';
+import { CaretLeft, Gear, PiggyBank, ShoppingBag, Shuffle, UsersThree, type Icon } from '@phosphor-icons/react';
+import { useCallback, useRef, useState } from 'react';
 import { DemoApi } from './api/demo';
 import type { Api } from './api/types';
 import { IconButton } from './ui/Button';
 import { ApiCtx, go, lastGroup, useRoute } from './ui/ctx';
+import { Brand } from './ui/Bow';
 import { Avatar, daysUntil, ToastProvider } from './ui/kit';
 import { DrawScreen } from './ui/screens/Draw';
 import { GroupScreen } from './ui/screens/Group';
@@ -19,13 +20,17 @@ import type { Title } from './ui/title';
 export function App({ api }: { api: Api }) {
   const route = useRoute();
   const [, force] = useState(0);
-  const [title, setTitle] = useState<Title>({ name: 'Lazo' });
-  const onTitle = useCallback((t: Title) => setTitle(t), []);
+  // El título lo pone cada pantalla al cargar; se guarda con su ruta para no enseñar el de la anterior.
+  const routeKey = route.join('/');
+  const keyRef = useRef(routeKey);
+  keyRef.current = routeKey;
+  const [title, setTitle] = useState<Title & { key?: string }>({ name: '' });
+  const onTitle = useCallback((t: Title) => setTitle({ ...t, key: keyRef.current }), []);
   const [section, id, extra] = route;
   const group = section === 'g' || section === 'sorteo' || section === 'hucha' ? id : lastGroup.get();
 
   let screen;
-  let t: Title = title;
+  let t: Title = title.key === routeKey ? title : { name: '' };
   if (section === 'g' && id) screen = <GroupScreen id={id} onTitle={onTitle} />;
   else if (section === 'l' && id) screen = <ListScreen id={id} adding={extra === 'nuevo'} onTitle={onTitle} />;
   else if (section === 'compras') {
@@ -33,22 +38,22 @@ export function App({ api }: { api: Api }) {
     t = { name: 'Mis compras', sub: 'Solo lo ves tú' };
   } else if (section === 'sorteo' && id) {
     screen = <DrawScreen groupId={id} />;
-    t = { name: 'Amigo invisible', back: `/g/${id}` };
+    t = { name: 'Amigo invisible', back: `/g/${id}`, backLabel: 'Al grupo' };
   } else if (section === 'hucha' && id) {
     screen = <HuchaScreen groupId={id} />;
-    t = { name: 'Hucha', back: `/g/${id}` };
+    t = { name: 'Hucha', back: `/g/${id}`, backLabel: 'Al grupo' };
   } else if (section === 'recibido' && id) {
     screen = <ReceivedScreen groupId={id} />;
-    t = { name: 'Lo que te regalaron', back: `/g/${id}` };
+    t = { name: 'Lo que te regalaron', back: `/g/${id}`, backLabel: 'Al grupo' };
   } else if (section === 'ajustes') {
     screen = <Settings />;
-    t = { name: 'Ajustes', back: '/' };
+    t = { name: 'Ajustes', back: '/', backLabel: 'Tus grupos' };
   } else if (section === 'unirse' && id) {
     screen = <Join token={id} onJoined={() => force((n) => n + 1)} />;
-    t = { name: 'Lazo', sub: 'Te han invitado' };
+    t = { name: '' };
   } else {
     screen = <Home />;
-    t = { name: 'Tus grupos', sub: 'Lazo · listas de regalos en familia', actions: <IconButton icon={Gear} label="Ajustes" onBox onClick={() => go('/ajustes')} /> };
+    t = { name: 'Tus grupos', sub: 'Listas de regalos en familia' };
   }
   const d = daysUntil(t.date);
 
@@ -57,37 +62,46 @@ export function App({ api }: { api: Api }) {
       <ToastProvider>
         <div className="app">
           {api instanceof DemoApi && <DemoBar api={api} onChange={() => force((n) => n + 1)} />}
-          <header className="topbar">
-            <div className="topbar-inner">
-              <div className="topbar-title">
-                {t.back && <IconButton icon={ArrowLeft} label="Atrás" onBox onClick={() => go(t.back!)} />}
-                {t.avatar && <Avatar user={t.avatar} size="md" />}
-                <div style={{ minWidth: 0 }}>
-                  {t.sub && <p className="sub">{t.sub}</p>}
-                  <h1>{t.name}</h1>
-                  {d !== null && d >= 0 && <p className="countdown-line">{d > 1 ? `Faltan ${d} días` : d === 1 ? 'Es mañana' : 'Es hoy'}</p>}
-                </div>
-              </div>
-              <div className="topbar-actions">
-                {t.actions}
-                {d !== null && d >= 0 && (
-                  <p className="countdown" aria-label={`Faltan ${d} días`}>
-                    <b>{d}</b>
-                    <span>{d === 1 ? 'día' : 'días'}</span>
-                  </p>
-                )}
+          <header className="masthead">
+            <div className="masthead-in">
+              <Brand />
+              {section !== 'unirse' && (
+                <nav className="tabs-top" aria-label="Principal">
+                  <Tabs section={section} group={group} />
+                </nav>
+              )}
+              <div className="masthead-end">
+                {section !== 'ajustes' && section !== 'unirse' && <IconButton icon={Gear} label="Ajustes" onClick={() => go('/ajustes')} />}
               </div>
             </div>
           </header>
-          <main id="contenido">{screen}</main>
+          <main id="contenido">
+            {t.name && (
+              <div className="page-head">
+                {t.back && (
+                  <a className="back" href={`#${t.back}`}>
+                    <CaretLeft size={18} weight="bold" aria-hidden /> {t.backLabel ?? 'Volver'}
+                  </a>
+                )}
+                <div className="page-head-row">
+                  {t.avatar && <Avatar user={t.avatar} size="xl" />}
+                  <div className="grow">
+                    <h1>{t.name}</h1>
+                    {t.sub && <p className="sub">{t.sub}</p>}
+                    {d !== null && d >= 0 && (
+                      <p className="when">
+                        {fecha(t.date!)} <span className="nw">· {d > 1 ? (<>faltan <b>{d}</b> días</>) : d === 1 ? 'es mañana' : 'es hoy'}</span>
+                      </p>
+                    )}
+                  </div>
+                  {t.actions && <div className="page-head-actions">{t.actions}</div>}
+                </div>
+              </div>
+            )}
+            {screen}
+          </main>
           <nav className="tabbar" aria-label="Principal" hidden={section === 'unirse'}>
-            <a className="brand" href="#/">
-              Lazo
-            </a>
-            <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l'} icon={UsersThree} label="Grupo" />
-            <Tab href={group ? `#/hucha/${group}` : '#/'} current={section === 'hucha'} icon={PiggyBank} label="Hucha" />
-            <Tab href="#/compras" current={section === 'compras'} icon={ShoppingBag} label="Mis compras" />
-            <Tab href={group ? `#/sorteo/${group}` : '#/'} current={section === 'sorteo'} icon={Shuffle} label="Sorteo" />
+            <Tabs section={section} group={group} />
           </nav>
         </div>
       </ToastProvider>
@@ -95,11 +109,24 @@ export function App({ api }: { api: Api }) {
   );
 }
 
+const fecha = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+
+function Tabs({ section, group }: { section?: string; group?: string | null }) {
+  return (
+    <>
+      <Tab href={group ? `#/g/${group}` : '#/'} current={section === 'g' || section === 'l' || !section} icon={UsersThree} label="Grupo" />
+      <Tab href={group ? `#/hucha/${group}` : '#/'} current={section === 'hucha'} icon={PiggyBank} label="Hucha" />
+      <Tab href="#/compras" current={section === 'compras'} icon={ShoppingBag} label="Mis compras" />
+      <Tab href={group ? `#/sorteo/${group}` : '#/'} current={section === 'sorteo'} icon={Shuffle} label="Sorteo" />
+    </>
+  );
+}
+
 function Tab({ href, current, icon: I, label }: { href: string; current: boolean; icon: Icon; label: string }) {
   return (
     <a className="tab" href={href} aria-current={current ? 'page' : undefined}>
       <I size={24} weight={current ? 'fill' : 'regular'} aria-hidden />
-      {label}
+      <span>{label}</span>
     </a>
   );
 }

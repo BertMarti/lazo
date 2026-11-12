@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Bow, Loading } from '../Bow';
 import type { InviteInfo } from '../../api/types';
 import { Button } from '../Button';
 import { go, useApi } from '../ctx';
-import { errorText, useLoad } from '../kit';
+import { Avatar, errorText, useLoad } from '../kit';
 
 const DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' });
 
@@ -15,21 +16,31 @@ export function Join({ token, onJoined }: { token: string; onJoined: () => void 
   const { data: info, error } = useLoad(() => api.inviteInfo(token), [api, token]);
   const [pending, setPending] = useState<{ request: string; code: string; group: string; name: string } | null>(null);
   if (error) return <Box><p className="notice notice-error">{error}</p></Box>;
-  if (!info) return <p className="meta">Cargando…</p>;
+  if (!info) return <Loading />;
   if (pending) return <Pending {...pending} organizer={info.organizer} onJoined={onJoined} />;
   return info.personal ? <Personal token={token} info={info} onJoined={onJoined} /> : <General token={token} info={info} onPending={setPending} />;
 }
 
 function Box({ children }: { children: React.ReactNode }) {
-  return <div className="panel stack" style={{ maxWidth: 520, margin: '0 auto' }}>{children}</div>;
+  return (
+    <div className="join">
+      <div className="panel stack">{children}</div>
+    </div>
+  );
 }
 
+/** La pantalla de los abuelos: el lazo grande y a qué te invitan, sin jerga. */
 function Head({ info }: { info: InviteInfo }) {
   return (
-    <p className="meta">
-      {info.group.name}
-      {info.group.date && ` · ${DATE.format(new Date(info.group.date + 'T12:00:00'))}`} · lo organiza {info.organizer}
-    </p>
+    <div className="join-hero">
+      <Bow size={72} />
+      <h1>
+        Te han invitado a <span style={{ color: 'var(--terracota-tinta)' }}>{info.group.name}</span>
+      </h1>
+      <p className="lead">
+        {info.group.date && `${DATE.format(new Date(info.group.date + 'T12:00:00'))} · `}lo organiza {info.organizer}
+      </p>
+    </div>
   );
 }
 
@@ -42,7 +53,7 @@ function Personal({ token, info, onJoined }: { token: string; info: InviteInfo; 
   return (
     <Box>
       <Head info={info} />
-      <h2 className="h-section" style={{ fontSize: 'var(--t-2xl)' }}>Eres {name}</h2>
+      <h2 className="h-section" style={{ fontSize: 'var(--t-1)' }}>Eres {name}</h2>
       <Button
         variant="primary"
         size="lg"
@@ -92,6 +103,7 @@ function General({ token, info, onPending }: { token: string; info: InviteInfo; 
           {info.free.map((f) => (
             <label key={f.list} className="choice">
               <input type="radio" name="plaza" value={f.list} checked={choice === f.list} onChange={() => setChoice(f.list)} />
+              <Avatar user={{ name: f.name, color: 'almendra' }} />
               {f.name}
             </label>
           ))}

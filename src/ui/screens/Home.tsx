@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import type { BuyMode, Occasion } from '../../core/types';
 import { Button, ButtonGroup } from '../Button';
 import { go, useApi } from '../ctx';
-import { daysUntil, errorText, OCCASION, Sheet, useLoad } from '../kit';
+import { Bow, Loading } from '../Bow';
+import { Avatar, daysUntil, errorText, OCCASION, Sheet, useLoad } from '../kit';
 
 export function Home() {
   const api = useApi();
@@ -21,23 +22,16 @@ export function Home() {
       {error && <p className="notice notice-error">{error}</p>}
       {groups && groups.length === 0 && (
         <div className="empty">
+          <Bow size={88} />
           <h2>Aún no tienes ningún grupo</h2>
           <p>Crea uno para Navidad, un cumpleaños o una boda, o pide a alguien de tu familia que te invite.</p>
         </div>
       )}
+      {!groups && !error && <Loading />}
       <div className="groups">
-        {groups?.map((g) => {
-          const d = daysUntil(g.date);
-          return (
-            <a key={g.id} className="group-card" href={`#/g/${g.id}`}>
-              <h2>{g.name}</h2>
-              <span className="meta">
-                {OCCASION[g.occasion]}
-                {d !== null && ` · ${d > 1 ? `faltan ${d} días` : d === 1 ? 'es mañana' : d === 0 ? 'es hoy' : 'ya pasó'}`}
-              </span>
-            </a>
-          );
-        })}
+        {groups?.map((g) => (
+          <GroupCard key={g.id} id={g.id} name={g.name} occasion={g.occasion} date={g.date} />
+        ))}
       </div>
       <div>
         <Button variant="secondary" icon={Plus} onClick={() => setCreating(true)}>
@@ -135,3 +129,42 @@ export const MODE: Record<BuyMode, { label: string; help: string }> = {
   individual: { label: 'Cada uno lo suyo', help: 'Cada regalo lo paga quien lo reserva.' },
   mixto: { label: 'Mixto', help: 'Se decide regalo a regalo.' },
 };
+
+/** Tarjeta de un grupo: la ocasión, la cuenta atrás, las caras de la familia y cuatro deseos. */
+function GroupCard({ id, name, occasion, date }: { id: string; name: string; occasion: string; date?: string }) {
+  const api = useApi();
+  const me = api.me()?.id;
+  const { data } = useLoad(async () => {
+    const d = await api.groupDetail(id);
+    const others = d.lists.filter((l) => l.user !== me);
+    const photos = (await Promise.all(others.slice(0, 6).map((l) => api.listDetail(l.id))))
+      .flatMap((l) => l.items.filter((i) => i.image && !i.removed).slice(0, 1))
+      .slice(0, 4);
+    return { members: d.members, photos };
+  }, [api, id, me]);
+  const d = daysUntil(date);
+  return (
+    <a className="group-card" href={`#/g/${id}`}>
+      <Bow size={40} />
+      <h2>{name}</h2>
+      <span className="meta">
+        {OCCASION[occasion]}
+        {d !== null && ` · ${d > 1 ? `faltan ${d} días` : d === 1 ? 'es mañana' : d === 0 ? 'es hoy' : 'ya pasó'}`}
+      </span>
+      {data && (
+        <span className="faces" aria-label={`${data.members.length} personas`}>
+          {data.members.slice(0, 7).map((m) => (
+            <Avatar key={m.id} user={m} size="md" />
+          ))}
+        </span>
+      )}
+      {data && data.photos.length > 0 && (
+        <span className="photos" aria-hidden>
+          {data.photos.map((i) => (
+            <img key={i.id} src={i.image} alt="" loading="lazy" referrerPolicy="no-referrer" />
+          ))}
+        </span>
+      )}
+    </a>
+  );
+}

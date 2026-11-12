@@ -157,7 +157,7 @@ function Added({ item, onClose, onMore, onSaved }: { item: Item; onClose: () => 
         </span>
         <div className="grow">
           <p style={{ fontWeight: 700 }}>
-            <Check size={18} weight="bold" aria-hidden style={{ verticalAlign: '-3px', color: 'var(--ok)' }} /> {item.title}
+            <Check size={18} weight="bold" aria-hidden style={{ verticalAlign: '-3px', color: 'var(--abeto)' }} /> {item.title}
           </p>
           <p className="meta">
             {item.priceCents !== undefined && <span className="money">{formatMoney(item.priceCents)}</span>}

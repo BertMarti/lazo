@@ -1,4 +1,5 @@
 import { Shuffle, X } from '@phosphor-icons/react';
+import { Bow, Loading } from '../Bow';
 import { useState } from 'react';
 import { DrawImpossible } from '../../core/draw';
 import { formatMoney, parseAmount } from '../../core/money';
@@ -16,7 +17,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
   const [setup, setSetup] = useState(false);
 
   if (error) return <p className="notice notice-error">{error}</p>;
-  if (!data) return <p className="meta">Cargando…</p>;
+  if (!data) return <Loading />;
   const { detail, info } = data;
   const isAdmin = detail.members.some((m) => m.id === me?.id && m.role === 'admin');
 
@@ -25,26 +26,27 @@ export function DrawScreen({ groupId }: { groupId: string }) {
       <p className="lead">Solo tú sabes a quién regalas. Ni quien organiza ve el resto.</p>
       {info.receiver ? (
         <div className="envelope" data-open={opened || undefined}>
-          <p className="meta" style={{ color: 'var(--on-box-2)' }}>Te ha tocado regalar a</p>
+          <p className="meta">Te ha tocado regalar a</p>
           <Avatar user={info.receiver} size="lg" />
           <p className="who">{info.receiver.name}</p>
           {info.draw?.budgetCents ? <p>Presupuesto: <span className="money">{formatMoney(info.draw.budgetCents)}</span></p> : null}
           {(() => {
             const l = detail.lists.find((x) => x.user === info.receiver!.id);
-            return l && opened ? <ButtonLink variant="on-box" href={`#/l/${l.id}`}>Ver la lista de {info.receiver.name}</ButtonLink> : null;
+            return l && opened ? <ButtonLink variant="primary" href={`#/l/${l.id}`}>Ver la lista de {info.receiver.name}</ButtonLink> : null;
           })()}
-          <button type="button" className="cover" onClick={() => setOpened(true)} aria-label="Abrir tu sobre del amigo invisible">
-            <span className="h-section" style={{ color: 'var(--foil)' }}>Tu sobre</span>
-            <span>Toca para ver a quién regalas</span>
-            <span className="meta" style={{ color: 'var(--on-box-2)' }}>Mira que nadie te esté mirando.</span>
+          <button type="button" className="cover" onClick={() => setOpened(true)} aria-label="Abrir tu regalo del amigo invisible">
+            <span className="cover-bow"><Bow size={96} /></span>
+            <span className="h-section">Te ha tocado…</span>
+            <span>Abrir · mira que nadie te esté mirando</span>
           </button>
         </div>
       ) : info.draw ? (
         <p className="notice">Este grupo ya tiene sorteo, pero tú no participas.</p>
       ) : (
         <div className="empty">
+          <Bow size={88} />
           <h2>Todavía no hay sorteo</h2>
-          <p>{isAdmin ? 'Elige quién participa y qué parejas no pueden tocarse.' : 'Cuando quien organiza el grupo lo haga, aquí verás tu sobre.'}</p>
+          <p>{isAdmin ? 'Elige quién participa y qué parejas no pueden tocarse.' : 'Cuando quien organiza el grupo lo haga, aquí verás a quién te toca regalar.'}</p>
         </div>
       )}
       {isAdmin && !setup && (
@@ -63,7 +65,7 @@ export function DrawScreen({ groupId }: { groupId: string }) {
           onCancel={() => setSetup(false)}
           onRun={async (participants, exclusions, budget) => {
             await api.runDraw(groupId, participants, exclusions, budget);
-            toast('Sorteo hecho. Cada uno ya tiene su sobre.');
+            toast('Sorteo hecho. Cada uno ya sabe a quién regala.');
             setSetup(false);
             setOpened(false);
             reload();
@@ -102,7 +104,7 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
   return (
     <section className="panel stack-lg" aria-label="Preparar el sorteo">
       <div className="stack">
-        <h3 className="h-section" style={{ fontSize: 'var(--t-lg)' }}>Quién participa</h3>
+        <h3 className="h-section" style={{ fontSize: 'var(--t-3)' }}>Quién participa</h3>
         <div className="grid-2">
           {members.map((m) => (
             <label key={m.id} className="check">
@@ -114,7 +116,7 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
         </div>
       </div>
       <div className="stack">
-        <h3 className="h-section" style={{ fontSize: 'var(--t-lg)' }}>Quién no puede tocarse</h3>
+        <h3 className="h-section" style={{ fontSize: 'var(--t-3)' }}>Quién no puede tocarse</h3>
         <p className="meta">Por ejemplo, las parejas, que ya se regalan entre ellas.</p>
         {pairs.length > 0 && (
           <ul className="list-plain">
@@ -143,7 +145,7 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
         <input className="input" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="30" />
       </label>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
-      {sure && <p className="notice" role="alert">El sorteo anterior se borrará y cada persona tendrá un sobre nuevo. Pulsa otra vez para confirmar.</p>}
+      {sure && <p className="notice" role="alert">El sorteo anterior se borrará y a cada persona le tocará alguien nuevo. Pulsa otra vez para confirmar.</p>}
       <ButtonGroup>
         <Button variant="primary" icon={Shuffle} loading={busy} disabled={chosen.size < 3} onClick={run}>{sure ? 'Sí, sortear de nuevo' : `Sortear entre ${chosen.size}`}</Button>
         <Button variant="ghost" icon={X} onClick={onCancel}>Cancelar</Button>

@@ -16,7 +16,7 @@ Textos de la interfaz: en español, cercanos y concretos. Cada botón dice lo qu
 Puedes usar IA para colaborar, siempre que revises lo que proponga. En este repo:
 
 - **Claude Opus 5.5:** implementación y documentación.
-- **Claude Fable 5.1:** revisiones de diseño y de seguridad.
+- **Claude Fable 5.2 (`claude-fable-5-2`):** revisiones de diseño y de seguridad.
 - **OpenCode con modelos gratuitos:** solo para lo mecánico.
 
 Si una IA escribe tu PR, dilo en la descripción.

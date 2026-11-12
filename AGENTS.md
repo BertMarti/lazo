@@ -60,5 +60,5 @@ Lazo es una app de listas de regalos en familia: PWA + Android (Capacitor) sobre
 | Modelo | Función |
 |---|---|
 | Claude Opus 5.5 | Diseño, implementación, pruebas y documentación |
-| Claude Fable 5.1 | Solo revisiones clave: diseño final y seguridad (gasta mucha cuota) |
+| Claude Fable 5.2 (`claude-fable-5-2`) | Solo revisiones clave: diseño final y seguridad (gasta mucha cuota) |
 | `opencode/deepseek-v4.1-flash-free` (OpenCode, en silencio y con `--agent plan`) | Tareas mecánicas: datos de catálogo y tests repetitivos. Devuelve un diff que revisa Opus |

@@ -75,7 +75,7 @@ Solo la última versión publicada.
 
 ## Modelos y su función
 
-- **Claude Fable 5.1:**
+- **Claude Fable 5.2 (`claude-fable-5-2`):**
   - auditoría de seguridad (`docs/security/AUDIT.md`);
   - diseño del modelo de plazas, hucha y entrega, con su análisis de fugas por deducción (la spec de plazas y hucha).
 - **Claude Opus 5.5:** implementación de los arreglos y de las pruebas.

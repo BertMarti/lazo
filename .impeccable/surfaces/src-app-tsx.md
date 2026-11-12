@@ -5,18 +5,18 @@ primary_target: "src/App.tsx"
 related_targets: []
 ---
 
-Scope: toda la app (Operate). Visitante: familia española, móvil primero, a menudo mayor y con prisa. Tarea: ver listas del grupo, reservar/comprar sin duplicar, llevar la propia lista sin ver su estado.
+Scope: toda la app (Operate). Visitante: familia española, móvil primero, a menudo mayor y con prisa. Tarea: ver a la familia y sus deseos, reservar o comprar sin duplicar y llevar la propia lista sin ver su estado.
 
 ## Direction contract
 
-THESIS: La app es una caja de confitería navideña abierta: cada persona es un sabor envuelto en su papel de seda, y reservar es precintar. Rechaza el «papel kraft con cordel y crema» y el panel gris con un acento.
+THESIS: La app es el catálogo de Navidad de una juguetería abierto en la mesa de envolver: personas grandes, fotos grandes, etiquetas de precio redondas y un lazo que ata lo que ya está cogido. Rechaza el panel SaaS (raíl lateral, cabecera oscura, filas grises) y la Navidad de manual en rojo y verde.
 
-OWN-WORLD: Cáscara azul caja-de-turrón (#1C2747) con titulares Bodoni Moda en dorado lámina mate; fondo papel de seda frío casi blanco; cada miembro tiene un color de sabor fijo (limón, canela, menta, fresa, violeta, almendra) usado en avatar, cabecera de lista y canto de cada regalo. Texto en Atkinson Hyperlegible Next. Sin grises neutros: todo secundario se tiñe del azul (raise de ikeda-datamatics: compromiso total de paleta).
+OWN-WORLD: Papel crema #f6efe2 con tarjetas #fffaf0. Terracota #b4532e como acción y etiqueta de precio, abeto #23493b como «es tuyo» y progreso, y oro #c9a24a solo como cinta y lazo. Young Serif para títulos y cifras, Nunito para la interfaz. Botones en píldora. Sombras cálidas tintadas de marrón. En oscuro, la misma mesa con la luz baja (#1b1612).
 
-STORY: Abres el grupo, ves a la familia como filas de sabores; entras en una lista ajena y cada regalo dice libre o lleva su precinto; en la tuya, los regalos aparecen bajo papel de seda liso: «aquí no verás lo que te han reservado».
+STORY: Abres el grupo y ves a tu familia en tarjetas con su cara, sus regalos y su presupuesto; debajo, lo más deseado en fotos. Entras en la lista de Mamá: un tablero de fotos con su precio. Lo cogido lleva la cinta (cruzada si ya está comprado) y una etiqueta que lo dice con palabras. En tu lista no hay cinta ni etiqueta: es sorpresa.
 
-FIRST VIEWPORT: (v0.2, «La bandeja», dirección de Fable) Cabecera azul con el nombre del grupo en Bodoni, «Invitar» como icono y la cuenta atrás. Debajo, rejilla de tarjetas de miembro (la mía primero, con «Añadir» y «Tu presupuesto y tus reservas son sorpresa»; las demás con avatar de sabor, «N regalos · M libres» y la BudgetBar). Al tocar a alguien, su lista: panel de presupuesto con «Mamá no ve esto» y secciones «Disponibles» / «Ya cogidos»; cada regalo es una fila con miniatura y un pie con el sello, la frase de estado y «Reservar» (1 toque) abajo a la derecha. Navegación inferior: Grupo · Mis compras · Amigo invisible (raíl de 264 en escritorio).
+FIRST VIEWPORT: Cabecera sobre papel: lazo y «Lazo» a la izquierda, pestañas en píldora en escritorio y barra inferior de 4 secciones en móvil. Título del grupo en Young Serif grande, con «24 de diciembre · faltan 43 días» debajo. Rejilla de personas (2 columnas en móvil y auto-fill de 190 px en escritorio), con tu tarjeta primero en abeto. Luego «Lo más deseado», 4 fotos en tablero.
 
-FORM: Envoltorios de confitería navideña, posición 3 de 7 en mi lista. seed:c81247c62518cab8. Signature move: el precinto — al reservar, una banda dorada cruza la etiqueta con un sello que gira y asienta (comprado = sello lleno; a medias = sello que se llena por porcentaje; libre = sello en trazo). Vocabulario de estados impreso y constante (raise de rw-centre-rail: estados como marcas impresas, siempre el mismo trazo). Color de sabor fijo por persona en todas las pantallas (raise de transit-diagram: cada línea su tinta).
+FORM: El catálogo de juguetes (posición 3 de 7 en mi lista: 1 papel de envolver, 2 carta a los Reyes, 3 catálogo de juguetería, 4 álbum familiar, 5 mesa de Nochebuena, 6 décimos de Lotería, 7 calendario de adviento). Elegida por Fable entre A, B y C (docs/design/v0.4/FABLE-DIRECCION.md). seed: d671fb943b27e810. Gesto propio: el lazo que se anuda al reservar y el confeti discreto en «Ya comprado», ambos anulados con reduced-motion. Raise del catálogo de personajes (descartado): cada persona tiene su ficha fija, con cara, nombre y una línea.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

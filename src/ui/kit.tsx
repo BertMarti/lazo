@@ -1,5 +1,5 @@
-import { EyeSlash, X } from '@phosphor-icons/react';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Check, CircleHalf, EyeSlash, Gift, PiggyBank, X, type Icon } from '@phosphor-icons/react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ItemStatus } from '../core/status';
 import type { User } from '../core/types';
 import { Button, IconButton } from './Button';
@@ -8,7 +8,7 @@ export const FLAVORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendr
 export type Flavor = (typeof FLAVORS)[number];
 export const flavorOf = (color?: string): Flavor => (FLAVORS as readonly string[]).includes(color ?? '') ? (color as Flavor) : 'almendra';
 
-export function Avatar({ user, size }: { user: Pick<User, 'name' | 'color'>; size?: 'sm' | 'md' | 'lg' }) {
+export function Avatar({ user, size }: { user: Pick<User, 'name' | 'color'>; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   return (
     <span className={['avatar', size && `avatar-${size}`].filter(Boolean).join(' ')} data-flavor={flavorOf(user.color)} aria-hidden>
       {initial(user.name)}
@@ -26,39 +26,20 @@ const SEAL_LABEL: Record<ItemStatus['kind'], string> = {
   partial: 'A medias',
   covered: 'Cubierto',
 };
+const SEAL_ICON: Record<ItemStatus['kind'], Icon | null> = { free: null, reserved: Gift, pot: PiggyBank, bought: Check, partial: CircleHalf, covered: Check };
 
 /**
- * El sello de Lazo: un único trazo para todos los estados.
- * Libre = trazo; reservado = trazo dorado; comprado/cubierto = lleno; a medias = se llena por porcentaje.
+ * La etiqueta de estado (como la que cuelga de un regalo): icono + palabra, nunca solo color.
+ * `mine` = lo llevas tú (abeto). Se pinta sobre la foto y en filas.
  */
-export function Seal({ status, animate, size = 44 }: { status: ItemStatus; animate?: boolean; size?: 24 | 44 }) {
+export function Seal({ status, mine }: { status: ItemStatus; mine?: boolean; animate?: boolean; size?: number }) {
   const k = status.kind;
-  const filled = k === 'bought' || k === 'covered';
-  const pct = k === 'partial' ? (status.percent ?? 50) : filled ? 100 : 0;
-  const r = 15;
-  const c = 2 * Math.PI * r;
-  // Borde festoneado: 16 lóbulos, geometría exacta.
-  const scallop = Array.from({ length: 16 }, (_, i) => {
-    const a = (i / 16) * Math.PI * 2;
-    return `${(22 + Math.cos(a) * 19).toFixed(2)},${(22 + Math.sin(a) * 19).toFixed(2)}`;
-  });
-  const ink = k === 'free' ? 'var(--ink-3)' : 'var(--foil-ink)';
+  const I = SEAL_ICON[k];
+  const text = mine ? (k === 'bought' ? 'Lo compraste' : k === 'partial' ? 'Has puesto' : 'Lo llevas tú') : statusLabel(status);
   return (
-    <span className="seal" style={{ '--seal': `${size}px` } as CSSProperties} data-enter={animate || undefined} role="img" aria-label={SEAL_LABEL[k] + (k === 'partial' && status.percent !== undefined ? ` ${status.percent} %` : '')}>
-      <svg viewBox="0 0 44 44" aria-hidden>
-        {scallop.map((p, i) => {
-          const [x, y] = p.split(',').map(Number);
-          return <circle key={i} cx={x} cy={y} r={3.6} fill={filled ? 'var(--foil-fill)' : 'var(--surface)'} stroke={ink} strokeWidth={1.2} />;
-        })}
-        <circle cx={22} cy={22} r={18} fill={filled ? 'var(--foil-fill)' : 'var(--surface)'} />
-        <circle cx={22} cy={22} r={r} fill="none" stroke={ink} strokeWidth={1.4} strokeDasharray={k === 'free' ? '2 3' : undefined} />
-        {k === 'partial' && (
-          <circle cx={22} cy={22} r={r} fill="none" stroke="var(--foil-fill)" strokeWidth={5} strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 22 22)" />
-        )}
-        {filled && <path d="M15.5 22.5l4.5 4.5 8.5-9" fill="none" stroke="#241c05" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />}
-        {k === 'pot' && <circle cx={22} cy={22} r={4} fill="var(--foil-ink)" />}
-        {k === 'reserved' && <path d="M14 22h16" stroke="var(--foil-ink)" strokeWidth={2.4} strokeLinecap="round" />}
-      </svg>
+    <span className="tag" data-k={mine ? 'mine' : k === 'bought' || k === 'covered' ? 'bought' : k === 'free' ? 'free' : undefined}>
+      {I && <I size={16} weight="bold" aria-hidden />}
+      {text}
     </span>
   );
 }
@@ -67,9 +48,9 @@ export const statusLabel = (s: ItemStatus) =>
   s.kind === 'partial' && s.percent !== undefined ? `A medias · ${s.percent} %` : SEAL_LABEL[s.kind];
 
 /** El chip de la regla: «Mamá no ve esto». Único chip dorado de la app. */
-export function VisibilityNote({ children }: { children: ReactNode }) {
+export function VisibilityNote({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
-    <p className="vis">
+    <p className={wide ? 'notice' : 'vis'}>
       <EyeSlash size={18} weight="bold" aria-hidden /> {children}
     </p>
   );
