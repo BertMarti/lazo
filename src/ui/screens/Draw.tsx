@@ -26,18 +26,18 @@ export function DrawScreen({ groupId }: { groupId: string }) {
       <p className="lead">Solo tú sabes a quién regalas. Ni quien organiza ve el resto.</p>
       {info.receiver ? (
         <div className="envelope" data-open={opened || undefined}>
-          <p className="meta" style={{ color: 'var(--on-box-2)' }}>Te ha tocado regalar a</p>
+          <p className="meta">Te ha tocado regalar a</p>
           <Avatar user={info.receiver} size="lg" />
           <p className="who">{info.receiver.name}</p>
           {info.draw?.budgetCents ? <p>Presupuesto: <span className="money">{formatMoney(info.draw.budgetCents)}</span></p> : null}
           {(() => {
             const l = detail.lists.find((x) => x.user === info.receiver!.id);
-            return l && opened ? <ButtonLink variant="on-box" href={`#/l/${l.id}`}>Ver la lista de {info.receiver.name}</ButtonLink> : null;
+            return l && opened ? <ButtonLink variant="primary" href={`#/l/${l.id}`}>Ver la lista de {info.receiver.name}</ButtonLink> : null;
           })()}
-          <button type="button" className="cover" onClick={() => setOpened(true)} aria-label="Abrir tu sobre del amigo invisible">
-            <span className="h-section" style={{ color: 'var(--foil)' }}>Tu sobre</span>
-            <span>Toca para ver a quién regalas</span>
-            <span className="meta" style={{ color: 'var(--on-box-2)' }}>Mira que nadie te esté mirando.</span>
+          <button type="button" className="cover" onClick={() => setOpened(true)} aria-label="Abrir tu regalo del amigo invisible">
+            <span className="cover-bow"><Bow size={96} /></span>
+            <span className="h-section">Te ha tocado…</span>
+            <span>Abrir · mira que nadie te esté mirando</span>
           </button>
         </div>
       ) : info.draw ? (
@@ -104,7 +104,7 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
   return (
     <section className="panel stack-lg" aria-label="Preparar el sorteo">
       <div className="stack">
-        <h3 className="h-section" style={{ fontSize: 'var(--t-lg)' }}>Quién participa</h3>
+        <h3 className="h-section" style={{ fontSize: 'var(--t-3)' }}>Quién participa</h3>
         <div className="grid-2">
           {members.map((m) => (
             <label key={m.id} className="check">
@@ -116,7 +116,7 @@ function DrawSetup({ members, redo, onCancel, onRun }: { members: { id: Id; name
         </div>
       </div>
       <div className="stack">
-        <h3 className="h-section" style={{ fontSize: 'var(--t-lg)' }}>Quién no puede tocarse</h3>
+        <h3 className="h-section" style={{ fontSize: 'var(--t-3)' }}>Quién no puede tocarse</h3>
         <p className="meta">Por ejemplo, las parejas, que ya se regalan entre ellas.</p>
         {pairs.length > 0 && (
           <ul className="list-plain">

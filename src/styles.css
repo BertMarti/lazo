@@ -92,7 +92,7 @@
     --sobre-peligro: #20140c;
     --peligro-suave: #3d221c;
     --aro: var(--tinta);
-    --sombra-1: none;
+    --sombra-1: 0 0 0 0 transparent;
     --sombra-2: 0 12px 32px rgb(0 0 0 / 0.45);
     --borde-tarjeta: 0 0 0 1px var(--linea);
   }
@@ -241,7 +241,7 @@ main { width: 100%; max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 a
 .btn-on-box { background: var(--tarjeta); color: var(--tinta); }
 .btn-link { height: auto; min-height: var(--touch); padding: 0; border: 0; background: none; color: var(--terracota-tinta); font-weight: 800; justify-content: flex-start; }
 .btn-link:active:not(:disabled) { transform: none; opacity: 0.7; }
-.toast .btn-link { color: var(--oro); }
+.toast .btn-link { color: var(--oro-suave); }
 @media (hover: hover) and (pointer: fine) {
   .btn-primary:not(:disabled):hover { background: var(--terracota-pulsado); }
   .btn-secondary:not(:disabled):hover, .btn-ghost:not(:disabled):hover, .btn-ghost-danger:not(:disabled):hover { background: var(--hundido); }
@@ -288,7 +288,7 @@ main { width: 100%; max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 a
 details.more > summary { display: flex; align-items: center; gap: var(--s-2); min-height: var(--touch); font-weight: 800; cursor: pointer; list-style: none; }
 details.more > summary::-webkit-details-marker { display: none; }
 details.more[open] > summary { margin-bottom: var(--s-3); }
-.choice { display: flex; align-items: center; gap: var(--s-3); min-height: 56px; padding: 0 var(--s-4); border-radius: var(--r-m); border: 1.5px solid var(--linea); background: var(--tarjeta); cursor: pointer; font-weight: 700; }
+.choice { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: 0 var(--s-4); border-radius: var(--r-m); border: 1.5px solid var(--linea); background: var(--tarjeta); cursor: pointer; font-weight: 700; }
 .choice:has(input:checked) { border-color: var(--abeto); box-shadow: inset 0 0 0 1px var(--abeto); }
 .choice:has(input:focus-visible) { outline: 3px solid var(--abeto); outline-offset: 2px; }
 .choice input { width: 20px; height: 20px; accent-color: var(--abeto); }
@@ -314,6 +314,7 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
   display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 12px; width: fit-content;
   border-radius: var(--r-pill); background: var(--oro-suave); color: var(--sobre-oro-suave); font-size: var(--t-mark); font-weight: 800;
 }
+.vis-line svg { flex: none; }
 .vis-line { display: flex; align-items: center; gap: var(--s-2); color: inherit; opacity: 0.9; font-size: var(--t-meta); }
 .tag {
   display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--r-s);
@@ -342,7 +343,7 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
 /* ————— Personas ————— */
 .members { display: grid; gap: var(--s-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 340px) { .members { grid-template-columns: 1fr; } }
-@media (min-width: 720px) { .members { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--s-4); } }
+@media (min-width: 720px) { .members { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--s-4); } }
 .members > [role='listitem'] { display: grid; }
 .member {
   position: relative; display: grid; justify-items: center; align-content: start; gap: var(--s-1); padding: var(--s-5) var(--s-3) var(--s-4);
@@ -426,7 +427,6 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
 .band-mine { background: var(--abeto); }
 .band-bow { position: absolute; left: 50%; top: calc(66% + 8px); z-index: 2; transform: translate(-50%, -55%); color: var(--oro); --knot-ring: var(--oro-tinta); }
 .band-bow .bow-knot { fill: var(--oro-tinta); }
-.band-mine ~ .band-bow { color: var(--abeto); --knot-ring: var(--tarjeta); }
 .band[data-enter] { animation: band-in 240ms var(--ease-out) both; }
 .band-v[data-enter] { animation: band-v-in 240ms var(--ease-out) both; }
 @keyframes band-in { from { transform: scaleX(0); } }
@@ -555,7 +555,14 @@ table.preview th { background: var(--hundido); font-weight: 800; }
   .gift-actions .btn { font-size: 0.9375rem; padding-inline: var(--s-2); }
   .rows { padding: 0 var(--s-4); }
   .rows > li { flex-wrap: wrap; }
-  .rows > li > .btn { margin-left: calc(72px + var(--s-3)); }
+  .rows > li:has(.gift-thumb) > .btn { margin-left: calc(72px + var(--s-3)); }
+  .gift-photo:has(.tags-top) .price { top: 44px; }
 }
 .desired { margin-top: var(--s-12); }
 .desired .gift-store b { color: var(--tinta); font-weight: 800; }
+.rows > li > .grow { flex: 1 1 9rem; }
+.band-bow .bow { color: var(--tarjeta); filter: drop-shadow(0 1px 2px rgb(42 29 20 / 0.35)); --knot-ring: var(--oro); }
+.page-head .when .nw { white-space: nowrap; }
+.notice svg { flex: none; margin-top: 3px; }
+.envelope .cover { place-content: end center; padding-bottom: var(--s-8); }
+.envelope .cover .cover-bow { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }

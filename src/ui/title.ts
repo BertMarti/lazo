@@ -7,6 +7,8 @@ export interface Title {
   sub?: string;
   date?: string;
   back?: string;
+  /** Nombre del destino de «‹ Volver» («Navidad en familia»). */
+  backLabel?: string;
   avatar?: Pick<User, 'name' | 'color'>;
   actions?: ReactNode;
 }

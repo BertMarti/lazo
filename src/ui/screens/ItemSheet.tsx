@@ -160,7 +160,7 @@ export function ItemSheet({ listId, itemId, users, focusPot, onBuy, onClose, onC
       {!st || !line ? (
         <VisibilityNote>Si alguien lo reserva, tú no lo verás.</VisibilityNote>
       ) : (
-        <section className="stack" style={{ borderTop: '1px solid var(--line)', paddingTop: 'var(--s-4)' }} aria-label="Estado">
+        <section className="stack" style={{ borderTop: '1px solid var(--linea)', paddingTop: 'var(--s-4)' }} aria-label="Estado">
           <div className="row">
             <Seal status={st} />
             <p className="grow">{line.text}</p>

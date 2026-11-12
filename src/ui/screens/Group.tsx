@@ -33,6 +33,7 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
       name: g.name,
       date: g.date,
       back: '/',
+      backLabel: 'Tus grupos',
       actions: isAdmin ? <IconButton icon={UserPlus} label="Invitar a la familia" onBox onClick={() => setInviting(true)} /> : undefined,
     });
   }, [data, id, isAdmin, onTitle]);

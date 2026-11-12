@@ -53,7 +53,7 @@ function Personal({ token, info, onJoined }: { token: string; info: InviteInfo; 
   return (
     <Box>
       <Head info={info} />
-      <h2 className="h-section" style={{ fontSize: 'var(--t-2xl)' }}>Eres {name}</h2>
+      <h2 className="h-section" style={{ fontSize: 'var(--t-1)' }}>Eres {name}</h2>
       <Button
         variant="primary"
         size="lg"

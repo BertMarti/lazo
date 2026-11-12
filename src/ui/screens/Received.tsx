@@ -13,10 +13,10 @@ export function ReceivedScreen({ groupId }: { groupId: string }) {
   if (!items)
     return (
       <div className="envelope" style={{ margin: '0 auto' }}>
-        <p className="h-section" style={{ color: 'var(--foil)' }}>¿Quieres verlo?</p>
+        <p className="h-section">¿Quieres verlo?</p>
         <p>Verás los regalos y de parte de quién. Si prefieres quedarte con la sorpresa, vuelve atrás.</p>
         <Button
-          variant="on-box"
+          variant="primary"
           loading={busy}
           onClick={async () => {
             setBusy(true);

@@ -61,6 +61,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
       name: d.list.user === me.id ? 'Tu lista' : d.list.name,
       sub: d.group.name,
       back: `/g/${d.group.id}`,
+      backLabel: d.group.name,
       avatar: { name: d.list.name, color: owner?.color ?? listFlavor(d.list, group.detail.members) },
     });
   }, [data, me, onTitle]);
@@ -144,7 +145,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
     <div className={d.canEdit ? 'has-cta' : undefined}>
       {mine ? (
         <div style={{ marginBottom: 'var(--s-6)' }}>
-          <VisibilityNote>Tú no ves quién te regala qué. Los demás sí.</VisibilityNote>
+          <VisibilityNote wide>Lo que te regalan es sorpresa: aquí solo ves lo que has pedido.</VisibilityNote>
         </div>
       ) : (
         <section className="budget-panel" aria-label={`Presupuesto para ${who}`}>
@@ -166,7 +167,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
             {taken.length} de {d.items.length} regalos cogidos
             {noPrice > 0 && ` · ${noPrice === 1 ? '1 reservado no tiene precio y no cuenta' : `${noPrice} reservados no tienen precio y no cuentan`}`}
           </p>
-          {d.list.user ? <VisibilityNote>{who} no ve esto</VisibilityNote> : d.list.kind === 'child' ? <VisibilityNote>{who} no usa Lazo: esto lo veis todos los mayores</VisibilityNote> : <p className="meta">{who} aún no ha entrado. Cuando entre, dejará de ver todo esto.</p>}
+          {d.list.user ? <VisibilityNote>{who} no ve esto</VisibilityNote> : d.list.kind === 'child' ? <VisibilityNote wide>{who} no usa Lazo: esto lo veis todos los mayores</VisibilityNote> : <p className="meta">{who} aún no ha entrado. Cuando entre, dejará de ver todo esto.</p>}
           {d.list.user && !explained && (
             <div className="notice" style={{ alignItems: 'flex-start' }}>
               <p className="grow">{who} ve su lista, pero no quién reserva, qué se ha comprado ni cuánto os gastáis. Los demás sí lo veis.</p>

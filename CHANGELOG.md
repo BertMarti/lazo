@@ -4,6 +4,24 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [0.4.0] - 2026-11-11 · El catálogo de juguetes
+
+Rediseño completo: Lazo deja de parecer un panel de administración y pasa a ser el catálogo de Navidad de una juguetería, con la familia y los regalos en grande.
+
+### Cambiado
+- Nueva identidad: papel crema, terracota, abeto y oro, títulos en Young Serif e interfaz en Nunito. Modo oscuro cálido.
+- Navegación con barra inferior en el móvil y cabecera con pestañas en el escritorio (adiós al raíl lateral).
+- El grupo enseña a cada persona con su cara grande, sus regalos y su presupuesto, y debajo «Lo más deseado» en fotos.
+- Las listas son un tablero de fotos con la etiqueta de precio. Lo reservado lleva una cinta y lo comprado la cinta en cruz, siempre con una etiqueta que lo dice con palabras.
+- Tus grupos, la hucha, Mis compras, el sorteo, la entrada por enlace, los estados vacíos y la carga, rehechos con el mismo sistema. `DESIGN.md` reescrito.
+
+### Añadido
+- El lazo que se anuda al reservar y un confeti discreto al marcar «Ya comprado» (ninguno de los dos con movimiento reducido).
+- Prueba e2e que entra en un grupo desde «Tus grupos» y vuelve.
+
+### Corregido
+- Al cambiar de pantalla ya no se ve un momento el título de la anterior.
+
 ### Seguridad
 - Nueva prueba PB-13 contra PocketBase real: las cuentas de la hucha de cada persona (su parte, lo que debe, la previsión y la tabla de cobro) salen bien con lo que el servidor le entrega y no cambian por lo que otros hagan en su plaza. Ya son 23 pruebas y no queda ninguna pendiente.
 

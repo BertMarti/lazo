@@ -26,11 +26,15 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 **Lazo lo arregla con una regla muy sencilla:** ves qué está libre, reservado o comprado en las listas de los demás, **pero nunca en la tuya**. Ni en la pantalla ni por detrás: el servidor no se lo envía a tu móvil.
 
 <p align="center">
-  <img src="docs/design/v0.3/movil/grupo.png" width="270" alt="La familia en tarjetas, cada una con su presupuesto; la tuya no lo muestra" />
+  <img src="docs/design/v0.4/readme/grupo-390.png" width="270" alt="La familia en tarjetas con su cara y su presupuesto (la tuya no lo muestra) y lo más deseado en fotos" />
   &nbsp;
-  <img src="docs/design/v0.3/movil/lista-de-mama.png" width="270" alt="Lista de Mamá vista por Alberto: presupuesto, «Mamá no ve esto» y reservar en un toque" />
+  <img src="docs/design/v0.4/readme/lista-390.png" width="270" alt="Lista de Mamá vista por Alberto: tablero de fotos con su precio; lo cogido lleva cinta y lazo" />
   &nbsp;
-  <img src="docs/design/v0.3/movil/hucha.png" width="270" alt="La hucha común en frases: cuánto te falta poner y a quién se lo das" />
+  <img src="docs/design/v0.4/readme/hucha-390.png" width="270" alt="La hucha común en frases: cuánto te falta poner y a quién se lo das" />
+</p>
+
+<p align="center">
+  <img src="docs/design/v0.4/readme/lista-1280.png" width="820" alt="En el escritorio: cabecera con pestañas y la lista de Mamá como tablero de fotos" />
 </p>
 
 ## Qué puedes hacer

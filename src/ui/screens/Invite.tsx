@@ -101,7 +101,7 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
         </div>
       </label>
 
-      <div className="stack" style={{ borderTop: '1px solid var(--line)', paddingTop: 'var(--s-4)' }}>
+      <div className="stack" style={{ borderTop: '1px solid var(--linea)', paddingTop: 'var(--s-4)' }}>
         <h3 className="h-section">Enlace para todos</h3>
         <p className="meta">Quien lo abra elige su nombre y espera a que le aceptes.</p>
         <Button variant="secondary" wide icon={WhatsappLogo} loading={busy === 'general'} onClick={() => send()}>Enviar el enlace para todos</Button>
@@ -109,7 +109,7 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
         {api.demo && <p className="meta">En la demo, el enlace abre la pantalla de entrada de verdad. Pruébalo.</p>}
       </div>
 
-      <div className="stack" style={{ borderTop: '1px solid var(--line)', paddingTop: 'var(--s-4)' }}>
+      <div className="stack" style={{ borderTop: '1px solid var(--linea)', paddingTop: 'var(--s-4)' }}>
         <h3 className="h-section">Lista de un niño</h3>
         <p className="meta">Los niños no necesitan cuenta: su lista la llevas tú. Solo su nombre de pila y, si quieres, el año en que nació.</p>
         <div className="grid-2">

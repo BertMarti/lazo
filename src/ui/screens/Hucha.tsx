@@ -81,7 +81,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
           </>
         )}
         {d.aparte < 0 && <p>{name(T2)} te tiene que devolver {m(-d.aparte)} por los regalos de {treasurerName}.</p>}
-        <VisibilityNote>Aquí no sale lo que se gasta en ti</VisibilityNote>
+        <VisibilityNote wide>Aquí no sale lo que se gasta en ti</VisibilityNote>
       </section>
 
       <section className="stack" aria-labelledby="h-parte">
@@ -92,7 +92,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
           <ul className="rows">
             {shares.map((s) => (
               <li key={s.list.id}>
-                <Avatar user={{ name: s.list.name, color: data.members.find((x) => x.id === s.list.user)?.color ?? 'canela' }} size="sm" />
+                <Avatar user={{ name: s.list.name, color: data.members.find((x) => x.id === s.list.user)?.color ?? 'canela' }} />
                 <span className="grow">
                   {s.list.name}
                   <br />
@@ -138,7 +138,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
           <ul className="rows">
             {table.map((r) => (
               <li key={r.who}>
-                <Avatar user={{ name: name(r.who), color: data.members.find((x) => x.id === r.who)?.color ?? 'canela' }} size="sm" />
+                <Avatar user={{ name: name(r.who), color: data.members.find((x) => x.id === r.who)?.color ?? 'canela' }} />
                 <span className="grow">
                   {name(r.who)}
                   <br />

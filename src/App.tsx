@@ -38,16 +38,16 @@ export function App({ api }: { api: Api }) {
     t = { name: 'Mis compras', sub: 'Solo lo ves tú' };
   } else if (section === 'sorteo' && id) {
     screen = <DrawScreen groupId={id} />;
-    t = { name: 'Amigo invisible', back: `/g/${id}` };
+    t = { name: 'Amigo invisible', back: `/g/${id}`, backLabel: 'Al grupo' };
   } else if (section === 'hucha' && id) {
     screen = <HuchaScreen groupId={id} />;
-    t = { name: 'Hucha', back: `/g/${id}` };
+    t = { name: 'Hucha', back: `/g/${id}`, backLabel: 'Al grupo' };
   } else if (section === 'recibido' && id) {
     screen = <ReceivedScreen groupId={id} />;
-    t = { name: 'Lo que te regalaron', back: `/g/${id}` };
+    t = { name: 'Lo que te regalaron', back: `/g/${id}`, backLabel: 'Al grupo' };
   } else if (section === 'ajustes') {
     screen = <Settings />;
-    t = { name: 'Ajustes', back: '/' };
+    t = { name: 'Ajustes', back: '/', backLabel: 'Tus grupos' };
   } else if (section === 'unirse' && id) {
     screen = <Join token={id} onJoined={() => force((n) => n + 1)} />;
     t = { name: '' };
@@ -80,7 +80,7 @@ export function App({ api }: { api: Api }) {
               <div className="page-head">
                 {t.back && (
                   <a className="back" href={`#${t.back}`}>
-                    <CaretLeft size={18} weight="bold" aria-hidden /> Volver
+                    <CaretLeft size={18} weight="bold" aria-hidden /> {t.backLabel ?? 'Volver'}
                   </a>
                 )}
                 <div className="page-head-row">
@@ -90,7 +90,7 @@ export function App({ api }: { api: Api }) {
                     {t.sub && <p className="sub">{t.sub}</p>}
                     {d !== null && d >= 0 && (
                       <p className="when">
-                        {fecha(t.date!)} · {d > 1 ? (<>faltan <b>{d}</b> días</>) : d === 1 ? 'es mañana' : 'es hoy'}
+                        {fecha(t.date!)} · <span className="nw">{d > 1 ? (<>faltan <b>{d}</b> días</>) : d === 1 ? 'es mañana' : 'es hoy'}</span>
                       </p>
                     )}
                   </div>

@@ -48,9 +48,9 @@ export const statusLabel = (s: ItemStatus) =>
   s.kind === 'partial' && s.percent !== undefined ? `A medias · ${s.percent} %` : SEAL_LABEL[s.kind];
 
 /** El chip de la regla: «Mamá no ve esto». Único chip dorado de la app. */
-export function VisibilityNote({ children }: { children: ReactNode }) {
+export function VisibilityNote({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
-    <p className="vis">
+    <p className={wide ? 'notice' : 'vis'}>
       <EyeSlash size={18} weight="bold" aria-hidden /> {children}
     </p>
   );
