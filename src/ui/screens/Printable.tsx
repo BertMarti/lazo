@@ -42,7 +42,7 @@ export function Catalog({ data }: { data: SharedList }) {
           <Bow size={28} /> Lazo
         </span>
         <h1>{data.name}</h1>
-        <p className="catalog-occasion">{OCCASION[data.occasion] ?? OCCASION.otro}</p>
+        <p className="catalog-occasion">Lista de regalos · {OCCASION[data.occasion] ?? OCCASION.otro}</p>
       </header>
       {data.items.length ? (
         <ul className="catalog-items">
@@ -78,7 +78,7 @@ export function Catalog({ data }: { data: SharedList }) {
       ) : (
         <p className="lead">Aún no hay regalos en esta lista.</p>
       )}
-      <footer className="catalog-foot">Precios orientativos. Escanea el código para ver cada regalo en su tienda.</footer>
+      <footer className="catalog-foot">Precios orientativos. Para ver un regalo en su tienda, apunta al cuadrado con la cámara del móvil.</footer>
     </article>
   );
 }
@@ -170,11 +170,13 @@ export function ShareSheet({ listId, who, mine, onClose }: { listId: string; who
           </div>
         </>
       ) : (
-        <Button variant="primary" wide icon={LinkSimple} loading={busy} onClick={create}>
-          Crear el enlace
-        </Button>
+        <>
+          <p>Si ya enviaste un enlace, al crear otro el anterior deja de funcionar.</p>
+          <Button variant="primary" wide icon={LinkSimple} loading={busy} onClick={create}>
+            Crear el enlace
+          </Button>
+        </>
       )}
-      <p className="meta">Si creas otro, el anterior deja de funcionar.</p>
       <Button variant="link" icon={LinkBreak} disabled={busy} onClick={revoke}>
         Dejar de compartir
       </Button>

@@ -38,7 +38,7 @@ test('Mamá no ve que Alberto le ha reservado el marco; Samira sí, con su nombr
   await page.goto('/#/l/l-mama');
   await page.getByLabel('Ver como').selectOption('samira');
   await expect(page.locator('.gift', { hasText: 'Marco digital de fotos' }).getByText('Lo reserva Alberto')).toBeVisible();
-  await expect(page.getByText('Mamá no ve esto').first()).toBeVisible();
+  await expect(page.getByText('Mamá no ve lo que reserváis')).toBeVisible();
   await page.getByLabel('Ver como').selectOption('mama');
   await expect(page.getByText('Lo reserva Alberto')).toHaveCount(0);
 });
@@ -124,7 +124,8 @@ test('qué ve Mamá: explicado la primera vez, luego plegado tras el icono; las 
   await expect(panel.getByText(/Lo pagáis entre/)).toBeHidden();
   await panel.getByText('Ver cuentas').click();
   await expect(panel.getByText(/Lo pagáis entre \d+: .+ cada uno\./)).toBeVisible();
-  await expect(panel.getByText('Mamá no ve esto')).toBeVisible();
+  // Una sola vez «no ve»: el chip del panel se oculta porque la línea de debajo ya lo dice.
+  await expect(panel.getByText('Mamá no ve esto')).toBeHidden();
 });
 
 test('la banda de la demo cabe en una línea de 44 px a 320 px', async ({ page }) => {

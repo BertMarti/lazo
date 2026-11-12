@@ -46,3 +46,21 @@ test('compartir mi lista en solo lectura y abrirla en #/ver', async ({ page }) =
   await page.goto(url);
   await expect(page.getByText('Este enlace no existe o ya no se comparte.')).toBeVisible();
 });
+
+test('en papel: dice qué es, una columna, marca en color y QR explicado', async ({ page }) => {
+  await page.goto('/#/imprimir/l-juancarlos');
+  await expect(page.getByText(/^Lista de regalos · /)).toBeVisible();
+  await expect(page.getByText('apunta al cuadrado con la cámara del móvil')).toBeVisible();
+  await expect(page.locator('.catalog-brand')).toBeHidden(); // en pantalla ya está la de la cabecera
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.catalog-brand')).toBeVisible();
+  const css = await page.locator('.catalog-items').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+  expect(css).toBe(1);
+  expect(await page.locator('.catalog-text').first().evaluate((el) => getComputedStyle(el).fontSize)).toBe('16px'); // 12 pt
+  // PAPEL=docs/design/v1.0 guarda la hoja en PDF para mirarla.
+  if (process.env.PAPEL && test.info().project.name === 'escritorio') {
+    await page.waitForLoadState('networkidle');
+    await page.waitForFunction(() => document.fonts.status === 'loaded' && [...document.images].every((i) => i.complete));
+    await page.pdf({ path: `${process.env.PAPEL}/imprimir-juancarlos.pdf`, format: 'A4' });
+  }
+});

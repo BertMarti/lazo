@@ -158,7 +158,7 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
                   <div className="stack plaza-lost-confirm">
                     <p style={{ fontWeight: 700 }}>¿{l.name} ha perdido el móvil?</p>
                     <p>Se cerrará su sesión en el móvil perdido. Conserva su lista y todo lo suyo.</p>
-                    <ButtonGroup align="stretch">
+                    <ButtonGroup>
                       <Button variant="danger" loading={busy === `lost-${l.id}`} onClick={() => releaseLost(l.id, l.name)}>Sí, liberar su sitio</Button>
                       <Button variant="secondary" onClick={() => setConfirmLost(null)}>No</Button>
                     </ButtonGroup>

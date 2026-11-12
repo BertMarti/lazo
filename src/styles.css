@@ -289,7 +289,7 @@ main { width: 100%; max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 a
 details.more > summary { display: flex; align-items: center; gap: var(--s-2); min-height: var(--touch); font-weight: 800; cursor: pointer; list-style: none; }
 details.more > summary::-webkit-details-marker { display: none; }
 details.more[open] > summary { margin-bottom: var(--s-3); }
-.choice { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: 0 var(--s-4); border-radius: var(--r-m); border: 1.5px solid var(--linea); background: var(--tarjeta); cursor: pointer; font-weight: 700; }
+.choice { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: 0 var(--s-4); border-radius: var(--r-m); border: 1.5px solid var(--linea-fuerte); background: var(--tarjeta); cursor: pointer; font-weight: 700; }
 .choice:has(input:checked) { border-color: var(--abeto); box-shadow: inset 0 0 0 1px var(--abeto); }
 .choice:has(input:focus-visible) { outline: 3px solid var(--abeto); outline-offset: 2px; }
 .choice input { width: 28px; height: 28px; accent-color: var(--abeto); }
@@ -616,6 +616,10 @@ table.preview th { background: var(--hundido); font-weight: 800; }
 .vista-line { display: flex; align-items: center; gap: var(--s-2); font-weight: 700; padding-left: var(--s-2); }
 .vista-line svg { flex: none; }
 .vista-why { padding: 0 var(--s-2); max-width: 60ch; }
+/* Con la línea de debajo basta: el chip del panel repetía «no ve». */
+.budget-panel:has(+ .vista) .vis { display: none; }
+.vista-line .grow { flex: 0 1 auto; }
+@media (max-width: 389px) { .page-head .when { font-size: var(--t-md); } }
 @media (max-width: 719px) {
   .masthead { padding-top: calc(var(--s-1) + env(safe-area-inset-top)); padding-bottom: var(--s-1); }
   .demo-bar { gap: var(--s-2); }
@@ -663,32 +667,35 @@ table.map-table .select { min-width: 9rem; }
 .catalog-price { font-weight: 800; color: var(--tinta); font-variant-numeric: tabular-nums; }
 .catalog-qr { width: 88px; height: 88px; border-radius: 4px; }
 .catalog-foot { margin-top: var(--s-6); color: var(--tinta-2); font-size: var(--t-meta); }
+@media screen { .catalog-brand { display: none; } }
 
 @media print {
   @page { size: A4; margin: 14mm 12mm; }
   :root { color-scheme: light; }
   html, body, .app, main { background: #fff !important; color: #000 !important; }
-  .masthead, .tabbar, .demo-bar, .print-bar, .toast { display: none !important; }
+  .masthead, .tabbar, .demo-bar, .print-bar, .toast, .offline-band { display: none !important; }
   main { max-width: none; padding: 0; }
-  .catalog { max-width: none; }
-  .catalog-head { border-bottom: 1.5pt solid #000; margin-bottom: 6mm; padding-bottom: 3mm; }
-  .catalog-brand, .catalog-occasion, .catalog-text, .catalog-prio, .catalog-price, .catalog-text h2, .catalog-foot { color: #000 !important; }
+  .catalog { max-width: none; padding-inline: 0.5mm; } /* que el borde derecho de la tarjeta no caiga justo en el margen y se corte */
+  .catalog-head { border-bottom: 1.5pt solid #c9a24a; margin-bottom: 6mm; padding-bottom: 3mm; }
+  .catalog-occasion, .catalog-text, .catalog-prio, .catalog-price, .catalog-text h2, .catalog-foot { color: #000 !important; }
+  .catalog-brand { color: #9a4222 !important; }
   .catalog-head h1 { font-size: 26pt; }
-  .catalog-items { grid-template-columns: 1fr 1fr; gap: 4mm; }
-  .catalog-item { grid-template-columns: 22mm 1fr 22mm; gap: 3mm; padding: 3mm; background: #fff; border: 0.75pt solid #555; border-radius: 3mm; }
-  .catalog-photo { width: 22mm; background: #fff; border: 0.5pt solid #999; color: #000; }
-  .catalog-qr { width: 22mm; height: 22mm; }
-  .catalog-text { font-size: 9.5pt; }
-  .catalog-text h2 { font-size: 10.5pt; }
+  .catalog-items { grid-template-columns: 1fr; gap: 3mm; }
+  .catalog-item { grid-template-columns: 26mm 1fr auto; gap: 4mm; padding: 3mm; background: #fff; border: 0.75pt solid #555; border-radius: 3mm; }
+  .catalog-photo { width: 26mm; background: #fff; border: 0.5pt solid #999; color: #000; }
+  .catalog-qr { width: 26mm; height: 26mm; }
+  .catalog-text { font-size: 12pt; }
+  .catalog-text h2 { font-size: 14pt; }
   .catalog-text h2 a { text-decoration: none; }
-  .catalog-foot { font-size: 9pt; }
+  .catalog-foot { font-size: 11pt; }
 }
 /* v10-plaza */
 .join-hero .faces { flex-wrap: wrap; justify-content: center; row-gap: var(--s-2); }
 .rows > li.plaza-lost { flex-wrap: wrap; }
 .plaza-lost-confirm { flex: 1 1 100%; gap: var(--s-2); }
 /* v10-red */
-.offline-band { margin: 0; padding: var(--s-2) var(--gutter); background: var(--oro-suave); color: var(--sobre-oro-suave); font-size: var(--t-meta); font-weight: 700; text-align: center; }
+.offline-band { position: sticky; top: 0; z-index: 20; margin: 0; padding: var(--s-2) var(--gutter); background: var(--oro-suave); color: var(--sobre-oro-suave); font-size: var(--t-md); font-weight: 700; text-align: center; }
 
 /* v10-copia */
+.copia .meta { font-size: var(--t-md); }
 .copia .btn { max-width: 100%; height: auto; min-height: var(--btn-h); padding-block: var(--s-2); white-space: normal; line-height: 1.2; text-align: center; }
