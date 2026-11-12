@@ -39,7 +39,7 @@ Cada Navidad pasa lo mismo: dos bufandas iguales para el abuelo, nadie sabe qué
 
 ## Qué puedes hacer
 
-- **Una lista para cada uno.** Pega un enlace de **Amazon** o de **cualquier tienda** y Lazo rellena el nombre, la foto y el precio. También puedes **subir un Excel** con tu lista o escribirla a mano, con talla, color y cuántas ganas tienes de cada cosa.
+- **Una lista para cada uno.** Pega un enlace de **Amazon** o de **cualquier tienda** y Lazo rellena el nombre, la foto y el precio. ¿Ya tienes una **lista de deseos en Amazon**? Cópiala (o, en Android, «Compartir → Lazo») y se añaden todos sus productos de una vez. También puedes **subir un Excel** con tu lista o escribirla a mano, con talla, color y cuántas ganas tienes de cada cosa.
 - **Sorpresa garantizada.** En las listas de los demás ves qué está libre, quién lo ha reservado y quién lo ha comprado. En la tuya, nada.
 - **Un presupuesto para cada uno.** «124,90 € de 200,00 €. Quedan 75,10 €.» Lo ve toda la familia… menos el destinatario.
 - **Reservar es un toque.** Y si te equivocas, «Deshacer».

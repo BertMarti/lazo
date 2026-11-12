@@ -4,6 +4,10 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [1.1.0] - 2026-11-12 · Lista de Amazon
+
+Trae a Lazo la lista que ya tienes hecha en Amazon, en un momento y sin que Lazo entre en Amazon por ti.
+
 ### Lo nuevo
 - **Trae tu lista de Amazon.** En «Añadir a tu lista», «Importar lista de Amazon»: abre tu lista en el navegador, selecciónalo todo, cópialo y toca «Pegar». Lazo te enseña los productos que ha encontrado, deja sin marcar los que ya tienes y añade los que elijas. Hay pasos con dibujos para Android, iPhone y ordenador. Lazo no se conecta a Amazon: solo lee lo que pegas, en tu móvil.
 - **En la app de Android**, selecciona el texto de tu lista y elige «Compartir → Lazo»: se abre directamente la vista previa.
@@ -11,6 +15,10 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ### Más claro
 - La hoja «Añadir a tu lista» se ve centrada y con el fondo atenuado en el ordenador, y ocupa todo el ancho abajo en el móvil.
+
+### Seguridad
+- Lazo no hace ninguna petición a Amazon: lee solo lo que tú pegas o compartes, en tu móvil, y ni siquiera carga las fotos hasta que confirmas. Revisión legal y de seguridad de Fable 5.2 en `docs/legal/AMAZON.md` y `docs/security/AUDIT.md`.
+- Los duplicados se comparan solo con lo que ya ves en tu lista, y lo que llega de otra app no se añade hasta que pulsas «Añadir».
 
 ## [1.0.0] - 2026-11-12 · Nochebuena
 
