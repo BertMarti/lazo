@@ -3,6 +3,12 @@ import type { CSSProperties } from 'react';
 import type { BudgetProgress } from '../core/budget';
 import { formatMoney } from '../core/money';
 
+/** «Quedan 25,10 €», «Presupuesto completo» u «Os pasáis 10 €». */
+export function leftText(p: BudgetProgress, currency = 'EUR', leftWord = 'Quedan', fullText = 'Presupuesto completo', overWord = 'Os pasáis') {
+  const m = (c: number) => formatMoney(c, currency);
+  return p.over ? `${overWord} ${m(-p.left)}` : p.left === 0 && p.target > 0 ? fullText : `${leftWord} ${m(p.left)}`;
+}
+
 /** Barra de presupuesto (o de «a medias»). Excedido = color + icono + texto, nunca solo color. */
 export function BudgetBar({ p, currency = 'EUR', size = 'md', label, leftWord = 'Quedan', fullText = 'Presupuesto completo', overWord = 'Os pasáis' }: {
   p: BudgetProgress;
@@ -14,7 +20,7 @@ export function BudgetBar({ p, currency = 'EUR', size = 'md', label, leftWord = 
   overWord?: string;
 }) {
   const m = (c: number) => formatMoney(c, currency);
-  const right = p.over ? `${overWord} ${m(-p.left)}` : p.left === 0 && p.target > 0 ? fullText : `${leftWord} ${m(p.left)}`;
+  const right = leftText(p, currency, leftWord, fullText, overWord);
   return (
     <div
       className={`budget${size === 'sm' ? ' budget-sm' : ''}`}

@@ -31,7 +31,7 @@ for (const [name, who, url, act] of shots) {
     await page.addInitScript((w) => {
       localStorage.clear();
       localStorage.setItem('lazo-demo-v4:viewer', w);
-      localStorage.setItem('lazo:explicado', '1');
+      localStorage.setItem('lazo:vista-explicada', '1');
       sessionStorage.setItem('lazo:inicio', '1');
     }, who);
     await page.emulateMedia({ reducedMotion: 'reduce' });

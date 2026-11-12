@@ -108,3 +108,30 @@ test('la hucha de Papá no dice nada de lo que se gasta en él', async ({ page }
   await expect(page.locator('.rows li', { hasText: /^P/ }).filter({ hasText: 'Papá' })).toHaveCount(0);
   await expect(page.getByText('Te falta poner')).toBeVisible();
 });
+
+test('qué ve Mamá: explicado la primera vez, luego plegado tras el icono; las cuentas, en «Ver cuentas»', async ({ page }) => {
+  await page.goto('/#/l/l-mama');
+  await page.getByLabel('Ver como').selectOption('alberto');
+  const why = page.getByText('Mamá ve su lista, pero no quién reserva');
+  await expect(page.getByText('Mamá no ve lo que reserváis')).toBeVisible();
+  await expect(why).toBeVisible();
+  await page.reload();
+  await expect(why).toBeHidden();
+  await page.getByRole('button', { name: 'Qué ve Mamá' }).click();
+  await expect(why).toBeVisible();
+  const panel = page.locator('.budget-panel');
+  await expect(panel.locator('.budget-big')).toHaveText(/^Quedan /);
+  await expect(panel.getByText(/Lo pagáis entre/)).toBeHidden();
+  await panel.getByText('Ver cuentas').click();
+  await expect(panel.getByText(/Lo pagáis entre \d+: .+ cada uno\./)).toBeVisible();
+  await expect(panel.getByText('Mamá no ve esto')).toBeVisible();
+});
+
+test('la banda de la demo cabe en una línea de 44 px a 320 px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/#/l/l-mama');
+  await page.getByLabel('Ver como').selectOption('juancarlos'); // el nombre más largo
+  const bar = page.getByRole('region', { name: 'Demo' });
+  expect((await bar.boundingBox())!.height).toBe(44);
+  await expect(bar.getByRole('link', { name: 'Probar a entrar' })).toBeInViewport({ ratio: 1 });
+});

@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
     if (!sessionStorage.getItem('e2e')) {
       localStorage.clear();
       localStorage.setItem('lazo-demo-v4:viewer', 'samira');
-      localStorage.setItem('lazo:explicado', '1');
+      localStorage.setItem('lazo:vista-explicada', '1');
       sessionStorage.setItem('e2e', '1');
       sessionStorage.setItem('lazo:inicio', '1');
     }

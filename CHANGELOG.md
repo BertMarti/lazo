@@ -4,6 +4,13 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Cambiado
+
+- En el móvil, el presupuesto de otra persona se lee de un vistazo: «Quedan 25,10 €» en grande, la barra y las cuentas plegadas en «Ver cuentas».
+- El aviso de qué ve el dueño de la lista es ahora una línea con un botón de información; la explicación larga solo sale la primera vez.
+- Un regalo solo en su sección ocupa todo el ancho en el móvil, con la foto 4:3.
+- La banda de la demo cabe en una línea, también a 320 px, y la cabecera tiene menos aire arriba.
+
 ## [0.5.1] - 2026-11-12 · Probado con la familia
 
 Arreglos que salen de recorrer Lazo en el móvil como lo harían un abuelo, alguien con prisa y una madre con la hucha, y lo que faltaba para montarlo en casa de verdad.

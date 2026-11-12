@@ -11,7 +11,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.addInitScript(() => {
         localStorage.clear();
         localStorage.setItem('lazo-demo-v4:viewer', 'alberto');
-        localStorage.setItem('lazo:explicado', '1');
+        localStorage.setItem('lazo:vista-explicada', '1');
         localStorage.setItem('lazo-demo-v4:shares', JSON.stringify({ ['a'.repeat(32)]: 'l-alberto' }));
         sessionStorage.setItem('lazo:inicio', '1');
       });

@@ -5,7 +5,7 @@ test('desde Tus grupos se entra en el grupo y se vuelve', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
     localStorage.setItem('lazo-demo-v4:viewer', 'alberto');
-    localStorage.setItem('lazo:explicado', '1');
+    localStorage.setItem('lazo:vista-explicada', '1');
     sessionStorage.setItem('lazo:inicio', '1');
   });
   await page.goto('/#/');
@@ -28,7 +28,7 @@ test('Ajustes da un código para entrar en otro móvil', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
     localStorage.setItem('lazo-demo-v4:viewer', 'alberto');
-    localStorage.setItem('lazo:explicado', '1');
+    localStorage.setItem('lazo:vista-explicada', '1');
     sessionStorage.setItem('lazo:inicio', '1');
   });
   await page.goto('/#/ajustes');

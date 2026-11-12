@@ -7,7 +7,7 @@ test('la campana abre los avisos y se marcan como leídos', async ({ page }) => 
     sessionStorage.setItem('lazo:e2e', '1');
     localStorage.clear();
     localStorage.setItem('lazo-demo-v4:viewer', 'mama');
-    localStorage.setItem('lazo:explicado', '1');
+    localStorage.setItem('lazo:vista-explicada', '1');
     sessionStorage.setItem('lazo:inicio', '1');
   });
   await page.goto('/#/g/navidad');

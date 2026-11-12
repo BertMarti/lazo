@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
     localStorage.setItem('lazo-demo-v4:viewer', 'alberto');
-    localStorage.setItem('lazo:explicado', '1');
+    localStorage.setItem('lazo:vista-explicada', '1');
     sessionStorage.setItem('lazo:inicio', '1');
   });
 });

@@ -1,4 +1,4 @@
-import { Gift as GiftIcon, FileXls, Lightbulb, Plus, Printer, ShareNetwork, X } from '@phosphor-icons/react';
+import { CaretDown, EyeSlash, Gift as GiftIcon, FileXls, Info, Lightbulb, Plus, Printer, ShareNetwork } from '@phosphor-icons/react';
 import { Bow, Loading } from '../Bow';
 import { useEffect, useState } from 'react';
 import type { ListDetail } from '../../api/types';
@@ -7,8 +7,8 @@ import { ledger } from '../../core/hucha';
 import { formatMoney } from '../../core/money';
 import { itemStatus } from '../../core/status';
 import type { Claim, Item } from '../../core/types';
-import { BudgetBar } from '../BudgetBar';
-import { Button } from '../Button';
+import { BudgetBar, leftText } from '../BudgetBar';
+import { Button, IconButton } from '../Button';
 import { go, listFlavor, useApi } from '../ctx';
 import { GiftCard } from '../Gift';
 import { errorText, useLive, useLoad, useToast, VisibilityNote } from '../kit';
@@ -24,7 +24,7 @@ import { ItemForm } from './ItemForm';
 import { ItemSheet } from './ItemSheet';
 import { ShareSheet } from './Printable';
 
-const SEEN_KEY = 'lazo:explicado';
+const SEEN_KEY = 'lazo:vista-explicada';
 
 /** Lista = elegir regalo. Ajena: presupuesto, «Disponibles» y «Ya cogidos», acciones de 1 toque. Propia: sin estado. */
 export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolean; onTitle: (t: Title) => void }) {
@@ -47,13 +47,23 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
   const [ideas, setIdeas] = useState(false);
   const [surprise, setSurprise] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [explained, setExplained] = useState(() => {
+  // La explicación de qué ve el dueño sale desplegada solo la primera vez; luego, al tocar el icono.
+  const [why, setWhy] = useState(() => {
     try {
-      return !!localStorage.getItem(SEEN_KEY);
+      return !localStorage.getItem(SEEN_KEY);
     } catch {
-      return true;
+      return false;
     }
   });
+  const owner = data?.d.list.user;
+  useEffect(() => {
+    if (!owner || owner === me?.id) return; // solo cuenta como vista donde se enseña
+    try {
+      localStorage.setItem(SEEN_KEY, '1');
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, [owner, me?.id]);
 
   useEffect(() => setView(data?.d ?? null), [data]);
   useEffect(() => {
@@ -142,6 +152,8 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
   const pot = d.canSee ? ledger(d.list, { members: members.map((m) => m.id), items: view.items, claims: view.claims }) : undefined;
   const advancers = pot ? Object.keys(pot.adv).map(nameOf) : [];
   const ownExtra = mode === 'mixto' ? committedOn(view.items, view.claims, view.contributions).own : 0;
+  const cur = d.group.currency;
+  const money = (c: number, exact = false) => formatMoney(c, d.group.currency, exact);
   const noPrice = d.items.filter((i) => i.priceCents === undefined && view.claims.some((c) => c.item === i.id && c.status === 'reserved')).length;
 
   const body = (
@@ -151,47 +163,53 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
           <VisibilityNote wide>Lo que te regalan es sorpresa: aquí solo ves lo que has pedido.</VisibilityNote>
         </div>
       ) : (
-        <section className="budget-panel" aria-label={`Presupuesto para ${who}`}>
-          <div className="budget-panel-head">
-            <span className="meta">Presupuesto para {who}</span>
-            <Button variant={d.budget ? 'link' : 'secondary'} size="sm" onClick={() => setBudgetOpen(true)}>
-              {d.budget ? 'Cambiar' : 'Poner presupuesto'}
-            </Button>
-          </div>
-          {progress && <BudgetBar p={progress} label={`Presupuesto para ${who}`} />}
-          {pot && pot.spent > 0 && (
-            <p className="meta">
-              Hucha de {who}: {formatMoney(pot.spent, d.group.currency, true)} entre {pot.sharers.length} · sale a {formatMoney(Math.round(pot.spent / Math.max(1, pot.sharers.length)), d.group.currency, true)} por persona
-              {advancers.length > 0 && ` · adelantó ${advancers.join(' y ')}`}
-            </p>
-          )}
-          {ownExtra > 0 && <p className="meta">Además, por su cuenta: {formatMoney(ownExtra)}</p>}
-          <p className="meta">
-            {taken.length} de {d.items.length} regalos cogidos
-            {noPrice > 0 && ` · ${noPrice === 1 ? '1 reservado no tiene precio y no cuenta' : `${noPrice} reservados no tienen precio y no cuentan`}`}
-          </p>
-          {d.list.user ? <VisibilityNote>{who} no ve esto</VisibilityNote> : d.list.kind === 'child' ? <VisibilityNote wide>{who} no usa Lazo: esto lo veis todos los mayores</VisibilityNote> : <p className="meta">{who} aún no ha entrado. Cuando entre, dejará de ver todo esto.</p>}
-          {d.list.user && !explained && (
-            <div className="notice" style={{ alignItems: 'flex-start' }}>
-              <p className="grow">{who} ve su lista, pero no quién reserva, qué se ha comprado ni cuánto os gastáis. Los demás sí lo veis.</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={X}
-                onClick={() => {
-                  setExplained(true);
-                  try {
-                    localStorage.setItem(SEEN_KEY, '1');
-                  } catch {
-                    /* sin almacenamiento */
-                  }
-                }}
-              >
-                Entendido
+        <>
+          <section className="budget-panel" aria-label={`Presupuesto para ${who}`}>
+            <div className="budget-panel-head">
+              <span className="meta">Presupuesto para {who}</span>
+              <Button variant={d.budget ? 'link' : 'secondary'} size="sm" onClick={() => setBudgetOpen(true)}>
+                {d.budget ? 'Cambiar' : 'Poner presupuesto'}
               </Button>
             </div>
+            {progress && (
+              <>
+                <p className="budget-big" data-over={progress.over || undefined}>{leftText(progress, cur)}</p>
+                <BudgetBar p={progress} currency={cur} label={`Presupuesto para ${who}`} />
+              </>
+            )}
+            <details className="more budget-more">
+              <summary>
+                <CaretDown size={18} weight="bold" aria-hidden /> Ver cuentas
+              </summary>
+              <div className="budget-more-body">
+                {pot && pot.spent > 0 && (
+                  <p>
+                    Con la hucha se han gastado {money(pot.spent, true)}. Lo pagáis entre {pot.sharers.length}: {money(Math.round(pot.spent / Math.max(1, pot.sharers.length)), true)} cada uno.
+                    {advancers.length > 0 && ` Lo adelantó ${advancers.join(' y ')}.`}
+                  </p>
+                )}
+                {ownExtra > 0 && <p>Además, por vuestra cuenta: {money(ownExtra)}.</p>}
+                <p>
+                  Ya hay {taken.length} de {d.items.length} regalos cogidos.
+                  {noPrice > 0 && ` ${noPrice === 1 ? 'Uno reservado no tiene precio y no cuenta.' : `${noPrice} reservados no tienen precio y no cuentan.`}`}
+                </p>
+              </div>
+            </details>
+            {d.list.user ? <VisibilityNote>{who} no ve esto</VisibilityNote> : d.list.kind === 'child' ? <VisibilityNote wide>{who} no usa Lazo: esto lo veis todos los mayores</VisibilityNote> : <p className="meta">{who} aún no ha entrado. Cuando entre, dejará de ver todo esto.</p>}
+          </section>
+          {d.list.user && (
+            <div className="vista">
+              <div className="vista-line">
+                <EyeSlash size={20} weight="bold" aria-hidden />
+                <span className="grow">{who} no ve lo que reserváis</span>
+                <IconButton icon={Info} label={`Qué ve ${who}`} aria-expanded={why} aria-controls="vista-why" onClick={() => setWhy((w) => !w)} />
+              </div>
+              <p id="vista-why" className="vista-why" hidden={!why}>
+                {who} ve su lista, pero no quién reserva, qué se ha comprado ni cuánto os gastáis. Los demás sí lo veis.
+              </p>
+            </div>
           )}
-        </section>
+        </>
       )}
 
       {d.canEdit && (
