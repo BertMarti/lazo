@@ -5,11 +5,13 @@ import type { PageMeta } from '../core/meta';
 import { joinCode, normName, parsePlazas } from '../core/plazas';
 import type { Cents, Claim, GiftList, Group, Id, Item, JoinRequest, Received, User } from '../core/types';
 import { LIMITS } from '../core/types';
+import { toShared } from '../core/shared';
 import { canEditList, canSeeStatus } from '../core/visibility';
 import { DEMO_GENERAL_TOKEN, DEMO_UNFURL, seed, type DemoData } from './seed';
 import {
   ApiError,
   BAD_INVITE,
+  BAD_SHARE,
   type Api,
   type DrawInfo,
   type GiftAction,
@@ -21,6 +23,7 @@ import {
   type ListDetail,
   type NewGroup,
   type Purchase,
+  type SharedList,
 } from './types';
 
 const KEY = 'lazo-demo-v4';
@@ -140,6 +143,7 @@ export class DemoApi implements Api {
     const g = this.admin(l.group);
     if (l.kind !== 'person' || !l.user || l.user === this.viewer || l.user === g.owner) throw new ApiError('No puedes liberar esa plaza.');
     this.db.memberships = this.db.memberships.filter((m) => !(m.group === g.id && m.user === l.user));
+    this.writeShares(this.dropShares(l.id)); // su enlace de solo lectura no pasa a quien ocupe la plaza
     l.prevUser = l.user;
     l.user = undefined;
     l.claimedAt = 0;
@@ -531,6 +535,39 @@ export class DemoApi implements Api {
     for (const claim of this.db.claims.filter((c) => (c.user === this.viewer || c.paidBy === this.viewer) && visible(c.item))) out.push({ ...ctx(claim.item), claim });
     for (const contribution of this.db.contributions.filter((c) => c.user === this.viewer && visible(c.item))) out.push({ ...ctx(contribution.item), contribution });
     return out;
+  }
+
+  // Enlace de solo lectura: el token vive en este navegador (en el servidor solo se guarda su hash).
+  async shareList(listId: Id) {
+    const l = this.editable(listId);
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+    this.writeShares({ ...this.dropShares(l.id), [token]: l.id });
+    return { url: `${location.origin}${location.pathname}#/ver/${token}` };
+  }
+
+  async unshareList(listId: Id) {
+    this.writeShares(this.dropShares(this.editable(listId).id));
+  }
+
+  async sharedList(token: string): Promise<SharedList> {
+    const list = this.db.lists.find((l) => l.id === this.shares()[token]);
+    const group = list && this.db.groups.find((g) => g.id === list.group);
+    if (!list || !group) throw new ApiError(BAD_SHARE);
+    return toShared(list.name, group.occasion, this.db.items.filter((i) => i.list === list.id));
+  }
+
+  private shares(): Record<string, Id> {
+    try {
+      return JSON.parse(this.read('shares') ?? '{}') as Record<string, Id>;
+    } catch {
+      return {};
+    }
+  }
+  private dropShares(listId: Id) {
+    return Object.fromEntries(Object.entries(this.shares()).filter(([, l]) => l !== listId));
+  }
+  private writeShares(s: Record<string, Id>) {
+    this.write('shares', JSON.stringify(s));
   }
 
   // — reglas —

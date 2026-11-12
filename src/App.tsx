@@ -12,6 +12,7 @@ import { GroupScreen } from './ui/screens/Group';
 import { Home } from './ui/screens/Home';
 import { Join } from './ui/screens/Join';
 import { ListScreen } from './ui/screens/List';
+import { PrintScreen, SharedScreen } from './ui/screens/Printable';
 import { Purchases } from './ui/screens/Purchases';
 import { Settings } from './ui/screens/Settings';
 import { HuchaScreen } from './ui/screens/Hucha';
@@ -52,28 +53,34 @@ export function App({ api }: { api: Api }) {
   } else if (section === 'unirse' && id) {
     screen = <Join token={id} onJoined={() => force((n) => n + 1)} />;
     t = { name: '' };
+  } else if (section === 'imprimir' && id) {
+    screen = <PrintScreen id={id} />;
+  } else if (section === 'ver' && id) {
+    screen = <SharedScreen token={id} />;
   } else {
     screen = <Home />;
     t = { name: 'Tus grupos', sub: 'Listas de regalos en familia' };
   }
   const d = daysUntil(t.date);
+  // Fuera del grupo (entrar o ver una lista compartida): sin navegación ni avisos.
+  const bare = section === 'unirse' || (section === 'ver' && !!id);
 
   return (
     <ApiCtx.Provider value={api}>
       <ToastProvider>
         <div className="app">
-          {api instanceof DemoApi && <DemoBar api={api} onChange={() => force((n) => n + 1)} />}
+          {api instanceof DemoApi && section !== 'ver' && <DemoBar api={api} onChange={() => force((n) => n + 1)} />}
           <header className="masthead">
             <div className="masthead-in">
               <Brand />
-              {section !== 'unirse' && (
+              {!bare && (
                 <nav className="tabs-top" aria-label="Principal">
                   <Tabs section={section} group={group} />
                 </nav>
               )}
               <div className="masthead-end">
-                {section !== 'unirse' && <Avisos key={api.me()?.id} refresh={routeKey} />}
-                {section !== 'ajustes' && section !== 'unirse' && <IconButton icon={Gear} label="Ajustes" onClick={() => go('/ajustes')} />}
+                {!bare && <Avisos key={api.me()?.id} refresh={routeKey} />}
+                {section !== 'ajustes' && !bare && <IconButton icon={Gear} label="Ajustes" onClick={() => go('/ajustes')} />}
               </div>
             </div>
           </header>
@@ -102,7 +109,7 @@ export function App({ api }: { api: Api }) {
             )}
             {screen}
           </main>
-          <nav className="tabbar" aria-label="Principal" hidden={section === 'unirse'}>
+          <nav className="tabbar" aria-label="Principal" hidden={bare}>
             <Tabs section={section} group={group} />
           </nav>
         </div>

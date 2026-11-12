@@ -1,5 +1,6 @@
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
+import type { SharedList } from '../core/shared';
 import type { Budget, BuyMode, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Occasion, Payment, Received, User } from '../core/types';
 
 export interface Member extends User {
@@ -87,6 +88,11 @@ export interface HuchaData {
   payments: Payment[];
 }
 
+export type { SharedItem, SharedList } from '../core/shared';
+
+/** Mismo texto para todo enlace malo: falso, rotado o revocado. */
+export const BAD_SHARE = 'Este enlace no existe o ya no se comparte.';
+
 /** Lo que la interfaz necesita del backend. Implementaciones: PocketBaseApi (servidor) y DemoApi (memoria). */
 export interface Api {
   readonly demo: boolean;
@@ -134,6 +140,11 @@ export interface Api {
    * nada de su propia plaza. `groupId` vacío = todos sus grupos. Devuelve cómo dejar de escuchar.
    */
   watch(groupId: Id, onChange: () => void): () => void;
+  /** Enlace de solo lectura de una lista propia (o de un niño que llevas). Crear de nuevo rota el anterior. */
+  shareList(listId: Id): Promise<{ url: string }>;
+  unshareList(listId: Id): Promise<void>;
+  /** Público: no necesita sesión. */
+  sharedList(token: string): Promise<SharedList>;
 }
 
 export class ApiError extends Error {}

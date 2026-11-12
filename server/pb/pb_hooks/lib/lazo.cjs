@@ -89,4 +89,21 @@ function keeperOf(app, group, listId) {
   return listId === group.getString('treasurer') ? userOf(group.getString('deputy')) : userOf(group.getString('treasurer'));
 }
 
-module.exports = { BAD_INVITE, COLORS, findInvite, newUser, reclamar, isAdmin, keeperOf };
+const BAD_SHARE = 'Este enlace no existe o ya no se comparte.';
+
+/** La lista que puedo compartir: mi plaza, o la de un niño que llevo (y siempre dentro del grupo). Mismo 403 si no existe. */
+function ownList(app, listId, me) {
+  const no = () => new ForbiddenError('Solo puedes compartir tu propia lista.');
+  let l, g;
+  try {
+    l = app.findRecordById('lists', String(listId || ''));
+    g = app.findRecordById('groups', l.getString('group'));
+  } catch {
+    throw no();
+  }
+  const mine = l.getString('user') === me || (l.getString('kind') === 'child' && l.getStringSlice('managers').includes(me));
+  if (!mine || !g.getStringSlice('members').includes(me)) throw no();
+  return l;
+}
+
+module.exports = { BAD_INVITE, BAD_SHARE, COLORS, findInvite, newUser, reclamar, isAdmin, keeperOf, ownList };
