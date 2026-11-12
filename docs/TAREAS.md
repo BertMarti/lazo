@@ -19,7 +19,7 @@ Cola priorizada. Cada tarea indica quién la hace y con qué modelo. Las que no 
 | 4 | Veredicto «apto» sobre las capturas nuevas | revisor-diseno | Fable 5.2 | hecha |
 | 5 | DESIGN.md, SKILLS.md, CHANGELOG y README | implementador | Opus 5.5 | hecha |
 | 6 | Merge a `main` y release v0.4.0 con el APK | implementador | Opus 5.5 | hecha |
-| 7 | Demo en Cloudflare Pages (`scripts/pages-deploy.sh` → `lazo-demo.pages.dev`), porque GitHub Pages y Actions están bloqueados por facturación. El control de seguridad deniega crear la superficie pública: la publica el usuario con `bash scripts/wsl.sh 'bash scripts/pages-deploy.sh'` | usuario | — | bloqueada: usuario |
+| 7 | Demo v0.4 publicada en GitHub Pages (https://bertmarti.github.io/lazo/), con el bundle nuevo comprobado. Alternativa en Cloudflare Pages lista en `scripts/pages-deploy.sh` (`lazo-demo.pages.dev`): el control de seguridad deniega crear esa superficie pública, así que la lanza el usuario si la quiere | implementador / usuario | Opus 5.5 | hecha (Cloudflare: bloqueada: usuario) |
 
 ## Siguiente (v0.5)
 
