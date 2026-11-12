@@ -1,6 +1,6 @@
 import { UserPlus } from '@phosphor-icons/react';
 import { Loading } from '../Bow';
-import { useEffect, useState } from 'react';
+import { useState, useLayoutEffect } from 'react';
 import type { Api, GroupDetail, ListDetail } from '../../api/types';
 import { budgetProgress } from '../../core/budget';
 import { itemStatus } from '../../core/status';
@@ -26,7 +26,8 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
   const [notYet, setNotYet] = useState(false);
 
   const isAdmin = !!data?.detail.members.some((m) => m.id === me?.id && m.role === 'admin');
-  useEffect(() => {
+  // useLayoutEffect: el título va antes de pintar, sin que la cabecera empuje el contenido (CLS).
+  useLayoutEffect(() => {
     if (!data) return;
     const g = data.detail.group;
     lastGroup.set(id);

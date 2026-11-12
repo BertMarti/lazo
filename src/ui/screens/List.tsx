@@ -1,6 +1,6 @@
 import { CaretDown, EyeSlash, Gift as GiftIcon, FileXls, Info, Lightbulb, Plus, Printer, ShareNetwork } from '@phosphor-icons/react';
 import { Bow, Loading } from '../Bow';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
 import type { ListDetail } from '../../api/types';
 import { budgetProgress, committedOn } from '../../core/budget';
 import { ledger } from '../../core/hucha';
@@ -66,7 +66,8 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
   }, [owner, me?.id]);
 
   useEffect(() => setView(data?.d ?? null), [data]);
-  useEffect(() => {
+  // useLayoutEffect: el título va antes de pintar, sin que la cabecera empuje el contenido (CLS).
+  useLayoutEffect(() => {
     if (!data || !me) return;
     const { d, group } = data;
     const owner = group.detail.members.find((m) => m.id === d.list.user);

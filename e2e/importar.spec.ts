@@ -22,7 +22,8 @@ test('importar un CSV con cabeceras raras', async ({ page }) => {
   await page.locator('input[type=file]').setInputFiles({ name: 'lista rara.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV, 'utf8') });
 
   // Mapeo adivinado sin IA.
-  await expect(page.getByLabel('Columna «ARTÍCULO deseado»')).toHaveValue('title');
+  // SheetJS se carga en diferido: la primera vez, en un disco lento, tarda más de 5 s.
+  await expect(page.getByLabel('Columna «ARTÍCULO deseado»')).toHaveValue('title', { timeout: 30_000 });
   await expect(page.getByLabel('Columna «¿Cuánto cuesta? (€)»')).toHaveValue('price');
   await expect(page.getByLabel('Columna «URL del producto»')).toHaveValue('url');
   await expect(page.getByLabel('Columna «Tienda online»')).toHaveValue('store');

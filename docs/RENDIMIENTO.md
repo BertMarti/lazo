@@ -6,16 +6,16 @@ Medido el 2026-11-12 con `npm run rendimiento` (`scripts/rendimiento.mjs`) sobre
 
 | Ruta | FCP | LCP | CLS | Interactivo (aprox.) | Transferido | JS transferido | Peticiones |
 |---|---|---|---|---|---|---|---|
-| `/#/g/navidad` | 1,64 s | 1,74 s | 0,248 ⚠ | 1,64 s | 476,4 KB | 193,6 KB (658,8 KB sin comprimir) | 10 |
-| `/#/l/l-mama` | 1,62 s | 1,83 s | 0,001 | 1,70 s | 565,6 KB | 193,6 KB (658,8 KB sin comprimir) | 11 |
+| `/#/g/navidad` | 1,71 s | 1,77 s | 0,004 | 1,77 s | 481,0 KB | 198,0 KB (674,5 KB sin comprimir) | 10 |
+| `/#/l/l-mama` | 1,62 s | 1,72 s | 0,004 | 1,72 s | 570,2 KB | 198,0 KB (674,5 KB sin comprimir) | 11 |
 
-**JS total con gzip:** 347,9 KB en 2 ficheros ⚠; lo que se descarga al abrir estas rutas, 192,9 KB. Límites: LCP ≤ 2,5 s, CLS ≤ 0,1 y JS ≤ 300 KB con gzip. **Algo pasa del límite** (⚠): ver las causas abajo.
+**JS total con gzip:** 352,3 KB en 2 ficheros ⚠; lo que se descarga al abrir estas rutas, 197,2 KB. Límites: LCP ≤ 2,5 s, CLS ≤ 0,1 y JS ≤ 300 KB con gzip. **Algo pasa del límite** (⚠): ver las causas abajo.
 
 ### Ficheros de `dist-demo/assets`
 
 | Fichero | En disco | Con gzip | Se descarga al abrir |
 |---|---|---|---|
-| `index-BsDoZjQi.js` | 658,8 KB | 192,9 KB | sí |
+| `index-CxuXt6Jw.js` | 674,5 KB | 197,2 KB | sí |
 | `xlsx-DR4W_luh.js` | 480,5 KB | 155,0 KB | no |
 | `nunito-latin-wght-normal-BzFMHfZw.woff2` | 38,2 KB | 38,2 KB | sí |
 | `nunito-latin-ext-wght-normal-CXYtwYOx.woff2` | 34,8 KB | 34,8 KB | no |
@@ -26,7 +26,7 @@ Medido el 2026-11-12 con `npm run rendimiento` (`scripts/rendimiento.mjs`) sobre
 | `young-serif-latin-ext-400-normal-DzElnxZw.woff2` | 16,9 KB | 16,9 KB | sí |
 | `young-serif-latin-ext-400-normal-4arC2Gh9.woff` | 14,4 KB | 14,3 KB | no |
 | `nunito-vietnamese-wght-normal-U01xdrZh.woff2` | 12,8 KB | 12,8 KB | no |
-| `index-B4U6leIx.css` | 39,2 KB | 8,8 KB | sí |
+| `index-CQwY9kKt.css` | 40,4 KB | 9,0 KB | sí |
 
 ## Metodología
 
