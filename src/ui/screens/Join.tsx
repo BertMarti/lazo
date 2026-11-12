@@ -58,6 +58,7 @@ function Box({ children }: { children: React.ReactNode }) {
   return (
     <div className="join">
       <div className="panel stack">{children}</div>
+      <p className="meta" style={{ textAlign: 'center' }}>Al entrar aceptas los <a href="https://github.com/BertMarti/lazo/blob/main/docs/legal/TERMINOS.md" target="_blank" rel="noopener noreferrer">términos</a> y la <a href="https://github.com/BertMarti/lazo/blob/main/docs/legal/PRIVACIDAD.md" target="_blank" rel="noopener noreferrer">privacidad</a>.</p>
     </div>
   );
 }
