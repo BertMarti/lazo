@@ -217,7 +217,8 @@ function Vista({ productos, visibles, onBack, onClose, onAdd }: { productos: Ama
             <label className="check">
               <input type="checkbox" checked={on[i]} onChange={(e) => setOn((o) => o.map((v, j) => (j === i ? e.target.checked : v)))} />
               <span className="gift-thumb paper" aria-hidden>
-                {p.image ? <img src={p.image} alt="" referrerPolicy="no-referrer" loading="lazy" /> : <span className="noimg"><Bow size={28} /></span>}
+                {/* AMZ-16: nada sale hacia Amazon antes de confirmar; la foto se ve después, ya en tu lista. */}
+                <span className="noimg"><Bow size={28} /></span>
               </span>
               <span className="grow">
                 <span className="amz-titulo">{p.title}</span>

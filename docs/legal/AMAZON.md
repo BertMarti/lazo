@@ -15,7 +15,8 @@ Lazo te deja traer a tu lista los productos de **tu propia** lista de deseos pú
 | **Para qué** | Para no teclear a mano regalos que ya eligió en Amazon. Uso familiar y privado |
 | **Qué se lee** | El título, la foto, el precio y el código del producto (ASIN) de cada artículo de la lista |
 | **Qué se guarda** | Por cada regalo: título, dirección de la foto (la foto no se copia: se sigue viendo desde Amazon), precio y el enlace limpio `https://www.amazon.es/dp/<ASIN>` |
-| **Qué no se guarda** | El enlace ni el identificador de tu lista de Amazon, tu nombre en Amazon, comentarios, prioridades, cantidades, dirección de envío, ni la página descargada |
+| **Prioridad y cantidad** | Si la copia las trae, se guardan como datos de tu propio regalo («Me encantaría», «2 unidades»): son tuyos, no de Amazon |
+| **Qué no se guarda** | El enlace ni el identificador de tu lista de Amazon, tu nombre en Amazon, comentarios, dirección de envío, ni la página descargada |
 | **Tope** | 100 productos por importación |
 
 ### Los dos caminos
@@ -89,6 +90,8 @@ Una pista práctica: que hoy Amazon haya cortado una simple descarga de su pági
 
 - Leer en un navegador la cláusula «Licencia y acceso» vigente y sustituir aquí el resumen de memoria por la cita literal con su fecha.
 - Volver a mirar el `robots.txt` antes de cada versión, por si aparece `/hz/wishlist/`.
+
+> Las fotos de la vista previa no se cargan hasta que confirmas: antes de pulsar «Añadir», Lazo no hace ninguna petición a Amazon (AMZ-16). Después, como con cualquier regalo, la foto se muestra desde la tienda.
 
 ## Modelos y su función
 
