@@ -38,7 +38,12 @@ async function start(srv: string | null) {
       />,
     );
   }
-  if (srv === 'demo') return render(<App api={new DemoApi()} />);
+  if (srv === 'demo') {
+    const demo = new DemoApi();
+    // Solo en la demo: las pruebas E2E actúan como otra persona desde la misma página (tiempo real).
+    if (import.meta.env.VITE_DEMO) Object.assign(window, { __lazoDemo: demo });
+    return render(<App api={demo} />);
+  }
   const pb = new PocketBaseApi(srv);
   await pb.resume();
   render(<App api={pb} />);

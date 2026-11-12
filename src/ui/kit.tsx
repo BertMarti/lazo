@@ -1,8 +1,9 @@
 import { Check, CircleHalf, EyeSlash, Gift, PiggyBank, X, type Icon } from '@phosphor-icons/react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ItemStatus } from '../core/status';
-import type { User } from '../core/types';
+import type { Id, User } from '../core/types';
 import { Button, IconButton } from './Button';
+import { useApi } from './ctx';
 
 export const FLAVORS = ['limon', 'canela', 'menta', 'fresa', 'violeta', 'almendra', 'cielo'] as const;
 export type Flavor = (typeof FLAVORS)[number];
@@ -150,7 +151,20 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data?: T; e
   return { ...state, reload: () => setN((x) => x + 1) };
 }
 
-export const daysUntil = (date?: string): number | null => {
+/**
+ * Tiempo real: recarga la pantalla cuando cambia algo del grupo (`''` = todos tus grupos; `undefined` = aún no se sabe).
+ * Sin parpadeo: useLoad conserva los datos anteriores hasta que llegan los nuevos.
+ */
+export function useLive(groupId: Id | undefined, reload: () => void) {
+  const api = useApi();
+  const latest = useRef(reload);
+  useEffect(() => {
+    latest.current = reload;
+  });
+  useEffect(() => (groupId === undefined ? undefined : api.watch(groupId, () => latest.current())), [api, groupId]);
+}
+
+export const daysUntil =(date?: string): number | null => {
   if (!date) return null;
   const d = new Date(date + 'T00:00:00');
   const today = new Date();

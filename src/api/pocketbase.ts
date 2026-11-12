@@ -1,4 +1,4 @@
-import PocketBase, { ClientResponseError, type RecordModel } from 'pocketbase';
+import PocketBase, { ClientResponseError, type RecordModel, type RecordSubscription } from 'pocketbase';
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
@@ -216,6 +216,26 @@ export class PocketBaseApi implements Api {
       return [...claims, ...pots];
     });
 
+  // Sin opciones ni filtros: el servidor solo admite «coleccion/*» (R-1) y filtra cada evento con la listRule.
+  watch = (groupId: Id, onChange: () => void) => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    let off = false;
+    const kick = (e: RecordSubscription) => {
+      // lists y payments llevan su grupo: lo de otros grupos no recarga esta pantalla.
+      if (off || (groupId && e.record.group && e.record.group !== groupId)) return;
+      t ??= setTimeout(() => {
+        t = undefined;
+        if (!off) onChange();
+      }, 300);
+    };
+    const subs = LIVE.map((c) => this.pb.collection(c).subscribe('*', kick).catch(() => null));
+    return () => {
+      off = true;
+      clearTimeout(t);
+      for (const s of subs) void s.then((unsub) => unsub?.().catch(() => {}));
+    };
+  };
+
   private async run<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
@@ -232,6 +252,8 @@ export class PocketBaseApi implements Api {
     }
   }
 }
+
+const LIVE = ['claims', 'contributions', 'budgets', 'payments', 'items', 'lists'];
 
 // — Conversión de registros —
 const opt = <T>(v: T | '' | 0 | null | undefined): T | undefined => (v === '' || v === null || v === undefined ? undefined : (v as T));

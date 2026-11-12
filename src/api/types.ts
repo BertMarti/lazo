@@ -129,6 +129,11 @@ export interface Api {
   drawInfo(groupId: Id): Promise<DrawInfo>;
   unfurl(url: string): Promise<PageMeta>;
   purchases(): Promise<Purchase[]>;
+  /**
+   * Tiempo real: llama a `onChange` (agrupado) cuando cambia algo que quien mira PUEDE ver; el servidor no le manda
+   * nada de su propia plaza. `groupId` vacío = todos sus grupos. Devuelve cómo dejar de escuchar.
+   */
+  watch(groupId: Id, onChange: () => void): () => void;
 }
 
 export class ApiError extends Error {}

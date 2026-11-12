@@ -105,6 +105,15 @@ onRecordCreateRequest((e) => {
 onRecordDeleteRequest((e) => {
   const id = e.record.id;
   let touched = 0;
+  // V-2: se marca SIEMPRE como retirado antes de nada, así el dueño recibe exactamente los mismos eventos
+  // de tiempo real (ninguno: un regalo retirado ya no es visible para él) tenga o no reservas.
+  // Se guarda FUERA de la transacción del borrado: PocketBase evalúa la regla de los eventos «delete» con el
+  // estado ya confirmado, y si no, el dueño recibiría «delete» solo de los regalos libres (v0.6, tiempo real).
+  // Desde aquí nadie puede reservar ni aportar (gift y contributions rechazan lo retirado): V-8 sigue cerrado.
+  if (!e.record.getBool('secret')) {
+    e.record.set('removed', true);
+    $app.save(e.record);
+  }
   // V-8: comprobar y borrar en la misma transacción (una reserva no puede colarse entre medias).
   $app.runInTransaction((tx) => {
     e.app = tx;
@@ -113,10 +122,6 @@ onRecordDeleteRequest((e) => {
       return e.next();
     }
     touched = tx.findRecordsByFilter('claims', 'item = {:i}', '', 1, 0, { i: id }).length || tx.findRecordsByFilter('contributions', 'item = {:i}', '', 1, 0, { i: id }).length;
-    // V-2: se marca SIEMPRE como retirado antes de nada, así el dueño recibe exactamente los mismos eventos
-    // de tiempo real (ninguno: un regalo retirado ya no es visible para él) tenga o no reservas.
-    e.record.set('removed', true);
-    tx.save(e.record);
     if (!touched) return e.next();
   });
   if (touched) return e.noContent(204);

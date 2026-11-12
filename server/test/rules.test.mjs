@@ -37,8 +37,8 @@ const ok = async (...a) => {
 };
 
 
-/** Suscripción en tiempo real: devuelve el estado de la suscripción y los eventos recibidos tras `trigger`. */
-async function realtime(token, subscriptions, trigger, ms = 800) {
+/** Abre una conexión de tiempo real y se suscribe; `stop(ms)` espera, cierra y devuelve el texto recibido. */
+async function listen(token, subscriptions) {
   const ac = new AbortController();
   const res = await fetch(BASE + '/api/realtime', { signal: ac.signal });
   const reader = res.body.getReader();
@@ -48,9 +48,7 @@ async function realtime(token, subscriptions, trigger, ms = 800) {
   const clientId = /"clientId":"([^"]+)"/.exec(buf)[1];
   const sub = await call('POST', '/api/realtime', { clientId, subscriptions }, token);
   let events = '';
-  if (sub.status < 300) {
-    await trigger();
-    setTimeout(() => ac.abort(), ms);
+  const reading = (async () => {
     try {
       for (;;) {
         const { value, done } = await reader.read();
@@ -60,9 +58,29 @@ async function realtime(token, subscriptions, trigger, ms = 800) {
     } catch {
       /* abortado */
     }
-  } else ac.abort();
-  return { status: sub.status, events };
+  })();
+  const stop = async (ms = 800) => {
+    await new Promise((r) => setTimeout(r, ms));
+    ac.abort();
+    await reading;
+    return events;
+  };
+  return { status: sub.status, stop };
 }
+
+/** Suscripción en tiempo real: devuelve el estado de la suscripción y los eventos recibidos tras `trigger`. */
+async function realtime(token, subscriptions, trigger, ms = 800) {
+  const l = await listen(token, subscriptions);
+  if (l.status >= 300) {
+    await l.stop(0);
+    return { status: l.status, events: '' };
+  }
+  await trigger();
+  return { status: l.status, events: await l.stop(ms) };
+}
+
+/** Los mensajes `data:` de un flujo SSE ya completo: [{ action, record }]. */
+const messages = (sse) => sse.split('\n').filter((l) => l.startsWith('data:')).map((l) => JSON.parse(l.slice(5)));
 
 describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (binario de PocketBase)' }, () => {
   before(async () => {
@@ -280,6 +298,92 @@ describe('reglas de visibilidad en PocketBase', { skip: !BIN && 'Falta PB_BIN (b
     assert.ok(seen.items.every((x) => !x.sub), 'el tesorero nunca ve pagos de la cuenta de sus regalos');
     assert.equal((await ok('GET', '/api/collections/payments/records', null, tok.mama)).totalItems, 0);
   });
+
+  // Tiempo real (v0.6): toda la familia escucha mientras los demás tocan la plaza de X. PocketBase solo manda a cada
+  // cliente lo que su listRule le deja leer (los borrados se evalúan antes de borrar). Va tras PB-12: hay tesorero
+  // (Alberto) y suplente (Samira).
+  const SUBS = ['claims/*', 'contributions/*', 'budgets/*', 'payments/*', 'items/*', 'lists/*'];
+  for (const who of FAMILY) {
+    test(`tiempo real: ${who} no recibe nada de lo que pasa en su plaza; los demás sí`, async (t) => {
+      // Muchas escrituras seguidas: sin límite de peticiones mientras dura (como PB-9).
+      await ok('PATCH', '/api/settings', { rateLimits: { enabled: false } }, su);
+      t.after(() => ok('PATCH', '/api/settings', { rateLimits: { enabled: true } }, su));
+      const L = ids[`l-${who}`];
+      const [a, b] = FAMILY.filter((x) => x !== who);
+      const q = (s) => encodeURIComponent(s);
+      const g1 = (await ok('POST', '/api/collections/items/records', { list: L, title: 'Vivo 1', priceCents: 1000, priority: 2, quantity: 1, createdBy: ids[who] }, tok[who])).id;
+      const g2 = (await ok('POST', '/api/collections/items/records', { list: L, title: 'Vivo 2', priceCents: 4000, priority: 2, quantity: 1, createdBy: ids[who] }, tok[who])).id;
+      const ears = {};
+      for (const y of FAMILY) {
+        ears[y] = await listen(tok[y], SUBS);
+        assert.equal(ears[y].status, 204, y);
+      }
+
+      // Reservar, comprar, deshacer la compra (la reserva se queda)
+      await ok('POST', '/api/lazo/gift', { action: 'reserve', item: g1, kind: 'self' }, tok[a]);
+      const c1 = (await ok('GET', `/api/collections/claims/records?filter=${q(`item = "${g1}"`)}`, null, tok[a])).items[0].id;
+      await ok('POST', '/api/lazo/gift', { action: 'buy', claim: c1, paidCents: 900, paidBy: ids[a] }, tok[a]);
+      await ok('POST', '/api/lazo/gift', { action: 'unbuy', claim: c1 }, tok[a]);
+      // Aportar, marcar pagado, retirar la aportación
+      const k = (await ok('POST', '/api/collections/contributions/records', { item: g2, user: ids[b], amountCents: 500 }, tok[b])).id;
+      await ok('PATCH', `/api/collections/contributions/records/${k}`, { paid: true }, tok[a]);
+      await ok('DELETE', `/api/collections/contributions/records/${k}`, null, tok[b]);
+      // Presupuesto: cambiarlo, quitarlo y ponerlo otra vez
+      const bu = (await ok('GET', `/api/collections/budgets/records?filter=${q(`list = "${L}"`)}`, null, tok[a])).items[0];
+      await ok('PATCH', `/api/collections/budgets/records/${bu.id}`, { amountCents: bu.amountCents + 100 }, tok[a]);
+      await ok('DELETE', `/api/collections/budgets/records/${bu.id}`, null, tok[a]);
+      const bu2 = (await ok('POST', '/api/collections/budgets/records', { list: L, amountCents: bu.amountCents }, tok[b])).id;
+      // Sorpresa: apuntarla, reservarla para la hucha, soltarla, intentar destaparla, editarla y borrarla
+      const s = (await ok('POST', '/api/collections/items/records', { list: L, title: 'Sorpresa en vivo', priceCents: 700, priority: 2, quantity: 1, createdBy: ids[b], secret: true }, tok[b])).id;
+      await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s, kind: 'pot' }, tok[a]);
+      const cs = (await ok('GET', `/api/collections/claims/records?filter=${q(`item = "${s}"`)}`, null, tok[a])).items[0].id;
+      await ok('POST', '/api/lazo/gift', { action: 'release', claim: cs }, tok[a]);
+      assert.ok((await call('PATCH', `/api/collections/items/records/${s}`, { secret: false }, tok[b])).status >= 400, 'una sorpresa no se destapa');
+      await ok('PATCH', `/api/collections/items/records/${s}`, { title: 'Sorpresa en vivo (2)' }, tok[b]);
+      await ok('POST', '/api/lazo/gift', { action: 'reserve', item: s, kind: 'pot' }, tok[a]); // el borrado se la lleva en cascada
+      const cs2 = (await ok('GET', `/api/collections/claims/records?filter=${q(`item = "${s}"`)}`, null, tok[a])).items[0].id;
+      await ok('DELETE', `/api/collections/items/records/${s}`, null, tok[b]);
+      // Hucha: pagos en los que X no es parte (el de la suplente es la cuenta de los regalos del tesorero)
+      const payer = ['juancarlos', 'mama', 'papa'].find((x) => x !== who);
+      const pays = [];
+      if (who !== 'alberto') pays.push(await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids[payer], to: ids.alberto, amountCents: 200, sub: false }, tok[payer]));
+      if (who !== 'samira') pays.push(await ok('POST', '/api/collections/payments/records', { group: ids.group, from: ids[payer], to: ids.samira, amountCents: 300, sub: true }, tok[payer]));
+      for (const p of pays) await ok('DELETE', `/api/collections/payments/records/${p.id}`, null, tok[payer]);
+      // X quita sus dos regalos: uno con reserva (queda retirado) y otro libre (se borra de verdad, V-2)
+      await ok('DELETE', `/api/collections/items/records/${g1}`, null, tok[who]);
+      await ok('DELETE', `/api/collections/items/records/${g2}`, null, tok[who]);
+
+      const got = {};
+      for (const y of FAMILY) got[y] = await ears[y].stop(y === FAMILY[0] ? 1000 : 0);
+      // X: ni un solo evento (ni de regalos, ni de presupuesto, ni de pagos), así que nada que deducir.
+      assert.deepEqual(messages(got[who]), [], `${who} recibió eventos: ${got[who]}`);
+      for (const id of [L, g1, g2, s, c1, cs, cs2, k, bu.id, bu2, ...pays.map((p) => p.id)]) assert.ok(!got[who].includes(id), id);
+
+      // Los demás reciben lo de la plaza de X; los pagos, solo sus dos partes.
+      for (const y of FAMILY.filter((x) => x !== who)) {
+        const ev = messages(got[y]);
+        const has = (col, action, f) => ev.some((e) => e.record.collectionName === col && e.action === action && f(e.record));
+        assert.ok(has('claims', 'create', (r) => r.item === g1), `${y}: reserva`);
+        assert.ok(has('claims', 'update', (r) => r.id === c1 && r.status === 'bought'), `${y}: compra`);
+        assert.ok(has('claims', 'delete', (r) => r.id === cs), `${y}: soltar la sorpresa`);
+        assert.ok(has('contributions', 'create', (r) => r.id === k), `${y}: aportación`);
+        assert.ok(has('contributions', 'delete', (r) => r.id === k), `${y}: aportación retirada`);
+        assert.ok(has('budgets', 'update', (r) => r.id === bu.id), `${y}: presupuesto`);
+        assert.ok(has('budgets', 'delete', (r) => r.id === bu.id), `${y}: presupuesto quitado`);
+        assert.ok(has('budgets', 'create', (r) => r.id === bu2), `${y}: presupuesto nuevo`);
+        assert.ok(has('items', 'create', (r) => r.id === s && r.secret), `${y}: sorpresa`);
+        assert.ok(has('items', 'delete', (r) => r.id === s), `${y}: sorpresa borrada`);
+        assert.ok(has('claims', 'delete', (r) => r.id === cs2), `${y}: su reserva, borrada en cascada`);
+        assert.ok(has('items', 'delete', (r) => r.id === g2), `${y}: regalo libre quitado`);
+        assert.ok(has('items', 'update', (r) => r.id === g1 && r.removed), `${y}: regalo retirado`);
+        for (const p of pays) {
+          const party = [p.from, p.to].includes(ids[y]);
+          assert.equal(has('payments', 'create', (r) => r.id === p.id), party, `${y}: pago ${p.sub ? 'suplente' : 'general'}`);
+          assert.equal(has('payments', 'delete', (r) => r.id === p.id), party, `${y}: pago borrado`);
+        }
+      }
+    });
+  }
 
   test('PB-15: la entrega se abre con dos llaves y no enseña precios', async () => {
     assert.equal((await call('GET', `/api/lazo/received/${ids.group}`, null, tok.mama)).status, 403);

@@ -6,7 +6,7 @@ import { budgetProgress } from '../../core/budget';
 import { itemStatus } from '../../core/status';
 import { Button, ButtonGroup, IconButton } from '../Button';
 import { go, lastGroup, listFlavor, useApi } from '../ctx';
-import { errorText, useLoad, useToast } from '../kit';
+import { errorText, useLive, useLoad, useToast } from '../kit';
 import { GiftCard } from '../Gift';
 import { MemberCard } from '../MemberCard';
 import type { Title } from '../title';
@@ -19,6 +19,7 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
   const me = api.me();
   const toast = useToast();
   const { data, error, reload } = useLoad(() => loadGroup(api, id, true), [api, id, me?.id]);
+  useLive(id, reload);
   const [inviting, setInviting] = useState<string | boolean>(false);
   const [budgetFor, setBudgetFor] = useState<ListDetail | null>(null);
   const [busy, setBusy] = useState<string | null>(null);

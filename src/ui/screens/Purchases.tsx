@@ -4,7 +4,7 @@ import type { Purchase } from '../../api/types';
 import { formatMoney } from '../../core/money';
 import { Button } from '../Button';
 import { useApi } from '../ctx';
-import { errorText, Seal, useLoad, useToast } from '../kit';
+import { errorText, Seal, useLive, useLoad, useToast } from '../kit';
 
 /** Mi lista de la compra: lo que he reservado, comprado o pago a medias, por persona. Solo lo veo yo. */
 export function Purchases() {
@@ -12,6 +12,7 @@ export function Purchases() {
   const me = api.me();
   const toast = useToast();
   const { data, error, reload } = useLoad(() => api.purchases(), [api, me?.id]);
+  useLive('', reload);
   const [busy, setBusy] = useState<string | null>(null);
   if (error) return <p className="notice notice-error">{error}</p>;
   if (!data) return <Loading />;
