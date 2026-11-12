@@ -4,21 +4,37 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
-### Cambiado
+## [1.0.0] - 2026-11-12 · Nochebuena
 
-- En el móvil, el presupuesto de otra persona se lee de un vistazo: «Quedan 25,10 €» en grande, la barra y las cuentas plegadas en «Ver cuentas».
-- El aviso de qué ve el dueño de la lista es ahora una línea con un botón de información; la explicación larga solo sale la primera vez.
-- Un regalo solo en su sección ocupa todo el ancho en el móvil, con la foto 4:3.
-- La banda de la demo cabe en una línea, también a 320 px, y la cabecera tiene menos aire arriba.
-### Añadido
-- Sin conexión: una franja avisa de que ves lo último que cargaste; al volver la red se va y la pantalla se recarga sola. Si algo no carga, sale «Reintentar».
+Lazo está listo para que tu familia lo use esta Navidad: sin regalos repetidos, sin un solo chivatazo y con todo en tu casa.
 
-### Cambiado
-- Con mala cobertura, lo que se lee se intenta otra vez (hasta 3 veces) antes de rendirse; lo que se guarda nunca se repite solo, para no reservar ni pagar dos veces, y el aviso dice que no se ha guardado.
-- El tiempo real recarga la pantalla al reconectar, por si se perdió algún cambio mientras estaba cortado.
+### Lo nuevo
+- **Todo al momento.** Cuando alguien reserva, compra o pone dinero en la hucha, los demás lo ven sin recargar. Y tu propia lista sigue sin enterarse de nada.
+- **Lista para imprimir.** «Imprimir la lista» saca una hoja bonita en A4 con un código por regalo que se abre con la cámara del móvil: perfecta para los abuelos. Nunca dice qué está cogido.
+- **Compartir mi lista (solo lectura).** Un enlace para amigos que no están en el grupo: ven lo que pides, nada más. Puedes dejar de compartirlo cuando quieras.
+- **Si alguien pierde el móvil**, quien organiza libera su sitio y le manda un enlace nuevo: conserva su lista y todo lo suyo.
+- **Entrar con un código**: «Tengo un código» para la primera vez y «Entrar en otro móvil» en Ajustes. Y «Cerrar sesión», en este móvil o en todos.
+- **Al entrar por el enlace** ya ves las caras de la familia que está dentro.
+- **Sin cobertura**: una franja te avisa de que ves lo último que cargaste, y al volver la red todo se pone al día solo. Lo que guardas nunca se repite por error.
+- **Copia del grupo**: para empezar otra Navidad con las mismas personas y sus listas, o mudaros de servidor.
+- **Privacidad y legal en sencillo**: política de privacidad, aviso sobre los datos de los niños y términos de uso, enlazados en Ajustes y al entrar.
 
-### Añadido
-- «Copia del grupo» en Ajustes: quien organiza descarga un archivo con lo que ve del grupo (de su propia lista, solo los regalos que pidió) y puede crear con él un grupo nuevo para otra Navidad o para mudarse de servidor. Se copian las personas, con sitios libres para reenviar los enlaces, y los regalos que pidió cada una; las reservas, compras y aportaciones no.
+### Más claro en el móvil
+- El presupuesto de cada persona se lee de un vistazo («Quedan 25,10 €») y las cuentas van plegadas en «Ver cuentas».
+- El aviso de lo que no ve el dueño de una lista ocupa una línea y se explica solo la primera vez.
+- Regalos en dos columnas, sin huecos raros, y una banda de la demo que cabe en una línea.
+
+### Seguridad
+- Dos auditorías finales de Fable 5.2 (V-20 a V-31), todas corregidas. Entre otras:
+  - el tiempo real ya no delata qué regalos tuyos estaban cogidos al quitarlos;
+  - tampoco recrear un regalo con su mismo identificador;
+  - la copia del grupo no guarda datos de otros.
+- Copias de seguridad cifradas opcionales, permisos estrictos en el servidor de casa e imágenes de Docker fijadas.
+- 63 pruebas contra PocketBase real, entre ellas una familia de 5 personas de principio a fin, comprobando en cada paso que nadie ve lo suyo. 194 pruebas unitarias y 112 de punta a punta, con accesibilidad AA en claro y en oscuro.
+- El APK de Android ya es de release, firmado con una clave que no está en el repositorio.
+
+### Para montarlo
+- [`docs/PRUEBA-REAL.md`](docs/PRUEBA-REAL.md): 15 minutos para tenerlo en casa y probar con la familia que la sorpresa funciona.
 
 ## [0.5.1] - 2026-11-12 · Probado con la familia
 
