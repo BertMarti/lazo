@@ -196,7 +196,7 @@ export class PocketBaseApi implements Api {
       const d = await this.pb.collection('draws').getFirstListItem(this.pb.filter('group = {:g}', { g: groupId })).catch(() => null);
       if (!d) return {};
       const a = await this.pb.collection('assignments').getFirstListItem(this.pb.filter('draw = {:d} && giver = {:me}', { d: d.id, me: this.uid() }), { expand: 'receiver' }).catch(() => null);
-      const draw: Draw = { id: d.id, group: d.group, budgetCents: d.budgetCents || undefined, exclusions: d.exclusions ?? [], participants: d.participants ?? [], createdBy: d.createdBy };
+      const draw: Draw = { id: d.id, group: d.group, budgetCents: d.budgetCents || undefined, exclusions: d.exclusions ?? [], participants: d.participants ?? [], createdBy: d.createdBy, round: d.round || undefined };
       return { draw, receiver: a?.expand?.receiver ? user(a.expand.receiver as RecordModel) : undefined };
     });
 

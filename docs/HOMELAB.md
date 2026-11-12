@@ -49,6 +49,7 @@ Tu familia usa Lazo desde su móvil, en casa o fuera, así que hace falta una di
 2. En **Zero Trust → Networks → Tunnels**, crea un túnel de tipo *Cloudflared* y copia su **token**.
 3. En **Public Hostname**, añade `lazo.tudominio.es` → servicio `HTTP` → `caddy:80`.
 4. No toques el router.
+5. En **SSL/TLS → Edge Certificates**, activa **Always Use HTTPS**. Con el túnel, Caddy sirve HTTP y el HTTPS lo pone Cloudflare: sin esta opción, `http://lazo.tudominio.es` respondería en claro y la sesión viajaría sin cifrar (V-23). La imagen de `cloudflared` va fijada a una versión y su digest en `docker-compose.yml`; al actualizarla, cambia los dos.
 
 > El puerto 80 hace falta en A y B: Let's Encrypt lo usa para comprobar que el dominio es tuyo, y Caddy redirige solo a HTTPS.
 
@@ -59,7 +60,11 @@ git clone https://github.com/BertMarti/lazo && cd lazo/server
 cp .env.example .env
 mkdir -p data/pb data/caddy data/backups
 sudo chown 1000:1000 data/pb   # PocketBase corre como el usuario 1000 dentro del contenedor
+sudo chmod 700 data/pb data/caddy data/backups   # los datos de la familia, solo para su dueño
+chmod 600 .env                                   # tokens y claves: solo tú
 ```
+
+Sin estos permisos, otra cuenta de la Raspberry (o un servicio comprometido que comparta máquina) podría leer `data/pb/data.db` o los tokens de `.env` (V-22).
 
 ## 3. Configura `.env`
 
@@ -76,6 +81,7 @@ Abre `server/.env` (por ejemplo, `nano .env`) y rellena:
 Y siempre:
 - `UNFURL_KEY`: pega el resultado de `openssl rand -hex 32`.
 - `TZ`: tu zona horaria (`Europe/Madrid` por defecto).
+- `BACKUP_PASSPHRASE` (recomendado si sacas las copias de la Raspberry): pega el resultado de `openssl rand -base64 32` y **guárdalo también fuera del servidor**, en tu gestor de contraseñas. Con ella las copias salen cifradas; sin ella no se pueden restaurar.
 
 `.env` no se sube nunca a git (está en `.gitignore`), y el repositorio es público: **no pongas tokens en ningún otro archivo.**
 
@@ -133,11 +139,18 @@ Desde la wifi de casa, inventarse la IP no sirve para saltarse los límites: tra
 for i in $(seq 1 12); do curl -s -o /dev/null -w '%{http_code} ' -X POST -H "CF-Connecting-IP: 203.0.113.$i" -H 'content-type: application/json' -d '{"token":"x"}' https://tu-dominio/api/lazo/join; done; echo
 ```
 
+Permisos de los datos y de `.env` (paso 2), y con el túnel, que HTTP redirige a HTTPS:
+
+```bash
+stat -c '%a %n' data/pb data/backups .env               # 700, 700 y 600
+curl -sI http://tu-dominio | head -1                    # C: 301 (Always Use HTTPS)
+```
+
 Opcional: pasa tu dominio por [securityheaders.com](https://securityheaders.com) y [SSL Labs](https://www.ssllabs.com/ssltest/).
 
 ## Copias de seguridad
 
-`lazo-backup` hace cada día (a las 3:30 por defecto, `BACKUP_CRON`) una copia **en caliente y coherente** de `data/pb` con `sqlite3 .backup`, comprueba su integridad y la guarda en `server/data/backups/lazo-AAAAMMDD-HHMMSS.tar.gz`. Se quedan las 14 últimas (`BACKUP_KEEP`); las más antiguas se borran solas. Las copias son legibles solo por root, porque llevan los datos de tu familia.
+`lazo-backup` hace cada día (a las 3:30 por defecto, `BACKUP_CRON`) una copia **en caliente y coherente** de `data/pb` con `sqlite3 .backup`, comprueba su integridad y la guarda en `server/data/backups/lazo-AAAAMMDD-HHMMSS.tar.gz`. Se quedan las 14 últimas (`BACKUP_KEEP`); las más antiguas se borran solas. Las copias son legibles solo por root, porque llevan los datos de tu familia. Con `BACKUP_PASSPHRASE` en `.env` salen **cifradas** (AES-256 con `openssl`, `lazo-….tar.gz.enc`).
 
 ```bash
 docker compose logs backup                                   # resultado de cada copia
@@ -145,7 +158,7 @@ docker compose exec backup lazo-backup                       # hacer una copia a
 ls -lh data/backups/
 ```
 
-**Fuera de casa.** Una copia en el mismo disco no te salva si el disco muere. Copia `data/backups` a otro sitio, por ejemplo con un cron del sistema a un NAS o un disco USB:
+**Fuera de casa.** Una copia en el mismo disco no te salva si el disco muere. Copia `data/backups` a otro sitio, por ejemplo con un cron del sistema a un NAS o un disco USB. Fuera de la Raspberry, usa solo copias cifradas (`BACKUP_PASSPHRASE`): en el NAS las puede leer cualquiera con acceso a esa carpeta.
 
 ```bash
 # crontab -e  (del usuario root de la Raspberry)
@@ -160,7 +173,9 @@ docker compose run --rm backup lazo-backup restore /backups/lazo-AAAAMMDD-HHMMSS
 docker compose start pocketbase
 ```
 
-Antes de restaurar, el script guarda lo que hubiera en `data/backups/antes-de-restaurar-….tar.gz`, por si te equivocas de copia. Para llevar Lazo a otra máquina: instala hasta el paso 3, copia el `.tar.gz` a `server/data/backups/` y restaura.
+Una copia cifrada (`….tar.gz.enc`) se restaura igual, con la misma `BACKUP_PASSPHRASE` en `.env`; para abrirla a mano: `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 -in lazo-….tar.gz.enc -out copia.tar.gz` (pide la clave).
+
+Antes de restaurar, el script guarda lo que hubiera en `data/backups/antes-de-restaurar-….tar.gz` (cifrada si hay clave), por si te equivocas de copia; se quedan las tres últimas. Para llevar Lazo a otra máquina: instala hasta el paso 3, copia el `.tar.gz` a `server/data/backups/` y restaura.
 
 ## Actualizar
 

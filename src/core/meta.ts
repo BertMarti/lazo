@@ -41,10 +41,12 @@ export function parseMeta(html: string, pageUrl: string): PageMeta {
   const ld = jsonLdProduct(page);
   const titleTag = page.match(/<title[^>]{0,200}>([^<]{0,1000})/i)?.[1];
 
-  let url = absHttps(metas.get('og:url'), pageUrl) ?? pageUrl;
+  // La página no decide adónde lleva el regalo ni qué tienda es (V-21): og:url solo del mismo host, y el dominio conocido gana.
+  const og = absHttps(metas.get('og:url'), pageUrl);
+  let url = og && hostLabel(og) === hostLabel(pageUrl) ? og : pageUrl;
   const amazon = amazonInfo(pageUrl) ?? amazonInfo(url);
   if (amazon) url = amazon.canonical;
-  const store = clean(metas.get('og:site_name')) ?? knownStore(pageUrl) ?? clean(ld?.seller) ?? hostLabel(pageUrl);
+  const store = knownStore(pageUrl) ?? clean(metas.get('og:site_name')) ?? clean(ld?.seller) ?? hostLabel(pageUrl);
 
   const title = productTitle(
     ld?.name ?? metas.get('og:title') ?? metas.get('twitter:title') ?? micro.name ?? metas.get('title') ?? (titleTag && decode(titleTag)),

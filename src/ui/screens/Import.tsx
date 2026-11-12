@@ -2,7 +2,8 @@ import { FileArrowUp, Sparkle } from '@phosphor-icons/react';
 import { loadAi } from '../../ai/provider';
 import { mapColumnsAI } from '../../ai/tasks';
 import { useMemo, useState } from 'react';
-import { assignColumn, fieldForColumn, FIELD_LABEL, guessColumns, rowsToDrafts, type ColumnMap, type Field, type ItemDraft } from '../../core/columns';
+import { assignColumn, fieldForColumn, FIELD_LABEL, guessColumns, MAX_INFLATED, rowsToDrafts, zipInflatedSize, type ColumnMap, type Field, type ItemDraft } from '../../core/columns';
+import { LIMITS } from '../../core/types';
 import { formatMoney } from '../../core/money';
 import { Button, ButtonGroup, FileButton } from '../Button';
 import { useApi } from '../ctx';
@@ -35,11 +36,14 @@ function previewCell(d: ItemDraft, f: Field): string {
 }
 
 /** Lee la primera hoja de un .xlsx/.xls/.ods/.csv. SheetJS se carga solo aquí (carga diferida). */
-async function readSheet(file: File): Promise<unknown[][]> {
+export async function readSheet(file: File): Promise<unknown[][]> {
   if (file.size > 5 * 1024 * 1024) throw new Error('El archivo pesa más de 5 MB. Prueba con uno más pequeño.');
-  const XLSX = await import('xlsx');
   const buf = await file.arrayBuffer();
-  const opts = { cellDates: false, dense: true } as const;
+  // V-24: un .xlsx de 5 MB puede descomprimirse a GB y colgar la pestaña.
+  if ((zipInflatedSize(buf) ?? 0) > MAX_INFLATED) throw new Error('El archivo es demasiado grande por dentro. Prueba con uno más pequeño.');
+  const XLSX = await import('xlsx');
+  // Cabecera + las filas que la importación acepta: SheetJS deja de leer ahí.
+  const opts = { cellDates: false, dense: true, sheetRows: LIMITS.importRows + 1 } as const;
   // Un CSV es texto: lo decodificamos nosotros (UTF-8 con o sin BOM o, si no lo es, el ANSI de Excel en Windows).
   const wb = /\.csv$/i.test(file.name) || file.type === 'text/csv' ? XLSX.read(decodeText(buf), { ...opts, type: 'string' }) : XLSX.read(buf, { ...opts, type: 'array' });
   const first = wb.SheetNames[0];

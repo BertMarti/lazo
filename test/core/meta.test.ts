@@ -101,3 +101,20 @@ describe('V-18: páginas hostiles sin cerrar no bloquean', () => {
       expect(performance.now() - t).toBeLessThan(3000);
     });
 });
+
+describe('V-21: la página no decide el enlace ni la tienda', () => {
+  const page = (url: string, site: string) =>
+    `<meta property="og:title" content="Regalo"><meta property="og:url" content="${url}"><meta property="og:site_name" content="${site}">`;
+
+  it('og:url a otro host se ignora: el regalo lleva a la página pegada', () => {
+    expect(parseMeta(page('https://phishing.example/amazon', 'Amazon'), 'https://tienda.example/p').url).toBe('https://tienda.example/p');
+  });
+
+  it('og:url del mismo host sí vale', () => {
+    expect(parseMeta(page('https://tienda.example/p/canon', 'Tienda'), 'https://tienda.example/p?x=1').url).toBe('https://tienda.example/p/canon');
+  });
+
+  it('en un dominio conocido manda el dominio, no og:site_name', () => {
+    expect(parseMeta(page('https://www.amazon.es/x', 'Otra'), 'https://www.amazon.es/x').store).toBe('Amazon');
+  });
+});

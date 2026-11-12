@@ -37,5 +37,5 @@ test('amigo invisible: abrir, ver el nombre, taparlo y copiar sin Web Share', as
   await page.getByRole('button', { name: 'Copiar' }).click();
   await expect(page.getByText('Copiado. Pégatelo en un chat contigo mismo')).toBeVisible();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toBe(`Amigo invisible de Navidad en familia: te toca regalar a Juan Carlos. ${new URL(page.url()).origin}/#/l/l-juancarlos`);
+  expect(copied).toBe(`Amigo invisible de Navidad en familia (sorteo n.º 1): te toca regalar a Juan Carlos. ${new URL(page.url()).origin}/#/l/l-juancarlos`);
 });

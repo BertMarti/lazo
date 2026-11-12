@@ -115,7 +115,7 @@ export function seed(): DemoData {
     { id: 'y2', group: 'navidad', from: 'mama', to: 'samira', amountCents: 1000, sub: true, at },
   ];
   const draws: Draw[] = [
-    { id: 'd1', group: 'navidad', budgetCents: 3000, exclusions: [['mama', 'papa']], participants: users.map((x) => x.id), createdBy: 'alberto' },
+    { id: 'd1', group: 'navidad', budgetCents: 3000, exclusions: [['mama', 'papa']], participants: users.map((x) => x.id), createdBy: 'alberto', round: 1 },
   ];
   const assignments = [
     { draw: 'd1', giver: 'alberto', receiver: 'samira' },
