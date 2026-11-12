@@ -1,6 +1,7 @@
 import { Check, CircleHalf, EyeSlash, Gift, PiggyBank, X, type Icon } from '@phosphor-icons/react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { initial } from '../core/plazas';
+import { OFFLINE_READ } from '../api/net';
 import type { ItemStatus } from '../core/status';
 import type { Id, User } from '../core/types';
 import { Button, IconButton } from './Button';
@@ -136,10 +137,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** Carga asíncrona con recarga manual. */
-export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data?: T; error?: string; reload: () => void } {
+/** Carga asíncrona con recarga manual; recarga sola al volver la conexión. Sin red, el error trae «Reintentar». */
+export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data?: T; error?: ReactNode; reload: () => void } {
   const [state, setState] = useState<{ data?: T; error?: string }>({});
   const [n, setN] = useState(0);
+  const reload = () => setN((x) => x + 1);
+  useEffect(() => {
+    const on = () => setN((x) => x + 1);
+    window.addEventListener('online', on);
+    return () => window.removeEventListener('online', on);
+  }, []);
   useEffect(() => {
     let alive = true;
     fn().then(
@@ -150,7 +157,31 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data?: T; e
       alive = false;
     };
   }, [...deps, n]);
-  return { ...state, reload: () => setN((x) => x + 1) };
+  const error =
+    state.error === OFFLINE_READ ? (
+      <>
+        {state.error}{' '}
+        <Button variant="link" onClick={reload}>Reintentar</Button>
+      </>
+    ) : state.error;
+  return { data: state.data, error, reload };
+}
+
+/** Franja bajo la cabecera mientras no hay red (al volver, useLoad recarga lo abierto). */
+export function OfflineBand() {
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+  // Solo existe sin red: un segundo role="status" permanente chocaría con el de los avisos breves.
+  return online ? null : <p className="offline-band" role="status">Sin conexión: verás lo último que cargaste</p>;
 }
 
 /**

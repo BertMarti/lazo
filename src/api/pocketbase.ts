@@ -3,6 +3,7 @@ import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
 import { canEditList, canSeeStatus } from '../core/visibility';
+import { OFFLINE_READ, OFFLINE_WRITE, RETRY_DELAYS, retryingFetch } from './net';
 import { ApiError, type Api, type DrawInfo, type GiftAction, type GroupDetail, type HuchaData, type InviteInfo, type ItemInput, type JoinResult, type ListDetail, type NewGroup, type Purchase, type SharedList } from './types';
 
 /**
@@ -12,10 +13,25 @@ import { ApiError, type Api, type DrawInfo, type GiftAction, type GroupDetail, t
 export class PocketBaseApi implements Api {
   readonly demo = false;
   readonly pb: PocketBase;
+  private sseClient = '';
+  private reconnected = new Set<() => void>();
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, retryDelays = RETRY_DELAYS) {
     this.pb = new PocketBase(baseUrl);
     this.pb.autoCancellation(false);
+    const getFetch = retryingFetch(retryDelays);
+    this.pb.beforeSend = (url, options) => {
+      // Solo los GET se reintentan: una escritura repetida podría reservar o pagar dos veces.
+      if (options.method === 'GET') options.fetch = getFetch;
+      // Reconexión del tiempo real: cada conexión SSE nueva trae otro clientId y el SDK lo envía aquí.
+      // (No vale suscribirse a PB_CONNECT: el servidor solo admite «coleccion/*», R-1, y lo rechazaría todo.)
+      const id = url.endsWith('/api/realtime') ? (options.body as { clientId?: string } | undefined)?.clientId : undefined;
+      if (id && id !== this.sseClient) {
+        if (this.sseClient) this.reconnected.forEach((f) => f());
+        this.sseClient = id;
+      }
+      return { url, options };
+    };
   }
 
   /** Renueva la sesión al abrir la app (token de 180 días: quien abre Lazo de vez en cuando no caduca). */
@@ -33,10 +49,10 @@ export class PocketBaseApi implements Api {
     return id;
   }
 
-  groups = () => this.run(async () => (await this.pb.collection('groups').getFullList({ sort: 'date' })).map(group));
+  groups = () => this.read(async () => (await this.pb.collection('groups').getFullList({ sort: 'date' })).map(group));
 
   groupDetail = (groupId: Id) =>
-    this.run(async (): Promise<GroupDetail> => {
+    this.read(async (): Promise<GroupDetail> => {
       const g = await this.pb.collection('groups').getOne(groupId, { expand: 'members' });
       const admins: string[] = g.admins ?? [];
       const members = ((g.expand?.members as RecordModel[]) ?? []).map((u) => ({ ...user(u), role: admins.includes(u.id) ? ('admin' as const) : ('member' as const) }));
@@ -45,7 +61,7 @@ export class PocketBaseApi implements Api {
     });
 
   listDetail = (listId: Id) =>
-    this.run(async (): Promise<ListDetail> => {
+    this.read(async (): Promise<ListDetail> => {
       const me = this.uid();
       const l = list(await this.pb.collection('lists').getOne(listId, { expand: 'group' }));
       const g = group((await this.pb.collection('groups').getOne(l.group)));
@@ -113,7 +129,7 @@ export class PocketBaseApi implements Api {
       return { url: `${this.pb.baseURL.replace(/\/$/, '')}/#/unirse/${r.token}`, expires: r.expires };
     });
 
-  inviteInfo = (token: string) => this.run(() => this.pb.send<InviteInfo>('/api/lazo/invite-info', { method: 'POST', body: { token } }));
+  inviteInfo = (token: string) => this.read(() => this.pb.send<InviteInfo>('/api/lazo/invite-info', { method: 'POST', body: { token } }));
 
   join = (token: string, choice: { list?: Id; name?: string }) =>
     this.run(async (): Promise<JoinResult> => {
@@ -133,7 +149,7 @@ export class PocketBaseApi implements Api {
 
   // Al rechazar, el servidor borra la solicitud (V-13 c): un 404 es «rechazada».
   requestStatus = (requestId: Id) =>
-    this.run(async () => {
+    this.read(async () => {
       try {
         return (await this.pb.collection('joinRequests').getOne(requestId)).status as JoinRequest['status'];
       } catch (e) {
@@ -143,7 +159,7 @@ export class PocketBaseApi implements Api {
     });
 
   joinRequests = (groupId: Id) =>
-    this.run(async () =>
+    this.read(async () =>
       (await this.pb.collection('joinRequests').getFullList({ filter: this.pb.filter('group = {:g} && status = "pending"', { g: groupId }) })).map(
         (r): JoinRequest => ({ id: r.id, group: r.group, user: r.user, list: opt(r.list), name: r.name, code: r.code, status: r.status }),
       ),
@@ -162,7 +178,7 @@ export class PocketBaseApi implements Api {
     this.run(async () => item(await this.pb.collection('items').create({ ...input, url: input.url ?? '', image: input.image ?? '', list: listId, createdBy: this.uid(), currency: 'EUR', secret: true })));
 
   hucha = (groupId: Id) =>
-    this.run(async (): Promise<HuchaData> => {
+    this.read(async (): Promise<HuchaData> => {
       const d = await this.groupDetail(groupId);
       const byGroup = this.pb.filter('list.group = {:g}', { g: groupId });
       const [items, claims, payments] = await Promise.all([
@@ -186,13 +202,13 @@ export class PocketBaseApi implements Api {
   reveal = (groupId: Id, action: 'ask' | 'confirm' | 'cancel' | 'close') =>
     this.run(async () => void (await this.pb.send('/api/lazo/reveal', { method: 'POST', body: { group: groupId, action } })));
 
-  received = (groupId: Id) => this.run(() => this.pb.send<Received[]>(`/api/lazo/received/${encodeURIComponent(groupId)}`, { method: 'GET' }));
+  received = (groupId: Id) => this.read(() => this.pb.send<Received[]>(`/api/lazo/received/${encodeURIComponent(groupId)}`, { method: 'GET' }));
 
   runDraw = (groupId: Id, participants: Id[], exclusions: [Id, Id][], budgetCents?: Cents) =>
     this.run(async () => void (await this.pb.send('/api/lazo/draw', { method: 'POST', body: { group: groupId, participants, exclusions, budgetCents } })));
 
   drawInfo = (groupId: Id) =>
-    this.run(async (): Promise<DrawInfo> => {
+    this.read(async (): Promise<DrawInfo> => {
       const d = await this.pb.collection('draws').getFirstListItem(this.pb.filter('group = {:g}', { g: groupId })).catch(() => null);
       if (!d) return {};
       const a = await this.pb.collection('assignments').getFirstListItem(this.pb.filter('draw = {:d} && giver = {:me}', { d: d.id, me: this.uid() }), { expand: 'receiver' }).catch(() => null);
@@ -200,10 +216,10 @@ export class PocketBaseApi implements Api {
       return { draw, receiver: a?.expand?.receiver ? user(a.expand.receiver as RecordModel) : undefined };
     });
 
-  unfurl = (url: string) => this.run(() => this.pb.send<PageMeta>('/api/lazo/unfurl', { method: 'POST', body: { url } }));
+  unfurl = (url: string) => this.read(() => this.pb.send<PageMeta>('/api/lazo/unfurl', { method: 'POST', body: { url } }));
 
   purchases = () =>
-    this.run(async (): Promise<Purchase[]> => {
+    this.read(async (): Promise<Purchase[]> => {
       const mine = this.pb.filter('user = {:me}', { me: this.uid() });
       const opts = { filter: this.pb.filter('user = {:me} || paidBy = {:me}', { me: this.uid() }), expand: 'item.list.group' };
       const ctx = (r: RecordModel) => {
@@ -229,8 +245,12 @@ export class PocketBaseApi implements Api {
       }, 300);
     };
     const subs = LIVE.map((c) => this.pb.collection(c).subscribe('*', kick).catch(() => null));
+    // Al reconectar pueden haberse perdido eventos: se recarga igual que con uno.
+    const again = () => kick({ record: {} } as RecordSubscription);
+    this.reconnected.add(again);
     return () => {
       off = true;
+      this.reconnected.delete(again);
       clearTimeout(t);
       for (const s of subs) void s.then((unsub) => unsub?.().catch(() => {}));
     };
@@ -241,15 +261,20 @@ export class PocketBaseApi implements Api {
       return { url: `${this.pb.baseURL.replace(/\/$/, '')}/#/ver/${r.token}` };
     });
   unshareList = (listId: Id) => this.run(async () => void (await this.pb.send('/api/lazo/share', { method: 'DELETE', body: { list: listId } })));
-  sharedList = (token: string) => this.run(() => this.pb.send<SharedList>(`/api/lazo/shared/${encodeURIComponent(token)}`, { method: 'GET' }));
+  sharedList = (token: string) => this.read(() => this.pb.send<SharedList>(`/api/lazo/shared/${encodeURIComponent(token)}`, { method: 'GET' }));
 
-  private async run<T>(fn: () => Promise<T>): Promise<T> {
+  /** Lectura: sus GET se reintentan y, sin red, el aviso dice que se volverá a intentar. */
+  private read<T>(fn: () => Promise<T>) {
+    return this.run(fn, true);
+  }
+
+  private async run<T>(fn: () => Promise<T>, read = false): Promise<T> {
     try {
       return await fn();
     } catch (e) {
       if (e instanceof ApiError) throw e;
       if (e instanceof ClientResponseError) {
-        if (e.status === 0) throw new ApiError('Sin conexión con tu Lazo. Revisa la red e inténtalo otra vez.');
+        if (e.status === 0) throw new ApiError(read ? OFFLINE_READ : OFFLINE_WRITE);
         if (e.status === 401) throw new ApiError('Tu sesión ha caducado. Entra otra vez con un enlace de invitación.');
         if (e.status === 403 || e.status === 404) throw new ApiError((e.response?.message as string) || 'No tienes acceso a esto.');
         if (e.status === 429) throw new ApiError('Demasiados intentos seguidos. Espera un minuto.');

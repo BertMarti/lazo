@@ -10,6 +10,12 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 - El aviso de qué ve el dueño de la lista es ahora una línea con un botón de información; la explicación larga solo sale la primera vez.
 - Un regalo solo en su sección ocupa todo el ancho en el móvil, con la foto 4:3.
 - La banda de la demo cabe en una línea, también a 320 px, y la cabecera tiene menos aire arriba.
+### Añadido
+- Sin conexión: una franja avisa de que ves lo último que cargaste; al volver la red se va y la pantalla se recarga sola. Si algo no carga, sale «Reintentar».
+
+### Cambiado
+- Con mala cobertura, lo que se lee se intenta otra vez (hasta 3 veces) antes de rendirse; lo que se guarda nunca se repite solo, para no reservar ni pagar dos veces, y el aviso dice que no se ha guardado.
+- El tiempo real recarga la pantalla al reconectar, por si se perdió algún cambio mientras estaba cortado.
 
 ## [0.5.1] - 2026-11-12 · Probado con la familia
 
