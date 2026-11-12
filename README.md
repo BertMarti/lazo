@@ -86,13 +86,13 @@ La IA es **opcional** y está **apagada por defecto**: Lazo funciona entero sin 
 
 La clave de la IA se queda en tu dispositivo: el servidor de Lazo nunca la ve. A la IA nunca le llega el nombre de un niño ni su año de nacimiento, solo una franja de edad («6–8 años»).
 
-## Privacidad
+## Privacidad y legal
 
 - Tus listas viven en **tu** servidor, no en el de una empresa.
 - Para los niños, solo el nombre de pila y, si quieres, el año en que nacieron.
 - Al pegar un enlace, el servidor solo lee los datos públicos que la tienda publica para compartir (los mismos que usa WhatsApp para la vista previa).
 
-Más detalles en [SECURITY.md](SECURITY.md).
+En lenguaje llano: [privacidad](docs/legal/PRIVACIDAD.md), [datos de los niños](docs/legal/MENORES.md) y [términos de uso](docs/legal/TERMINOS.md). La parte técnica está en [SECURITY.md](SECURITY.md).
 
 ## Para quien quiera colaborar
 

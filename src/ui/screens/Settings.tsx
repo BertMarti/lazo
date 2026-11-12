@@ -73,9 +73,26 @@ export function Settings() {
           )}
         </ButtonGroup>
       </section>
+      <section className="panel stack" aria-labelledby="legal">
+        <h2 id="legal" className="h-section">Privacidad y legal</h2>
+        <p className="lead">Tus datos se quedan en el servidor de tu casa, o en el de quien organiza tu familia. Lazo no es una empresa y nadie más los ve.</p>
+        <ButtonGroup>
+          {[
+            ['PRIVACIDAD', 'Privacidad'],
+            ['MENORES', 'Datos de los niños'],
+            ['TERMINOS', 'Términos de uso'],
+          ].map(([doc, label]) => (
+            <ButtonLink key={doc} variant="ghost" iconEnd={ArrowSquareOut} href={`${LEGAL}/${doc}.md`} target="_blank" rel="noopener noreferrer">
+              {label}
+            </ButtonLink>
+          ))}
+        </ButtonGroup>
+      </section>
     </div>
   );
 }
+
+const LEGAL = 'https://github.com/BertMarti/lazo/blob/main/docs/legal';
 
 /** «Entrar en otro móvil»: un código de un solo uso para «Tengo un código» en el otro móvil. */
 function OtherDevice() {
