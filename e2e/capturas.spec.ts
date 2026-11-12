@@ -17,7 +17,7 @@ const shots: [string, string, string, ((p: Page) => Promise<void>)?][] = [
   ['recibido', 'mama', '/#/g/navidad', async (p) => { await p.evaluate(() => { const k = 'lazo-demo-v4'; const db = JSON.parse(localStorage.getItem(k)!); db.groups[0].revealedAt = 1; localStorage.setItem(k, JSON.stringify(db)); }); await p.goto('/#/recibido/navidad'); await p.waitForTimeout(300); await p.getByRole('button', { name: 'Verlo' }).click(); }],
   ['anadir', 'alberto', '/#/l/l-alberto/nuevo'],
   ['compras', 'alberto', '/#/compras'],
-  ['amigo-invisible', 'alberto', '/#/sorteo/navidad', async (p) => { await p.getByRole('button', { name: /Abrir tu sobre/ }).click(); }],
+  ['amigo-invisible', 'alberto', '/#/sorteo/navidad', async (p) => { await p.getByRole('button', { name: /Abrir el paquete/ }).click(); }],
   ['inicio', 'alberto', '/#/'],
   ['hucha', 'papa', '/#/hucha/navidad'],
   ['hucha-tesorero', 'alberto', '/#/hucha/navidad'],

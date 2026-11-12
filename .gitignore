@@ -34,3 +34,4 @@ server/data/
 
 # Capturas de referencias de terceros (v0.4): solo locales
 docs/design/referencias/v0.4/*.png
+.claude/worktrees/
