@@ -7,7 +7,7 @@ import type { Id } from '../../core/types';
 import { BudgetBar } from '../BudgetBar';
 import { Button, ButtonGroup } from '../Button';
 import { useApi } from '../ctx';
-import { Avatar, errorText, Sheet, useLoad, useToast, VisibilityNote } from '../kit';
+import { Avatar, errorText, Sheet, useLive, useLoad, useToast, VisibilityNote } from '../kit';
 
 const m = (c: number) => formatMoney(c, 'EUR', true);
 
@@ -19,6 +19,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
   const api = useApi();
   const me = api.me();
   const { data, error, reload } = useLoad(() => api.hucha(groupId), [api, groupId, me?.id]);
+  useLive(groupId, reload);
   const [paying, setPaying] = useState<{ from: Id; to: Id; sub: boolean; amount: number; title: string } | null>(null);
   const [roles, setRoles] = useState(false);
   if (error) return <p className="notice notice-error">{error}</p>;

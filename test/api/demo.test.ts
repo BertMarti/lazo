@@ -77,3 +77,20 @@ describe('hucha en la demo', () => {
     expect(g.target).toBe(10122);
   });
 });
+
+describe('DemoApi · tiempo real', () => {
+  it('avisa después de cada cambio guardado y deja de avisar al salir', async () => {
+    const demo = new DemoApi(null);
+    let n = 0;
+    const stop = demo.watch('navidad', () => n++);
+    demo.setViewer('samira');
+    await demo.gift({ action: 'reserve', item: 'i8', kind: 'self' });
+    expect(n).toBe(0); // nunca a mitad de la acción
+    await new Promise((r) => setTimeout(r));
+    expect(n).toBe(1);
+    stop();
+    await demo.setBudget('l-mama', 1000);
+    await new Promise((r) => setTimeout(r));
+    expect(n).toBe(1);
+  });
+});

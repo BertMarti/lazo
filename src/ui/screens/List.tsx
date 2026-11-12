@@ -11,7 +11,7 @@ import { BudgetBar } from '../BudgetBar';
 import { Button } from '../Button';
 import { go, listFlavor, useApi } from '../ctx';
 import { GiftCard } from '../Gift';
-import { errorText, useLoad, useToast, VisibilityNote } from '../kit';
+import { errorText, useLive, useLoad, useToast, VisibilityNote } from '../kit';
 import { statusLine, type CardAction } from '../statusText';
 import type { Title } from '../title';
 import { AddGift } from './AddGift';
@@ -34,6 +34,7 @@ export function ListScreen({ id, adding, onTitle }: { id: string; adding: boolea
     const d = await api.listDetail(id);
     return { d, group: await loadGroup(api, d.list.group) };
   }, [api, id, me?.id]);
+  useLive(data?.d.list.group, reload);
   // Copia local para pintar al instante (optimista); las secciones salen de lo cargado, para que nada se mueva bajo el dedo.
   const [view, setView] = useState<ListDetail | null>(null);
   const [open, setOpen] = useState<{ id: string; focusPot?: boolean } | null>(null);

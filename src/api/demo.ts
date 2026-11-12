@@ -34,6 +34,7 @@ export class DemoApi implements Api {
   readonly demo = true;
   private db: DemoData;
   private viewer: Id;
+  private live = new Set<() => void>();
 
   constructor(private storage: Storage | null = typeof localStorage === 'undefined' ? null : localStorage) {
     this.db = this.load() ?? seed();
@@ -59,6 +60,12 @@ export class DemoApi implements Api {
 
   me(): User {
     return this.user(this.viewer);
+  }
+
+  /** Tiempo real de la demo: cada cambio guardado avisa a las pantallas abiertas (que recargan con sus reglas). */
+  watch(_groupId: Id, onChange: () => void) {
+    this.live.add(onChange);
+    return () => void this.live.delete(onChange);
   }
 
   async groups() {
@@ -612,6 +619,8 @@ export class DemoApi implements Api {
     } catch {
       /* modo privado: la demo sigue en memoria */
     }
+    // Después, nunca a mitad de una acción: las pantallas recargan con lo ya guardado.
+    setTimeout(() => this.live.forEach((f) => f()));
   }
   private read(k: string) {
     try {
