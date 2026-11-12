@@ -35,6 +35,15 @@ Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparte
 | F | Revisión de seguridad y de UX de todo lo nuevo, accesibilidad (axe) y capturas | revisor-seguridad + revisor-diseno | Fable 5.2 | — | hecha (seguridad: V-16 a V-19 corregidos; UX: apto, con 8 arreglos aplicados) |
 | G | Release v0.5.0: CHANGELOG, APK, demo, README y CI mínimo | implementador | Opus 5.5 | — | hecha |
 
+## Hecho en la v0.5.1 «Probado con la familia»
+
+| Tarea | Responsable | Modelo | Estado |
+|---|---|---|---|
+| `docs/PRUEBA-REAL.md`: guía de 15 minutos | Opus | Opus 5.5 | hecha |
+| Recorridos reales en móvil (abuelo, Amazon, hucha) y sus 6 arreglos | revisor-diseno → implementador | Fable 5.2 → Opus 5.5 | hecha |
+| Alta del organizador (`lazo-alta`) y entrar con un código | implementador | Opus 5.5 | hecha |
+| Portafolio: [BertMarti/BertMarti#24](https://github.com/BertMarti/BertMarti/pull/24) | usuario | — | bloqueada: usuario (fusionar el PR) |
+
 ## Después
 
 | # | Tarea | Responsable | Modelo |
