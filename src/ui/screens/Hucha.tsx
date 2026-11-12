@@ -18,6 +18,7 @@ const m = (c: number) => formatMoney(c, 'EUR', true);
 export function HuchaScreen({ groupId }: { groupId: string }) {
   const api = useApi();
   const me = api.me();
+  const toast = useToast();
   const { data, error, reload } = useLoad(() => api.hucha(groupId), [api, groupId, me?.id]);
   useLive(groupId, reload);
   const [paying, setPaying] = useState<{ from: Id; to: Id; sub: boolean; amount: number; title: string } | null>(null);
@@ -126,7 +127,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
               <li key={p.id}>
                 <span className="grow">{p.from === me.id ? `Le diste a ${name(p.to)}` : `${name(p.from)} te dio`}</span>
                 <span className="money">{m(p.amountCents)}</span>
-                <Button variant="link" size="sm" onClick={async () => { await api.removePayment(p.id); reload(); }}>Quitar</Button>
+                <Button variant="link" size="sm" onClick={() => api.removePayment(p.id).then(reload, (e: unknown) => toast(errorText(e)))}>Quitar</Button>
               </li>
             ))}
           </ul>

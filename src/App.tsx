@@ -6,7 +6,7 @@ import { Avisos } from './ui/Avisos';
 import { IconButton } from './ui/Button';
 import { ApiCtx, go, lastGroup, useRoute } from './ui/ctx';
 import { Brand } from './ui/Bow';
-import { Avatar, daysUntil, ToastProvider } from './ui/kit';
+import { Avatar, daysUntil, OfflineBand, ToastProvider } from './ui/kit';
 import { DrawScreen } from './ui/screens/Draw';
 import { GroupScreen } from './ui/screens/Group';
 import { Home } from './ui/screens/Home';
@@ -84,6 +84,7 @@ export function App({ api }: { api: Api }) {
               </div>
             </div>
           </header>
+          <OfflineBand />
           <main id="contenido">
             {t.name && (
               <div className="page-head">

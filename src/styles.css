@@ -666,3 +666,5 @@ table.map-table .select { min-width: 9rem; }
 .join-hero .faces { flex-wrap: wrap; justify-content: center; row-gap: var(--s-2); }
 .rows > li.plaza-lost { flex-wrap: wrap; }
 .plaza-lost-confirm { flex: 1 1 100%; gap: var(--s-2); }
+/* v10-red */
+.offline-band { margin: 0; padding: var(--s-2) var(--gutter); background: var(--oro-suave); color: var(--sobre-oro-suave); font-size: var(--t-meta); font-weight: 700; text-align: center; }

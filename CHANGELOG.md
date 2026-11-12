@@ -4,6 +4,13 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Añadido
+- Sin conexión: una franja avisa de que ves lo último que cargaste; al volver la red se va y la pantalla se recarga sola. Si algo no carga, sale «Reintentar».
+
+### Cambiado
+- Con mala cobertura, lo que se lee se intenta otra vez (hasta 3 veces) antes de rendirse; lo que se guarda nunca se repite solo, para no reservar ni pagar dos veces, y el aviso dice que no se ha guardado.
+- El tiempo real recarga la pantalla al reconectar, por si se perdió algún cambio mientras estaba cortado.
+
 ## [0.5.1] - 2026-11-12 · Probado con la familia
 
 Arreglos que salen de recorrer Lazo en el móvil como lo harían un abuelo, alguien con prisa y una madre con la hucha, y lo que faltaba para montarlo en casa de verdad.
