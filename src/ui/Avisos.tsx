@@ -1,4 +1,4 @@
-import { Bell } from '@phosphor-icons/react';
+import { Bell, CaretRight } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { collectFacts, notices, seenFacts, withBaseline, type Facts, type Notice } from '../core/avisos';
 import { IconButton } from './Button';
@@ -12,6 +12,7 @@ export function Avisos({ refresh }: { refresh: string }) {
   const me = api.me()?.id;
   const [state, setState] = useState<{ now: Facts[]; list: Notice[] } | null>(null);
   const [shown, setShown] = useState<Notice[] | null>(null);
+  const [read, setRead] = useState(false);
 
   // Lo visto muere con la sesión: nada de otra persona se queda en este navegador (V-19). La demo cambia de
   // persona a propósito y no es frontera.
@@ -27,7 +28,9 @@ export function Avisos({ refresh }: { refresh: string }) {
         if (!alive) return;
         const prev = withBaseline(seenFacts.get(me), now);
         seenFacts.set(me, prev);
-        setState({ now, list: notices(prev, now) });
+        const fresh = notices(prev, now);
+        setState((s) => ({ now, list: fresh.length ? fresh : s?.list ?? [] }));
+        if (fresh.length) setRead(false);
       },
       () => {}, // sin conexión: la campana sigue como estaba
     );
@@ -37,12 +40,10 @@ export function Avisos({ refresh }: { refresh: string }) {
   }, [api, me, refresh]);
 
   if (!me) return null;
-  const n = state?.list.length ?? 0;
+  const n = read ? 0 : state?.list.length ?? 0;
   const close = () => {
-    if (state) {
-      seenFacts.set(me, state.now);
-      setState({ ...state, list: [] });
-    }
+    if (state) seenFacts.set(me, state.now);
+    setRead(true);
     setShown(null);
   };
 
@@ -59,12 +60,13 @@ export function Avisos({ refresh }: { refresh: string }) {
       {shown && (
         <Sheet title="Avisos" onClose={close}>
           {shown.length ? (
-            <ul className="avisos" aria-label="Avisos nuevos">
+            <ul className="avisos" aria-label={read ? 'Avisos ya vistos' : 'Avisos nuevos'}>
               {shown.map((a, i) => (
                 <li key={a.key}>
                   <a href={`#${a.href}`} onClick={close} data-autofocus={i === 0 || undefined}>
                     <span className="aviso-text">{a.text}</span>
                     <span className="aviso-group">{a.group}</span>
+                    <CaretRight size={20} weight="bold" aria-hidden />
                   </a>
                 </li>
               ))}

@@ -92,7 +92,7 @@ export function App({ api }: { api: Api }) {
                     {t.sub && <p className="sub">{t.sub}</p>}
                     {d !== null && d >= 0 && (
                       <p className="when">
-                        {fecha(t.date!)} <span className="nw">· {d > 1 ? (<>faltan <b>{d}</b> días</>) : d === 1 ? 'es mañana' : 'es hoy'}</span>
+                        {fecha(t.date!)} · <span className="nw">{d > 1 ? (<>faltan <b>{d}</b> días</>) : d === 1 ? 'es mañana' : 'es hoy'}</span>
                       </p>
                     )}
                   </div>

@@ -93,7 +93,7 @@ export function ItemForm({ listId, item, initialUrl, hint, surpriseFor, onClose,
           ))}
         </div>
       </fieldset>
-      <details className="more" open={!!item || !!initialUrl}>
+      <details className="more" open={!!item}>
         <summary>
           <CaretDown size={18} weight="bold" aria-hidden /> Más detalles
         </summary>

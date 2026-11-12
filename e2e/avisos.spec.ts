@@ -18,7 +18,12 @@ test('la campana abre los avisos y se marcan como leídos', async ({ page }) => 
   await expect(sheet.getByRole('link', { name: /Te toca poner .+ en la hucha/ })).toBeVisible();
   await expect(sheet).not.toContainText(/Mamá|tu lista|reserv|compr|sorpresa|presupuesto/i);
   await sheet.getByRole('button', { name: 'Cerrar' }).click();
-  await expect(page.getByRole('button', { name: 'Avisos', exact: true })).toBeVisible();
+  const read = page.getByRole('button', { name: 'Avisos', exact: true });
+  await expect(read).toBeVisible();
+  // Leídos no es borrados: siguen en la hoja hasta que lleguen otros o se recargue.
+  await read.click();
+  await expect(page.getByRole('list', { name: 'Avisos ya vistos' }).getByRole('link', { name: /Te toca poner/ })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Cerrar' }).click();
   await page.reload();
   await page.getByRole('button', { name: 'Avisos', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Avisos' })).toContainText('Estás al día');

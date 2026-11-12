@@ -132,7 +132,8 @@ function Package({ receiver, groupName, budgetCents, listId, opened, setOpened }
         <span className="ribbon ribbon-h" aria-hidden />
         <span className="cover-bow"><Bow size={96} /></span>
         <span className="h-section">Te ha tocado…</span>
-        <span>Abrir · mira que nadie te esté mirando</span>
+        <span className="cover-cta">Abrir el paquete</span>
+        <span>Mira que nadie te esté mirando</span>
       </button>
     </div>
   );

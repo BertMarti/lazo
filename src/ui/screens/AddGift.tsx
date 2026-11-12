@@ -50,7 +50,7 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
       const meta = await api.unfurl(url).catch(() => null);
       if (!meta?.title) {
         // Fallback manual: el enlace se queda guardado en el formulario y solo falta el nombre.
-        setStep({ kind: 'manual', url, hint: 'Esta tienda no nos deja ver los datos del regalo. Hemos guardado el enlace: escribe qué es y, si quieres, el precio.' });
+        setStep({ kind: 'manual', url, hint: `${new URL(url).hostname.replace(/^www\./, '')} no nos deja ver los datos del regalo. Hemos guardado el enlace: escribe qué es y, si quieres, el precio.` });
         return;
       }
       const item = await api.saveItem(listId, { title: meta.title, url: meta.url ?? url, priceCents: meta.priceCents, store: meta.store, image: meta.image, priority: 2, quantity: 1 });

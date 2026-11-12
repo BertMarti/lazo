@@ -119,6 +119,7 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
         <>
           <p className="meta">Hemos adivinado qué es cada columna. Corrige lo que no cuadre y mira abajo cómo quedará antes de importar.</p>
           {loadAi().provider !== 'none' && (
+            <>
             <Button
               variant="secondary"
               icon={Sparkle}
@@ -138,17 +139,18 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
             >
               Que la IA lo ordene
             </Button>
+            <p className="meta">Envía a la IA solo los títulos de las columnas y 3 filas de ejemplo.</p>
+            </>
           )}
           <div className="table-wrap">
             <table className="preview map-table" aria-label="Qué es cada columna">
-              <thead><tr><th scope="col">Columna</th><th scope="col">Ejemplo</th><th scope="col">Se importa como</th></tr></thead>
+              <thead><tr><th scope="col">Columna</th><th scope="col">Se importa como</th></tr></thead>
               <tbody>
                 {headers.map((h, i) => {
                   const name = h.trim() || `Columna ${i + 1}`;
                   return (
                     <tr key={i}>
-                      <th scope="row">{name}</th>
-                      <td>{example(rows, i)}</td>
+                      <th scope="row">{name}<span className="meta map-example">{example(rows, i)}</span></th>
                       <td>
                         <select
                           className="select"
@@ -168,7 +170,7 @@ export function ImportSheet({ listId, onClose, onDone }: { listId: string; onClo
           </div>
           {drafts.length > 0 && (
             <>
-              <h3 className="map-title">Así quedarán los primeros</h3>
+              <h3 className="h-section" style={{ fontSize: 'var(--t-3)' }}>Así quedarán los primeros</h3>
               <div className="table-wrap">
                 <table className="preview" aria-label="Vista previa">
                   <thead><tr>{shown.map((f) => <th key={f} scope="col">{FIELD_LABEL[f]}</th>)}</tr></thead>
