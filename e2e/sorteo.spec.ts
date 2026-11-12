@@ -9,7 +9,7 @@ test('amigo invisible: abrir, ver el nombre, taparlo y copiar sin Web Share', as
       localStorage.clear();
       sessionStorage.setItem('e2e', '1');
       sessionStorage.setItem('lazo:inicio', '1');
-      localStorage.setItem('lazo:explicado', '1');
+      localStorage.setItem('lazo:vista-explicada', '1');
     }
   });
   await page.goto('/#/sorteo/navidad');
