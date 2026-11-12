@@ -81,6 +81,7 @@ Cada persona tiene un color fijo, el mismo en claro y en oscuro, siempre con la 
   - Títulos y cifras: **Young Serif** 400 (`@fontsource/young-serif`), nunca por debajo de 20 px.
   - Interfaz: **Nunito Variable** (`@fontsource-variable/nunito`), con 500 para el texto, 700 para las etiquetas y 800 para botones y precios.
   - Las dos van empaquetadas: la CSP solo permite fuentes propias.
+  - Excepción: el código de entrada va en Nunito 800 con interletrado de 0,16em, porque se copia y no se admira (en Young Serif «1974» parece un año).
 - **Jerarquía:**
 
 | Token | Móvil | Escritorio | Uso |

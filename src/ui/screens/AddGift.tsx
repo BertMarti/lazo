@@ -2,6 +2,7 @@ import { Check, ClipboardText, PencilSimple } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatMoney } from '../../core/money';
 import type { Item, Priority } from '../../core/types';
+import { Bow } from '../Bow';
 import { Button, ButtonGroup } from '../Button';
 import { useApi } from '../ctx';
 import { PRIORITY } from '../Gift';
@@ -68,9 +69,9 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
     try {
       const url = firstUrl(await navigator.clipboard.readText());
       if (url) return fromUrl(url);
-      setStep({ kind: 'idle', hint: 'No hay ningún enlace copiado. Pégalo aquí.' });
+      setStep({ kind: 'idle', hint: 'No encuentro ningún enlace copiado. Vuelve a la tienda, cópialo y pégalo en este campo.' });
     } catch {
-      setStep({ kind: 'idle', hint: 'Mantén pulsado el campo y elige Pegar.' });
+      setStep({ kind: 'idle', hint: 'El móvil no nos deja pegarlo solo. Mantén el dedo en el campo «Enlace» y elige «Pegar».' });
     }
   };
 
@@ -101,7 +102,7 @@ export function AddGift({ listId, onClose, onSaved, onImport }: { listId: string
         <Button variant="primary" size="lg" wide icon={ClipboardText} loading={step.kind === 'reading'} onClick={paste} data-autofocus>
           {step.kind === 'reading' ? 'Leyendo la tienda…' : peek ? `Pegar ${peek}` : 'Pegar enlace'}
         </Button>
-        <p className="meta">Copia el enlace en Amazon o en cualquier tienda y pégalo aquí.</p>
+        <p className="meta">En la tienda, pulsa «Compartir» y «Copiar enlace». Luego vuelve y toca este botón. Si el móvil pregunta, pulsa «Permitir».</p>
         {step.kind === 'idle' && step.hint && (
           <>
             <p className="notice" role="status">{step.hint}</p>
@@ -154,10 +155,10 @@ function Added({ item, onClose, onMore, onSaved }: { item: Item; onClose: () => 
     >
       <div className="row" style={{ alignItems: 'flex-start' }}>
         <span className="gift-thumb paper" aria-hidden>
-          {item.image && <img src={item.image} alt="" referrerPolicy="no-referrer" />}
+          {item.image ? <img src={item.image} alt="" referrerPolicy="no-referrer" /> : <span className="noimg"><Bow size={32} /></span>}
         </span>
         <div className="grow">
-          <p style={{ fontWeight: 700 }}>
+          <p className="purchase-title">
             <Check size={18} weight="bold" aria-hidden style={{ verticalAlign: '-3px', color: 'var(--abeto)' }} /> {item.title}
           </p>
           <p className="meta">
@@ -167,7 +168,7 @@ function Added({ item, onClose, onMore, onSaved }: { item: Item; onClose: () => 
         </div>
       </div>
       <fieldset className="field">
-        <legend>¿Cuántas ganas?</legend>
+        <legend>¿Cuántas ganas? (puedes dejarlo así)</legend>
         <div className="segmented">
           {([1, 2, 3] as const).map((p) => (
             <label key={p}>

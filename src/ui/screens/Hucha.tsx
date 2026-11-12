@@ -54,7 +54,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
   return (
     <div className="stack-lg" style={{ maxWidth: 744 }}>
       <section className="panel stack" aria-label="Tu saldo">
-        {!(me.id === T && d.general === 0) && <p className="meta">{me.id === T ? 'La llevas tú' : `La lleva ${name(T)}`}</p>}
+        {!(me.id === T && d.general === 0) && <p className="meta">{me.id === T ? 'Tú guardas el dinero de la hucha' : `${name(T)} guarda el dinero de la hucha`}</p>}
         {d.general > 0 ? (
           <>
             <p style={{ fontWeight: 700 }}>Te falta poner</p>
@@ -63,6 +63,7 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
               const g = generalProgress(ctx);
               return <BudgetBar p={{ target: g.target, committed: g.put, left: g.target - g.put, over: false, percent: g.target > 0 ? Math.round((g.put * 100) / g.target) : 0 }} label="Lo que has puesto" leftWord="Faltan" />;
             })()}
+            <p>Dáselo en mano o por Bizum, como queráis. Después, apúntalo aquí.</p>
             <Button variant="primary" wide onClick={() => setPaying({ from: me.id, to: T, sub: false, amount: d.general, title: `Ya se lo di a ${name(T)}` })}>Ya se lo di a {name(T)}</Button>
           </>
         ) : d.general < 0 ? (
@@ -72,11 +73,11 @@ export function HuchaScreen({ groupId }: { groupId: string }) {
             <Button variant="secondary" wide onClick={() => setPaying({ from: T, to: me.id, sub: false, amount: -d.general, title: 'Ya me lo dio' })}>Ya me lo dio</Button>
           </>
         ) : (
-          <p className="h-section">{me.id === T ? 'Llevas la hucha' : 'Estás al día'}</p>
+          <p className="h-section">{me.id === T ? 'Llevas la hucha' : d.aparte > 0 ? `Con ${name(T)} estás al día` : 'Estás al día'}</p>
         )}
         {d.aparte > 0 && (
           <>
-            <p>Y {m(d.aparte)} a {name(T2)}, por los regalos de {treasurerName}.</p>
+            <p>Aparte, te faltan {m(d.aparte)} para {name(T2)}: es tu parte de los regalos de {treasurerName}.</p>
             <Button variant="secondary" wide onClick={() => setPaying({ from: me.id, to: T2, sub: true, amount: d.aparte, title: `Ya se lo di a ${name(T2)}` })}>Ya se lo di a {name(T2)}</Button>
           </>
         )}
@@ -162,6 +163,7 @@ function PaySheet({ groupId, p, onClose, onDone }: { groupId: Id; p: { from: Id;
   const toast = useToast();
   const [v, setV] = useState((p.amount / 100).toFixed(2).replace('.', ','));
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   return (
     <Sheet
       title={p.title}
@@ -171,15 +173,18 @@ function PaySheet({ groupId, p, onClose, onDone }: { groupId: Id; p: { from: Id;
           <Button
             variant="primary"
             data-autofocus
+            loading={busy}
             onClick={async () => {
               const c = parseAmount(v);
               if (!c) return setErr('Escribe una cantidad, por ejemplo 20.');
+              setBusy(true);
               try {
                 await api.addPayment(groupId, { from: p.from, to: p.to, amountCents: c, sub: p.sub });
-                toast('Apuntado. Solo lo veis vosotros dos.');
+                toast(`${p.title}: ${m(c)} apuntados.`);
                 onDone();
               } catch (e) {
                 setErr(errorText(e));
+                setBusy(false);
               }
             }}
           >
@@ -189,9 +194,10 @@ function PaySheet({ groupId, p, onClose, onDone }: { groupId: Id; p: { from: Id;
       }
     >
       <label className="field">
-        <span>¿Cuánto?</span>
+        <span>Cantidad, en euros</span>
         <input className="input" inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} />
       </label>
+      <p className="meta">Lazo no mueve dinero: solo lo apunta. Lo veréis solo vosotros dos.</p>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
     </Sheet>
   );

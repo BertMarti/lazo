@@ -87,6 +87,20 @@ test('entrar con el enlace general: pendiente con código hasta que el admin ace
   await expect(page.locator('.member', { hasText: 'Tía Loli' }).getByText('Aún no ha entrado')).toHaveCount(0);
 });
 
+test('al volver a abrir el enlace general sigue el código, sin pedir entrar otra vez', async ({ page }) => {
+  await page.goto('/#/unirse/demoGeneralNavidad2026xx');
+  await page.getByRole('radio', { name: 'Tía Loli' }).check();
+  await page.getByRole('button', { name: 'Soy Tía Loli' }).click();
+  const code = (await page.locator('.code').textContent())!.trim();
+  expect(code).toMatch(/^\d{4}$/);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Ya casi estás, Tía Loli' })).toBeVisible();
+  await expect(page.locator('.code')).toHaveText(code);
+  await expect(page.getByRole('heading', { name: '¿Quién eres?' })).toHaveCount(0);
+  const wa = page.getByRole('link', { name: 'Enviar el código por WhatsApp' });
+  await expect(wa).toHaveAttribute('href', `https://wa.me/?text=${encodeURIComponent(`Hola, Alberto. Soy Tía Loli. Mi código de Lazo es ${code}.`)}`);
+});
+
 test('la hucha de Papá no dice nada de lo que se gasta en él', async ({ page }) => {
   await page.goto('/#/hucha/navidad');
   await page.getByLabel('Ver como').selectOption('papa');

@@ -291,7 +291,7 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
 .choice { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: 0 var(--s-4); border-radius: var(--r-m); border: 1.5px solid var(--linea); background: var(--tarjeta); cursor: pointer; font-weight: 700; }
 .choice:has(input:checked) { border-color: var(--abeto); box-shadow: inset 0 0 0 1px var(--abeto); }
 .choice:has(input:focus-visible) { outline: 3px solid var(--abeto); outline-offset: 2px; }
-.choice input { width: 20px; height: 20px; accent-color: var(--abeto); }
+.choice input { width: 28px; height: 28px; accent-color: var(--abeto); }
 .choice-off { color: var(--tinta-2); cursor: default; background: transparent; }
 
 /* ————— Avatar ————— */
@@ -479,7 +479,7 @@ dialog.sheet::backdrop { background: rgb(42 29 20 / 0.45); animation: fade 200ms
 .notice-error { background: var(--peligro-suave); color: var(--peligro); }
 .banner { display: grid; gap: var(--s-3); padding: var(--s-5); border-radius: var(--r-l); background: var(--oro-suave); color: var(--sobre-oro-suave); margin-bottom: var(--s-5); }
 .banner p b { font-weight: 800; }
-.code { font-family: var(--f-display); font-weight: 400; font-size: var(--t-cifra); letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.code { font-family: var(--f-ui); font-weight: 800; font-size: var(--t-cifra); letter-spacing: 0.16em; font-variant-numeric: tabular-nums; }
 .empty { display: grid; justify-items: center; gap: var(--s-3); text-align: center; padding: var(--s-12) var(--s-4); color: var(--tinta-2); font-size: var(--t-big); }
 .empty .bow { color: var(--oro); margin-bottom: var(--s-2); }
 .empty h2 { font-family: var(--f-display); font-weight: 400; font-size: var(--t-2); color: var(--tinta); }

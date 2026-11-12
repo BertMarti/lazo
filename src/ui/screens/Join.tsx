@@ -1,11 +1,33 @@
+import { WhatsappLogo } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { Bow, Loading } from '../Bow';
 import type { InviteInfo } from '../../api/types';
-import { Button } from '../Button';
+import { Button, ButtonLink } from '../Button';
 import { go, useApi } from '../ctx';
 import { Avatar, errorText, useLoad } from '../kit';
 
 const DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' });
+
+type PendingReq = { request: string; code: string; group: string; name: string };
+
+/** La solicitud pendiente se guarda por enlace: si el abuelo vuelve a abrirlo, sigue viendo su código. */
+const pendingKey = (token: string) => `lazo:pendiente:${token}`;
+function readPending(token: string): PendingReq | null {
+  try {
+    const v = localStorage.getItem(pendingKey(token));
+    return v ? (JSON.parse(v) as PendingReq) : null;
+  } catch {
+    return null;
+  }
+}
+function savePending(token: string, p: PendingReq | null) {
+  try {
+    if (p) localStorage.setItem(pendingKey(token), JSON.stringify(p));
+    else localStorage.removeItem(pendingKey(token));
+  } catch {
+    /* sin almacenamiento: queda solo en memoria */
+  }
+}
 
 /**
  * Entrar desde un enlace (spec plazas-hucha §10.4–10.5):
@@ -14,11 +36,22 @@ const DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' })
 export function Join({ token, onJoined }: { token: string; onJoined: () => void }) {
   const api = useApi();
   const { data: info, error } = useLoad(() => api.inviteInfo(token), [api, token]);
-  const [pending, setPending] = useState<{ request: string; code: string; group: string; name: string } | null>(null);
+  const [pending, setPending] = useState<PendingReq | null>(() => readPending(token));
   if (error) return <Box><p className="notice notice-error">{error}</p></Box>;
   if (!info) return <Loading />;
-  if (pending) return <Pending {...pending} organizer={info.organizer} onJoined={onJoined} />;
-  return info.personal ? <Personal token={token} info={info} onJoined={onJoined} /> : <General token={token} info={info} onPending={setPending} />;
+  if (pending) return <Pending {...pending} organizer={info.organizer} onJoined={onJoined} onDecided={() => savePending(token, null)} />;
+  return info.personal ? (
+    <Personal token={token} info={info} onJoined={onJoined} />
+  ) : (
+    <General
+      token={token}
+      info={info}
+      onPending={(p) => {
+        savePending(token, p);
+        setPending(p);
+      }}
+    />
+  );
 }
 
 function Box({ children }: { children: React.ReactNode }) {
@@ -81,20 +114,21 @@ function Personal({ token, info, onJoined }: { token: string; info: InviteInfo; 
   );
 }
 
-function General({ token, info, onPending }: { token: string; info: InviteInfo; onPending: (p: { request: string; code: string; group: string; name: string }) => void }) {
+function General({ token, info, onPending }: { token: string; info: InviteInfo; onPending: (p: PendingReq) => void }) {
   const api = useApi();
   const [choice, setChoice] = useState<string>('');
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const chosen = info.free.find((f) => f.list === choice);
-  const label = choice === 'new' ? (newName.trim() ? `Soy ${newName.trim()}` : 'Escribe tu nombre') : chosen ? `Soy ${chosen.name}` : 'Elige tu nombre';
+  const label = choice === 'new' ? (newName.trim() ? `Soy ${newName.trim()}` : 'Escribe tu nombre') : chosen ? `Soy ${chosen.name}` : 'Primero toca tu nombre';
   const ready = choice === 'new' ? !!newName.trim() : !!chosen;
 
   return (
     <Box>
       <Head info={info} />
       <h2 className="h-section">¿Quién eres?</h2>
+      <p>Toca tu nombre. Después, {info.organizer} te dejará entrar.</p>
       {info.free.length === 0 && !info.allowNewNames ? (
         <p>Ya han entrado todos. Pide a {info.organizer} que te añada.</p>
       ) : (
@@ -142,13 +176,12 @@ function General({ token, info, onPending }: { token: string; info: InviteInfo; 
       >
         {label}
       </Button>
-      <p className="meta">Elige solo tu nombre. {info.organizer} tiene que aceptarte.</p>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
     </Box>
   );
 }
 
-function Pending({ request, code, group, organizer, onJoined }: { request: string; code: string; group: string; name: string; organizer: string; onJoined: () => void }) {
+function Pending({ request, code, group, name, organizer, onJoined, onDecided }: PendingReq & { organizer: string; onJoined: () => void; onDecided: () => void }) {
   const api = useApi();
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   useEffect(() => {
@@ -156,6 +189,7 @@ function Pending({ request, code, group, organizer, onJoined }: { request: strin
     const t = setInterval(() => {
       api.requestStatus(request).then((s) => {
         setStatus(s);
+        if (s !== 'pending') onDecided();
         if (s === 'approved') {
           onJoined();
           go(`/g/${group}`);
@@ -163,17 +197,29 @@ function Pending({ request, code, group, organizer, onJoined }: { request: strin
       }, () => {});
     }, 3000);
     return () => clearInterval(t);
-  }, [api, request, status, group, onJoined]);
+  }, [api, request, status, group, onJoined, onDecided]);
   return (
     <Box>
       {status === 'rejected' ? (
         <p>{organizer} no ha aceptado esta entrada. Habla con {organizer}.</p>
       ) : (
         <>
-          <h2 className="h-section">Falta que {organizer} te acepte</h2>
+          <h2 className="h-section">Ya casi estás, {name}</h2>
+          <p>Solo falta que {organizer} te deje entrar. Mándale este código para que sepa que eres tú:</p>
           <p className="code" aria-label={`Código ${code.split('').join(' ')}`}>{code}</p>
-          <p>Dile este código a {organizer}. Así sabe que eres tú.</p>
-          <p className="meta">Puedes cerrar esto: cuando te acepte, entrarás al abrir Lazo.</p>
+          <ButtonLink
+            variant="primary"
+            size="lg"
+            wide
+            icon={WhatsappLogo}
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://wa.me/?text=${encodeURIComponent(`Hola, ${organizer}. Soy ${name}. Mi código de Lazo es ${code}.`)}`}
+          >
+            Enviar el código por WhatsApp
+          </ButtonLink>
+          <p className="meta" role="status">Esperando a {organizer}… Esta pantalla cambiará sola cuando te acepte.</p>
+          <p className="meta">Si la cierras, no pasa nada: cuando te acepte, abre Lazo y ya estarás dentro.</p>
         </>
       )}
     </Box>
