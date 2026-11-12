@@ -498,26 +498,13 @@ dialog.sheet::backdrop { background: rgb(42 29 20 / 0.45); animation: fade 200ms
 .gift-thumb { position: relative; width: 72px; height: 72px; flex: none; border-radius: var(--r-m); overflow: hidden; background: var(--hundido); }
 .gift-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Amigo invisible: el paquete atado */
+/* Amigo invisible: el paquete atado (la animación, en el bloque v05-sorteo) */
 .envelope {
-  position: relative; display: grid; justify-items: center; gap: var(--s-3); width: 100%; max-width: 520px; margin-inline: auto;
+  position: relative; display: grid; justify-items: center; align-content: center; width: 100%; max-width: 520px; min-height: 380px; margin-inline: auto;
   padding: var(--s-12) var(--s-5); border-radius: var(--r-l); background: var(--tarjeta); color: var(--tinta); text-align: center; overflow: hidden;
   box-shadow: var(--sombra-2), var(--borde-tarjeta);
 }
 .envelope .who { font-family: var(--f-display); font-weight: 400; font-size: var(--t-display); line-height: 1.05; color: var(--terracota-tinta); }
-.envelope .cover {
-  position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: var(--s-3); padding: var(--s-5);
-  border: 0; color: var(--sobre-abeto-fondo); cursor: pointer; font: inherit; font-weight: 700;
-  background:
-    linear-gradient(var(--oro), var(--oro)) center / 18px 100% no-repeat,
-    linear-gradient(var(--oro), var(--oro)) center / 100% 18px no-repeat,
-    var(--abeto-fondo);
-  transition: clip-path 420ms var(--ease-out), opacity 300ms ease; clip-path: inset(0 0 0 0);
-}
-.envelope .cover .bow { color: var(--oro); --knot-ring: var(--abeto-fondo); }
-.envelope .cover > :not(.cover-bow) { background: var(--abeto-fondo); padding: 4px 12px; border-radius: var(--r-pill); }
-.envelope[data-open] .cover { clip-path: inset(0 0 100% 0); pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .envelope .cover { transition: opacity 200ms ease; } .envelope[data-open] .cover { opacity: 0; clip-path: none; } }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 60; transform: translateX(-50%);
@@ -564,6 +551,52 @@ table.preview th { background: var(--hundido); font-weight: 800; }
 .band-bow .bow { color: var(--tarjeta); filter: drop-shadow(0 1px 2px rgb(42 29 20 / 0.35)); --knot-ring: var(--oro); }
 .page-head .when .nw { white-space: nowrap; }
 .notice svg { flex: none; margin-top: 3px; }
-.envelope .cover { place-content: end center; padding-bottom: var(--s-8); }
-.envelope .cover .cover-bow { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
-.envelope { min-height: 380px; align-content: center; }
+
+/* v05-sorteo — el paquete se abre (≈900 ms, solo transform y opacity) y se puede volver a tapar */
+.envelope-inside { display: grid; justify-items: center; gap: var(--s-3); width: 100%; }
+.envelope-inside .btn-group { width: 100%; }
+.envelope .who:focus { outline: none; }
+.envelope .who:focus-visible { outline: 3px solid var(--abeto); outline-offset: 4px; }
+.envelope-warn { text-align: left; font-size: var(--t-meta); }
+.envelope .cover {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-content: end center; justify-items: center; gap: var(--s-3); padding: var(--s-5) var(--s-5) var(--s-8);
+  border: 0; border-radius: 0; color: var(--sobre-abeto-fondo); background: var(--abeto-fondo); cursor: pointer; font: inherit; font-weight: 700; overflow: hidden;
+}
+.envelope .cover:focus-visible { outline: 3px solid var(--oro); outline-offset: -6px; border-radius: var(--r-l); }
+.envelope .cover > span:not(.ribbon):not(.cover-bow) { position: relative; background: var(--abeto-fondo); padding: 4px 12px; border-radius: var(--r-pill); }
+.envelope .ribbon { position: absolute; background: var(--oro); }
+.envelope .ribbon-v { top: 0; bottom: 0; left: 50%; width: 18px; transform: translateX(-50%); }
+.envelope .ribbon-h { left: 0; right: 0; top: 50%; height: 18px; transform: translateY(-50%); }
+.envelope .cover-bow { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.envelope .cover .bow { color: var(--oro); --knot-ring: var(--abeto-fondo); }
+.envelope .cover .bow > * { transform-box: fill-box; }
+.envelope .cover .bow-l { transform-origin: right center; }
+.envelope .cover .bow-r { transform-origin: left center; }
+.envelope .cover .bow-tail { transform-origin: center top; }
+.envelope .cover .bow-knot { transform-origin: center; }
+
+/* Tapar: rápido y sin retardos (alguien mira). */
+.envelope .cover, .envelope .cover *, .envelope-inside > * { transition: opacity 150ms ease, transform 150ms ease; }
+.envelope:not([data-open]) .envelope-inside > * { opacity: 0; transition: none; }
+.envelope:not([data-open]) .envelope-inside > .avatar { transform: scale(0.9); }
+
+/* Abrir: 1) el lazo se deshace 2) la cinta sale por los bordes 3) la tapa se levanta 4) aparece la persona. */
+.envelope[data-open] .cover { opacity: 0; transform: translateY(-16px); pointer-events: none; transition: opacity 260ms ease 500ms, transform 300ms var(--ease-out) 480ms; }
+.envelope[data-open] .cover .bow-l, .envelope[data-open] .cover .bow-r { opacity: 0; transform: scale(0.2); transition: opacity 200ms ease, transform 220ms var(--ease-out); }
+.envelope[data-open] .cover .bow-knot { opacity: 0; transform: scale(0); transition: opacity 140ms ease 120ms, transform 140ms ease 120ms; }
+.envelope[data-open] .cover .bow-tail { opacity: 0; transform: translateY(14px) scaleY(0.6); transition: opacity 220ms ease 80ms, transform 240ms var(--ease-out) 80ms; }
+.envelope[data-open] .cover > span:not(.ribbon):not(.cover-bow) { opacity: 0; transition: opacity 160ms ease; }
+.envelope[data-open] .ribbon { transition: transform 300ms cubic-bezier(0.5, 0, 0.75, 0) 220ms; }
+.envelope[data-open] .ribbon-v { transform: translate(-50%, -101%); }
+.envelope[data-open] .ribbon-h { transform: translate(101%, -50%); }
+.envelope[data-open] .envelope-inside > * { transition: opacity 240ms ease 660ms; }
+.envelope[data-open] .envelope-inside > .avatar { transition: opacity 240ms ease 600ms, transform 300ms var(--ease-out) 600ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .envelope .cover, .envelope .cover *, .envelope[data-open] .cover, .envelope[data-open] .cover *, .envelope[data-open] .envelope-inside > * { transition: opacity 150ms ease !important; }
+  .envelope[data-open] .cover { transform: none; }
+  .envelope[data-open] .cover .bow > *, .envelope[data-open] .cover > span:not(.ribbon):not(.cover-bow) { opacity: 1; transform: none; }
+  .envelope[data-open] .ribbon-v { transform: translateX(-50%); }
+  .envelope[data-open] .ribbon-h { transform: translateY(-50%); }
+  .envelope:not([data-open]) .envelope-inside > .avatar { transform: none; }
+}
