@@ -4,6 +4,9 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Añadido
+- Avisos del grupo: una campana en la cabecera con lo nuevo desde la última vez (regalos que alguien añade a su lista, quién entra, la cuenta atrás a 10, 3 y 1 día, lo que te toca poner en la hucha y el sorteo). Se calculan en tu móvil con lo que ya puedes ver: nunca dicen nada de tu propia lista.
+
 ## [0.4.0] - 2026-11-11 · El catálogo de juguetes
 
 Rediseño completo: Lazo deja de parecer un panel de administración y pasa a ser el catálogo de Navidad de una juguetería, con la familia y los regalos en grande.

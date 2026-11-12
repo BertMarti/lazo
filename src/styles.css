@@ -600,3 +600,16 @@ table.preview th { background: var(--hundido); font-weight: 800; }
   .envelope[data-open] .ribbon-h { transform: translateY(-50%); }
   .envelope:not([data-open]) .envelope-inside > .avatar { transform: none; }
 }
+
+/* v05-avisos */
+.bell { position: relative; display: inline-flex; }
+.bell-count {
+  position: absolute; top: 0; right: 0; min-width: 22px; height: 22px; padding: 0 6px; display: grid; place-items: center; pointer-events: none;
+  border-radius: var(--r-pill); background: var(--terracota); color: var(--sobre-terracota); box-shadow: 0 0 0 2px var(--aro);
+  font-size: var(--t-mark); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.avisos { list-style: none; margin: 0; padding: 0; display: grid; }
+.avisos li + li { border-top: 1px dotted var(--linea-fuerte); }
+.avisos a { display: grid; gap: 2px; min-height: 44px; padding: var(--s-3) 0; color: var(--tinta); text-decoration: none; }
+.avisos .aviso-text { font-weight: 700; font-size: var(--t-md); }
+.avisos .aviso-group { color: var(--tinta-2); font-size: var(--t-meta); }
