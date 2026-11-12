@@ -27,18 +27,20 @@ Las tareas A a D van en paralelo, cada una en su worktree y su rama. No comparte
 
 | # | Tarea | Responsable | Modelo | Rama | Estado |
 |---|---|---|---|---|---|
-| A | **Puesta en marcha real.** Guía `docs/HOMELAB.md` y `server/docker-compose.yml` de PocketBase en el homelab (al estilo de SHIELD-DNS y HEIMDALL): copias de seguridad, HTTPS con Caddy y acceso desde fuera para la familia. E2E contra PocketBase real del flujo completo: crear grupo → invitar → reclamar plaza → reservar → hucha → ajuste de cuentas | implementador | Opus 5.5 | `v05-homelab` | en curso |
-| B | **Importación robusta.** Enlaces de Amazon.es, El Corte Inglés, PcComponentes, Zara y Decathlon (metadatos públicos, fallback manual, tests con fixtures HTML) y Excel o CSV con mapeo de columnas asistido sin IA | implementador | Opus 5.5 | `v05-importar` | en curso |
-| C | **Avisos del grupo.** «Papá ha añadido 3 regalos», «faltan 10 días»… respetando la regla de la sorpresa, con un test que garantiza que ningún aviso filtra datos de la propia lista | implementador | Opus 5.5 | `v05-avisos` | en curso |
-| D | **Amigo invisible.** Animación de revelado y opción de reenviar el resultado en privado | implementador | Opus 5.5 | `v05-sorteo` | en curso |
-| E | Integrar A a D en `main` y pasar todas las pruebas | Opus | Opus 5.5 | — | pendiente |
-| F | Revisión de seguridad y de UX de todo lo nuevo, accesibilidad (axe) y capturas | revisor-seguridad + revisor-diseno | Fable 5.2 | — | pendiente |
+| A | **Puesta en marcha real.** Guía `docs/HOMELAB.md` y `server/docker-compose.yml` de PocketBase en el homelab (al estilo de SHIELD-DNS y HEIMDALL): copias de seguridad, HTTPS con Caddy y acceso desde fuera para la familia. E2E contra PocketBase real del flujo completo: crear grupo → invitar → reclamar plaza → reservar → hucha → ajuste de cuentas | implementador | Opus 5.5 | `v05-homelab` | hecha |
+| B | **Importación robusta.** Enlaces de Amazon.es, El Corte Inglés, PcComponentes, Zara y Decathlon (metadatos públicos, fallback manual, tests con fixtures HTML) y Excel o CSV con mapeo de columnas asistido sin IA | implementador | Opus 5.5 | `v05-importar` | hecha |
+| C | **Avisos del grupo.** «Papá ha añadido 3 regalos», «faltan 10 días»… respetando la regla de la sorpresa, con un test que garantiza que ningún aviso filtra datos de la propia lista | implementador | Opus 5.5 | `v05-avisos` | hecha |
+| D | **Amigo invisible.** Animación de revelado y opción de reenviar el resultado en privado | implementador | Opus 5.5 | `v05-sorteo` | hecha |
+| E | Integrar A a D en `main` y pasar todas las pruebas | Opus | Opus 5.5 | — | hecha |
+| F | Revisión de seguridad y de UX de todo lo nuevo, accesibilidad (axe) y capturas | revisor-seguridad + revisor-diseno | Fable 5.2 | — | hecha (seguridad: V-16 a V-19 corregidos; UX: apto, con 8 arreglos aplicados) |
 | G | Release v0.5.0: CHANGELOG, APK, demo, README y CI mínimo | implementador | Opus 5.5 | — | pendiente |
 
 ## Después
 
 | # | Tarea | Responsable | Modelo |
 |---|---|---|---|
+| 14 | Hallazgos bajos V-20 a V-25 de `docs/security/AUDIT.md` (pruebas de avisos contra el servidor, `og:url`, permisos y cifrado de copias, túnel, `.xlsx` comprimido, número de sorteo en el mensaje) | revisor-seguridad → implementador | Fable 5.2 → Opus 5.5 |
+| 15 | Validar en el homelab real: `caddy validate`, `docker compose up` y las comprobaciones de `docs/HOMELAB.md` §7 | usuario | — |
 | 8 | Avatares de la familia en la entrada por enlace (`inviteInfo` con nombres y colores, revisado por seguridad) | revisor-seguridad → implementador | Fable 5.2 → Opus 5.5 |
 | 9 | Selector propio de claro u oscuro en Ajustes | implementador | Opus 5.5 |
 | 10 | Regenerar `e2e/capturas.spec.ts` con las pantallas v0.4 | OpenCode | `deepseek-v4.1-flash-free` |

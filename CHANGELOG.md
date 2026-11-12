@@ -4,6 +4,10 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [0.5.0] - 2026-11-12 · Lista para Navidad
+
+Lazo se puede montar en casa para la familia de verdad, entiende mejor las tiendas y las hojas de cálculo, avisa de lo nuevo sin estropear sorpresas y el amigo invisible se abre como un regalo.
+
 ### Añadido
 - Amigo invisible: el paquete se abre con una animación (el lazo se deshace, la cinta se retira y aparece la persona), se puede volver a tapar y puedes enviarte el resultado a ti mismo («Enviármelo» o «Copiar»), con un aviso para no reenviarlo al grupo.
 - Importar desde Excel o CSV con una tabla para elegir qué es cada columna (adivinada sin IA, en español e inglés) y una vista previa antes de importar. Los CSV en windows-1252 ya no rompen las tildes.
@@ -15,6 +19,12 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 - El proxy bloquea más rutas de administración de PocketBase y pasa la IP real del cliente (también detrás de Cloudflare Tunnel).
 - Nueva prueba contra PocketBase real del flujo completo (crear grupo, invitar, reclamar plaza, reservar, hucha y ajuste de cuentas), comprobando en cada paso que nadie ve lo suyo.
 - Prueba de que ningún aviso cambia por lo que otros hacen en tu lista.
+- Auditoría de Fable 5.2 de la v0.5 aplicada:
+  - El login de superusuario ya no se puede alcanzar por su id; Caddy deja pasar solo las rutas que usa la app.
+  - Nadie puede inventarse su IP desde la red de casa para saltarse los límites.
+  - Una página hostil ya no puede colgar la lectura de enlaces.
+  - Lo que recuerdan los avisos se borra al cambiar de persona en el mismo navegador.
+- Accesibilidad comprobada con axe (WCAG 2.1 AA) en las pantallas principales, en claro y en oscuro.
 
 ## [0.4.0] - 2026-11-11 · El catálogo de juguetes
 

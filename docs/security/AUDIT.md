@@ -1027,3 +1027,14 @@ No es una fuga: el mensaje solo lleva lo tuyo. Pero si quien organiza repite el 
 ### Veredicto
 
 **No se puede publicar** tal como está. V-16 deja el login de superusuario accesible desde Internet, y la documentación dice lo contrario: quien adivine esa contraseña lee todas las listas. El arreglo es pequeño. Con V-16 corregido y probado **se puede publicar**; V-17, V-18 y V-19 deberían ir en la misma versión, y los bajos pueden esperar. En lo nuevo de la v0.5 no he encontrado ninguna vía por la que la dueña de una lista vea o deduzca lo suyo desde su propia sesión: la única deducción (V-19) exige compartir navegador con otro miembro.
+
+
+### Estado tras la auditoría v0.5 (2026-11-12, Opus 5.5)
+
+- **Corregidos:**
+  - V-16: lista blanca de `/api/collections` en `server/Caddyfile`, con su prueba en `server/test/caddyfile.test.mjs`, que corre en CI.
+  - V-17: Caddy solo confía en `172.31.253.3/32` (cloudflared en la red `tunel`) y solo lee `CF-Connecting-IP`; PocketBase no es alcanzable desde el túnel. La comprobación está en `docs/HOMELAB.md` §7.
+  - V-18: las expresiones de `src/core/meta.ts` van acotadas y el JSON-LD se cierra con `indexOf`. Prueba en `test/core/meta.test.ts`: 1,5 MB de etiquetas sin cerrar se procesan en menos de 3 s.
+  - V-19: `seenFacts.forget` borra lo visto de otras personas al cambiar de sesión (salvo en la demo). Prueba en `test/core/avisos.test.ts`.
+- **Pendientes (bajos):** V-20 a V-25 quedan anotados en `docs/TAREAS.md` para la v0.6. Ninguno bloquea la publicación.
+- **Sin validar en un homelab real:** `caddy validate` y `docker compose up` (en este equipo no hay Docker ni Caddy). Hay que hacerlo en el primer despliegue.

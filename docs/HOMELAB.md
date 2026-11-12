@@ -97,7 +97,7 @@ Es solo para ti, para mantenimiento:
 docker compose exec pocketbase pocketbase superuser upsert tu@correo.es 'una-contraseña-larga' --dir=/pb/pb_data
 ```
 
-El panel `/_/` y la API de administración **no están publicados en Internet**: Caddy responde 404 a `/_/`, `/api/settings`, `/api/logs`, `/api/backups`, `/api/crons`, `/api/collections/_superusers` y la gestión de colecciones. PocketBase solo escucha en `127.0.0.1:8090` de la propia Raspberry. Para entrar desde tu ordenador:
+El panel `/_/` y la API de administración **no están publicados en Internet**: Caddy responde 404 a `/_/`, `/api/settings`, `/api/logs`, `/api/backups`, `/api/crons` y a todo `/api/collections` salvo las colecciones y rutas que usa la app (lista blanca: así no se cuela el login de superusuario por su id). PocketBase solo escucha en `127.0.0.1:8090` de la propia Raspberry. Para entrar desde tu ordenador:
 
 ```bash
 ssh -L 8090:127.0.0.1:8090 usuario@IP-de-la-raspberry
@@ -117,6 +117,15 @@ curl -sI https://tu-dominio | grep -iE 'strict-transport|x-frame|content-securit
 curl -s -o /dev/null -w '%{http_code}\n' https://tu-dominio/_/                        # 404
 curl -s -o /dev/null -w '%{http_code}\n' https://tu-dominio/api/settings              # 404
 curl -s https://tu-dominio/api/health                                                 # {"message":"API is healthy."…}
+# El login de superusuario tampoco se publica, ni por nombre ni por su id fijo:
+curl -s -o /dev/null -w '%{http_code}
+' -X POST https://tu-dominio/api/collections/pbc_3142635823/auth-with-password   # 404
+```
+
+Desde la wifi de casa, inventarse la IP no sirve para saltarse los límites: tras diez intentos seguidos, los últimos deben dar 429.
+
+```bash
+for i in $(seq 1 12); do curl -s -o /dev/null -w '%{http_code} ' -X POST -H "CF-Connecting-IP: 203.0.113.$i" -H 'content-type: application/json' -d '{"token":"x"}' https://tu-dominio/api/lazo/join; done; echo
 ```
 
 Opcional: pasa tu dominio por [securityheaders.com](https://securityheaders.com) y [SSL Labs](https://www.ssllabs.com/ssltest/).
