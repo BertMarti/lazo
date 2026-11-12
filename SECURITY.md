@@ -37,6 +37,7 @@ No basta con no enseñar lo de X: X tampoco debe poder **calcularlo restando**. 
 - `test/core/hucha.test.ts`: no interferencia ∀X y el contraejemplo del greedy.
 - `test/api/visibility.test.ts`: no interferencia ∀X sobre todas las lecturas de la API, reclamar una plaza, suplantación y entrega.
 - `server/test/rules.test.mjs`: contra un PocketBase real, en CI.
+- `server/test/flujo.test.mjs`: el flujo completo (grupo → invitación → plaza → reserva → hucha → ajuste de cuentas) contra un PocketBase real, comprobando en cada paso que la dueña de la lista no ve nada de lo suyo.
 
 ## Plazas y entrada
 
@@ -58,7 +59,8 @@ Lo abren **dos llaves**: un admin propone y otra persona confirma. No hay apertu
 | Riesgo | Medida |
 |---|---|
 | Invitaciones | Token de unos 190 bits del que solo se guarda el hash, caducidad, usos, revocación y límite de peticiones; validación transaccional |
-| Superusuario | Su API y su panel no se publican por Caddy y su login tiene límite de intentos. Se administra por la LAN o por VPN (HEIMDALL) |
+| Superusuario | Su API, su panel y la gestión de colecciones no se publican por Caddy (404) y su login tiene límite de intentos. PocketBase solo escucha en `127.0.0.1:8090` del servidor: se administra por túnel SSH o por VPN (HEIMDALL) |
+| Homelab | Cabeceras HSTS, CSP, `nosniff`, `X-Frame-Options` y COOP/CORP en Caddy. Con Cloudflare Tunnel, la IP real llega a PocketBase para el límite de intentos. Copias diarias de `pb_data` sin red, legibles solo por root y con rotación (`docs/HOMELAB.md`) |
 | Sesiones | Token de 180 días renovable, «cerrar sesión en todos los dispositivos» (`/api/lazo/logout-all`) y sin contraseñas conocidas |
 | SSRF | Solo `http` y `https` en los puertos 80 y 443. IP privadas, loopback, link-local, CGNAT, NAT64, 6to4 y Teredo bloqueadas en cada redirección, con DNS fijado. 6 s de tiempo **total** y 1,5 MB. Servicio en red interna y sin puertos |
 | Amigo invisible | El sorteo se hace en el servidor y cada uno ve solo su asignación. Las exclusiones no pueden dejar un único reparto (quien organiza no puede amañarlo) y cada sorteo lleva número |

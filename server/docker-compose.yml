@@ -1,4 +1,5 @@
 name: lazo
+# Guía paso a paso: docs/HOMELAB.md. Toda la configuración va en server/.env (plantilla: .env.example).
 
 services:
   pocketbase:
@@ -11,6 +12,9 @@ services:
       TZ: ${TZ:-Europe/Madrid}
       UNFURL_KEY: ${UNFURL_KEY:?Falta UNFURL_KEY en .env (openssl rand -hex 32)}
       UNFURL_URL: http://unfurl:8787
+    # Panel /_/ solo desde la propia máquina (túnel SSH o VPN). Nunca 0.0.0.0: Caddy lo bloquea por fuera.
+    ports:
+      - "127.0.0.1:8090:8090"
     volumes:
       - ./data/pb:/pb/pb_data
     networks: [interna, publica]
@@ -35,13 +39,64 @@ services:
       - no-new-privileges:true
     depends_on: [pocketbase]
     environment:
+      # Con dominio propio o DuckDNS: milazo.duckdns.org. Con Cloudflare Tunnel: http://lazo.tudominio.es
       LAZO_DOMAIN: ${LAZO_DOMAIN:?Falta LAZO_DOMAIN en .env (p. ej. milazo.duckdns.org)}
+    # Con Cloudflare Tunnel pon LAZO_BIND=127.0.0.1 y no abras puertos en el router.
     ports:
-      - "80:80"
-      - "443:443"
+      - "${LAZO_BIND:-0.0.0.0}:80:80"
+      - "${LAZO_BIND:-0.0.0.0}:443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./data/caddy:/data
+    networks: [publica]
+
+  # Copia diaria de pb_data con rotación. Sin red. Restaurar: docs/HOMELAB.md.
+  backup:
+    build: ./backup
+    container_name: lazo-backup
+    restart: unless-stopped
+    network_mode: none
+    environment:
+      TZ: ${TZ:-Europe/Madrid}
+      BACKUP_CRON: ${BACKUP_CRON:-30 3 * * *}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+    volumes:
+      - ./data/pb:/pb_data
+      - ./data/backups:/backups
+
+  # — Opcionales: se activan con COMPOSE_PROFILES en .env —
+
+  # Mantiene tu subdominio de DuckDNS apuntando a la IP de casa (si HEIMDALL ya lo hace, no lo actives).
+  duckdns:
+    profiles: [duckdns]
+    image: alpine:3.22
+    container_name: lazo-duckdns
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      DUCKDNS_SUBDOMAIN: ${DUCKDNS_SUBDOMAIN:-}
+      DUCKDNS_TOKEN: ${DUCKDNS_TOKEN:-}
+    command:
+      - /bin/sh
+      - -c
+      - 'while :; do echo "$$(date "+%F %T") DuckDNS: $$(wget -qO- "https://www.duckdns.org/update?domains=$$DUCKDNS_SUBDOMAIN&token=$$DUCKDNS_TOKEN&ip=")"; sleep 300; done'
+    networks: [salida]
+
+  # Alternativa sin abrir puertos: Cloudflare Tunnel hasta Caddy (http://caddy:80).
+  cloudflared:
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:2025.1.0
+    container_name: lazo-cloudflared
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    depends_on: [caddy]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
     networks: [publica]
 
 networks:

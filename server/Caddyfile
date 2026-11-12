@@ -1,3 +1,12 @@
+{
+	# Solo se fía de cabeceras de IP que lleguen desde redes privadas (Cloudflare Tunnel corre en Docker).
+	# Así PocketBase limita intentos por persona y no por «todo el que entra por el túnel».
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+	}
+}
+
 {$LAZO_DOMAIN} {
 	encode zstd gzip
 	header {
@@ -8,10 +17,19 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
 		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		X-Robots-Tag "noindex, nofollow"
 		-Server
+		-X-Powered-By
 	}
-	# El panel y la API de administración de PocketBase no se publican: entra por la LAN o por HEIMDALL (VPN).
-	@admin path /_ /_/* /api/collections/_superusers /api/collections/_superusers/* /api/settings* /api/logs* /api/backups* /api/crons*
+	# El panel y la API de administración de PocketBase no se publican: entra por túnel SSH, la LAN o HEIMDALL (VPN).
+	# Incluye la gestión de colecciones (/api/collections, /api/collections/{c}, …/truncate, import), que no tiene «/records».
+	@admin path /_ /_/* /api/settings* /api/logs* /api/backups* /api/crons* /api/collections/_* /api/collections/import* /api/collections/meta/*
+	@adminCollections path_regexp ^/api/collections/?$|^/api/collections/[^/]+/?$|^/api/collections/[^/]+/truncate
 	respond @admin 404
-	reverse_proxy pocketbase:8090
+	respond @adminCollections 404
+	reverse_proxy pocketbase:8090 {
+		# Una sola IP, la ya resuelta: PocketBase lee la de más a la derecha (trustedProxy).
+		header_up X-Forwarded-For {client_ip}
+	}
 }
