@@ -110,6 +110,37 @@ describe('plazas y entrada', () => {
     await expect(admin.join(token, {})).rejects.toThrow(/no existe o ha caducado/);
   });
 
+  it('caras del enlace: solo inicial y color de quien está; un enlace falso no dice nada', async () => {
+    const api = fresh('alberto');
+    const info = await api.inviteInfo(DEMO_GENERAL_TOKEN);
+    expect(info.faces).toEqual([
+      { initial: 'A', color: 'cielo' },
+      { initial: 'J', color: 'menta' },
+      { initial: 'S', color: 'fresa' },
+      { initial: 'M', color: 'violeta' },
+      { initial: 'P', color: 'canela' },
+    ]);
+    expect(JSON.stringify(info.faces)).not.toMatch(/alberto|juancarlos|samira|mama|papa/);
+    await expect(api.inviteInfo('Z'.repeat(32))).rejects.toThrow(/no existe o ha caducado/);
+  });
+
+  it('perder el móvil: liberar y volver con un enlace nuevo conserva su lista', async () => {
+    const api = fresh('alberto');
+    const before = await api.listDetail('l-papa');
+    await api.releasePlaza('l-papa');
+    expect((await api.inviteInfo(DEMO_GENERAL_TOKEN)).faces.map((f) => f.initial)).toEqual(['A', 'J', 'S', 'M']);
+    const { url } = await api.createInvite('navidad', 'l-papa');
+    const token = url.split('/unirse/')[1]!;
+    expect((await api.inviteInfo(token)).personal).toEqual({ list: 'l-papa', name: 'Papá', color: 'canela' });
+    await api.join(token, {});
+    const now = await api.listDetail('l-papa');
+    expect(now.items.map((i) => i.id)).toEqual(before.items.map((i) => i.id));
+    expect(now.canSee).toBe(false);
+    // La cuenta vieja ya no está en el grupo
+    api.setViewer('papa');
+    await expect(api.groupDetail('navidad')).rejects.toThrow(/No perteneces/);
+  });
+
   it('D-3: suplantación: enlace general → pendiente sin acceso; plaza ocupada; nombres repetidos', async () => {
     const api = fresh('alberto');
     const info = await api.inviteInfo(DEMO_GENERAL_TOKEN);

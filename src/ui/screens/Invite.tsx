@@ -1,8 +1,8 @@
-import { Baby, Copy, Plus, WhatsappLogo } from '@phosphor-icons/react';
+import { Baby, Copy, DeviceMobileSlash, Plus, WhatsappLogo } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Button } from '../Button';
+import { Button, ButtonGroup } from '../Button';
 import { useApi } from '../ctx';
-import { errorText, Sheet, useLoad, useToast } from '../kit';
+import { Avatar, errorText, Sheet, useLoad, useToast } from '../kit';
 
 /**
  * Invitar (solo admin): un enlace personal por plaza libre (entra con un toque y nadie puede ocupar su sitio)
@@ -17,6 +17,9 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
   const [child, setChild] = useState('');
   const [year, setYear] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmLost, setConfirmLost] = useState<string | null>(null);
+  /** Plaza liberada porque perdió el móvil: se queda en su fila con «Enviar enlace nuevo». */
+  const [lost, setLost] = useState<string | null>(null);
 
   const send = async (listId?: string, name?: string) => {
     setErr('');
@@ -70,7 +73,26 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
     }
   };
 
-  const free = (data?.lists ?? []).filter((l) => l.kind !== 'child' && !l.user).sort((a, b) => Number(b.id === focusList) - Number(a.id === focusList));
+  const free = (data?.lists ?? []).filter((l) => l.kind !== 'child' && !l.user && l.id !== lost).sort((a, b) => Number(b.id === focusList) - Number(a.id === focusList));
+  const me = api.me()?.id;
+  // Quien organiza puede liberar cualquier plaza ocupada salvo la suya y la del dueño del grupo (como el servidor).
+  const inside = (data?.lists ?? []).filter((l) => l.kind === 'person' && (l.id === lost || (l.user && l.user !== me && l.user !== data!.group.owner)));
+  const releaseLost = async (listId: string, name: string) => {
+    setErr('');
+    setBusy(`lost-${listId}`);
+    try {
+      await api.releasePlaza(listId);
+      setConfirmLost(null);
+      setLost(listId);
+      toast(`Sitio de ${name} listo. Envíale un enlace nuevo.`);
+      reload();
+      onChanged();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <Sheet title="Invitar" onClose={onClose}>
       <p data-autofocus tabIndex={-1} style={{ outline: 'none' }}>Envía a cada uno su enlace. Entra con un toque y nadie puede ocupar su sitio.</p>
@@ -118,6 +140,37 @@ export function InviteSheet({ groupId, focusList, onClose, onChanged }: { groupI
         </div>
         <Button variant="secondary" icon={Baby} onClick={addChild}>Crear su lista</Button>
       </div>
+
+      {inside.length > 0 && (
+        <div className="stack" style={{ borderTop: '1px solid var(--linea)', paddingTop: 'var(--s-4)' }}>
+          <h3 className="h-section">Si alguien pierde el móvil</h3>
+          <p className="meta">Libera su sitio y envíale un enlace nuevo. Su lista y todo lo suyo se quedan como estaban.</p>
+          <ul className="rows" aria-label="Ya están dentro">
+            {inside.map((l) => (
+              <li key={l.id} className="plaza-lost">
+                <Avatar user={{ name: l.name, color: data!.members.find((m) => m.id === l.user)?.color ?? '' }} />
+                <b className="grow">{l.name}</b>
+                {l.id === lost && !l.user ? (
+                  <Button variant="primary" size="sm" icon={WhatsappLogo} loading={busy === l.id} onClick={() => send(l.id, l.name)}>
+                    Enviar enlace nuevo
+                  </Button>
+                ) : confirmLost === l.id ? (
+                  <div className="stack plaza-lost-confirm">
+                    <p style={{ fontWeight: 700 }}>¿{l.name} ha perdido el móvil?</p>
+                    <p>Se cerrará su sesión en el móvil perdido. Conserva su lista y todo lo suyo.</p>
+                    <ButtonGroup align="stretch">
+                      <Button variant="danger" loading={busy === `lost-${l.id}`} onClick={() => releaseLost(l.id, l.name)}>Sí, liberar su sitio</Button>
+                      <Button variant="secondary" onClick={() => setConfirmLost(null)}>No</Button>
+                    </ButtonGroup>
+                  </div>
+                ) : (
+                  <Button variant="ghost" size="sm" icon={DeviceMobileSlash} onClick={() => setConfirmLost(l.id)}>Ha perdido el móvil</Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {err && <p className="notice notice-error" role="alert">{err}</p>}
     </Sheet>
   );

@@ -19,3 +19,6 @@ export function parsePlazas(text: string | string[], creatorName = ''): string[]
 
 /** Código de 4 cifras para aprobar una entrada. */
 export const joinCode = () => String(crypto.getRandomValues(new Uint16Array(1))[0]! % 10000).padStart(4, '0');
+
+/** Inicial de un nombre, sin «Tía», «Abuelo»…: lo único que se enseña de quien ya está en el grupo. */
+export const initial = (name: string) => [...name.replace(/^(abuela|abuelo|tía|tío)\s+/i, '').trim()][0]?.toUpperCase() ?? '·';

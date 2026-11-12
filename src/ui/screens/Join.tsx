@@ -74,6 +74,13 @@ function Head({ info }: { info: InviteInfo }) {
       <p className="lead">
         {info.group.date && `${DATE.format(new Date(info.group.date + 'T12:00:00'))} · `}lo organiza {info.organizer}
       </p>
+      {info.faces.length > 0 && (
+        <span className="faces" role="img" aria-label={info.faces.length === 1 ? 'Ya hay 1 persona dentro' : `Ya hay ${info.faces.length} personas dentro`}>
+          {info.faces.map((f, i) => (
+            <Avatar key={i} user={{ name: f.initial, color: f.color }} />
+          ))}
+        </span>
+      )}
     </div>
   );
 }
@@ -138,7 +145,7 @@ function General({ token, info, onPending }: { token: string; info: InviteInfo; 
           {info.free.map((f) => (
             <label key={f.list} className="choice">
               <input type="radio" name="plaza" value={f.list} checked={choice === f.list} onChange={() => setChoice(f.list)} />
-              <Avatar user={{ name: f.name, color: 'almendra' }} />
+              <Avatar user={{ name: f.name, color: f.color ?? '' }} />
               {f.name}
             </label>
           ))}

@@ -662,3 +662,7 @@ table.map-table .select { min-width: 9rem; }
   .catalog-text h2 a { text-decoration: none; }
   .catalog-foot { font-size: 9pt; }
 }
+/* v10-plaza */
+.join-hero .faces { flex-wrap: wrap; justify-content: center; row-gap: var(--s-2); }
+.rows > li.plaza-lost { flex-wrap: wrap; }
+.plaza-lost-confirm { flex: 1 1 100%; gap: var(--s-2); }
