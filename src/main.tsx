@@ -19,7 +19,8 @@ const read = (k: string) => {
 };
 
 // Web: la PWA la sirve PocketBase (mismo origen). Pages: la demo. Android: el servidor sale del enlace de invitación.
-const server = import.meta.env.VITE_DEMO ? 'demo' : import.meta.env.VITE_SERVER_URL || (native ? read(SERVER_KEY) : location.origin);
+// ?bienvenida=1 solo existe en la demo: las E2E ven la pantalla del primer arranque del APK.
+const server = import.meta.env.VITE_DEMO ? (new URLSearchParams(location.search).has('bienvenida') ? null : 'demo') :import.meta.env.VITE_SERVER_URL || (native ? read(SERVER_KEY) : location.origin);
 const root = createRoot(document.getElementById('root')!);
 const render = (node: ReactNode) => root.render(<StrictMode>{node}</StrictMode>);
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- El papel de src/styles.css: lo que se ve tras la barra de estado si el WebView va con relleno nativo (Chromium < 140). -->
+    <color name="lazo_papel">#F6EFE2</color>
+</resources>
