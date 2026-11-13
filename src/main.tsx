@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { DemoApi } from './api/demo';
 import { PocketBaseApi } from './api/pocketbase';
-import { Connect } from './ui/screens/Connect';
+import { Connect, linkAction } from './ui/screens/Connect';
 import './styles.css';
 
 const SERVER_KEY = 'lazo:server';
@@ -70,20 +70,19 @@ if (native) {
   });
   // App Links (APK compilado con LAZO_HOST): un enlace de invitación abre la app en «Unirse».
   const invite = (url?: string) => {
-    if (!url) return;
-    const u = new URL(url);
-    if (!/^#\/unirse\/[A-Za-z0-9]{20,64}$/.test(u.hash)) return;
-    if (!read(SERVER_KEY)) {
-      // Primera vez: el servidor es el del enlace, como si se hubiera pegado en «Tengo un enlace».
+    const a = url ? linkAction(url, read(SERVER_KEY), import.meta.env.VITE_LAZO_HOST) : null;
+    if (!a) return;
+    if (a.server) {
+      // Primera vez y del dominio con el que se compiló el APK (V-33).
       try {
-        localStorage.setItem(SERVER_KEY, u.origin);
+        localStorage.setItem(SERVER_KEY, a.server);
       } catch {
         return;
       }
-      location.hash = u.hash;
+      location.hash = a.hash;
       return location.reload();
     }
-    if (u.origin === read(SERVER_KEY)) location.hash = u.hash;
+    location.hash = a.hash;
   };
   void CapApp.addListener('appUrlOpen', (e) => invite(e.url));
   CapApp.getLaunchUrl().then((r) => invite(r?.url), () => {});

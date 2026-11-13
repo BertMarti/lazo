@@ -24,12 +24,14 @@ if [ ! -f "$KS" ]; then
   echo "Clave nueva creada en $KS (cópiala a un sitio seguro)."
 fi
 
-npm run build
+# V-33: la app solo acepta servidor por enlace si es el dominio con el que se compila (ninguno sin LAZO_HOST).
+VITE_LAZO_HOST="${LAZO_HOST:-}" npm run build
 npx cap sync android
 chmod +x android/gradlew
 (cd android && ./gradlew assembleRelease --no-daemon --console=plain -q)
 IN=android/app/build/outputs/apk/release/app-release-unsigned.apk
-OUT="dist-apk/lazo-$VER.apk"
+# V-36: con LAZO_HOST el nombre lo dice (lazo-<ver>-<host>.apk), para no publicarlo por error.
+OUT="dist-apk/lazo-$VER${LAZO_HOST:+-$LAZO_HOST}.apk"
 mkdir -p dist-apk
 "$BT/zipalign" -f -p 4 "$IN" dist-apk/alineado.apk
 "$BT/apksigner" sign --ks "$KS" --ks-key-alias lazo --ks-pass "file:$PASS" --out "$OUT" dist-apk/alineado.apk
@@ -39,4 +41,8 @@ grep -q '"webContentsDebuggingEnabled": *false' android/app/src/main/assets/capa
 # Condición de publicación de la auditoría final: el APK no puede ser depurable.
 [ "$("$BT/aapt2" dump badging "$OUT" | grep -c debuggable || true)" = "0" ] || { echo "¡APK depurable!" >&2; exit 1; }
 sha256sum "$OUT"
+# V-36: el APK público no reclama ningún dominio.
+AV="$("$BT/aapt2" dump xmltree --file AndroidManifest.xml "$OUT" | grep -c autoVerify || true)"
+if [ -z "${LAZO_HOST:-}" ]; then [ "$AV" = "0" ] || { echo "¡APK sin LAZO_HOST que reclama un dominio!" >&2; exit 1; }
+else echo "AVISO: este APK lleva tu dominio ($LAZO_HOST) y reclama sus enlaces: no lo publiques." >&2; fi
 echo "APK firmado: $OUT"

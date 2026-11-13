@@ -45,6 +45,8 @@ Contra un PocketBase real (en CI; `PB_BIN=… node --test server/test/*.test.mjs
 - `server/test/flujo.test.mjs`: el flujo completo (grupo → invitación → plaza → reserva → hucha → ajuste de cuentas), comprobando en cada paso que la dueña de la lista no ve nada de lo suyo.
 - `server/test/familia.test.mjs`, `plaza.test.mjs`, `alta.test.mjs`: entrada por enlace personal o general, plazas, códigos de dispositivo y `lazo-alta`.
 - `server/test/share.test.mjs`: el enlace de solo lectura (sin estado, rotación, revocación, límite).
+- `server/test/grupo.test.mjs`: salir y eliminar el grupo; invitaciones, enlaces y asignación de quien sale o es expulsado (V-32, V-34, V-35) y tiempo real al salir y al eliminar (V-37).
+- `test/ui/applink.test.ts`: qué enlaces acepta la app de Android (V-33).
 - `server/test/copia.test.mjs`: `restore` (solo regalos normales, todo o nada, solo en un grupo recién creado, límite de peticiones V-29).
 - `server/test/backup.test.mjs` y `caddyfile.test.mjs`: copias cifradas del servidor y cabeceras y lista blanca de Caddy.
 
@@ -56,6 +58,9 @@ Contra un PocketBase real (en CI; `PB_BIN=… node --test server/test/*.test.mjs
 | Reclamar una plaza ocupada | Comprobación dentro de la transacción e índice único (grupo, cuenta). Una cuenta, una plaza |
 | El admin «reenlaza» una plaza ajena | No existe esa operación. Solo puede **liberarla** (expulsa a la cuenta), nunca la suya ni la del dueño |
 | Reservas hechas antes de que X entre | Al reclamar, la regla se las oculta desde su primera petición (antes no era miembro: no hay caché que arrastrar) |
+| Salir del grupo (`group-leave`) | Cualquiera menos el dueño. Suelta solo lo que era promesa suya hacia otros (reservas sin comprar y aportaciones sin pagar); lo comprado y lo pagado se quedan. **Nunca lee ni toca su propia lista** y la respuesta es siempre la misma. Su plaza queda libre y no puede volver en otra (V-5). Fuera no ve nada del grupo, tampoco su asignación del amigo invisible (V-35) |
+| Eliminar el grupo | Solo el dueño y solo por `POST /api/lazo/group-delete` (la API REST y los lotes no borran grupos). Todo en una transacción, misma respuesta si el grupo no existe o no es suyo; nunca mira qué hay dentro |
+| Llaves que sobreviven a quien las repartió | Una invitación vale mientras quien la creó siga organizando el grupo: si sale, lo expulsan, deja de ser admin o borra su cuenta, responde como un token falso, y salir o ser expulsado las revoca (V-32). Con él se van también el enlace de solo lectura de las listas de niños que llevaba y su sitio en ellas (V-34) |
 
 **Riesgo residual declarado (R1):** quien reparte las llaves puede quedarse una. Un admin podría generarse el enlace de una plaza libre o aceptar una solicitud suya desde otro navegador. Sin verificación de identidad externa no se puede cerrar. Se mitiga con transparencia: cada plaza muestra cómo y cuándo se ocupó y quién la aceptó. El admin es de confianza para **quién entra**, nunca para **los datos**.
 
@@ -83,6 +88,7 @@ Lo abren **dos llaves**: un admin propone y otra persona confirma. No hay apertu
 | Claves de IA | Solo en el dispositivo |
 | Secretos | gitleaks en el pre-commit (`npm install` lo activa) y en CI. `.env` fuera de git y `server/data` fuera de git y de Docker |
 | Navegador y Android | CSP, `frame-ancestors 'none'`, nada de HTML inyectado, `allowBackup=false` y WebView no depurable |
+| App Links y enlaces que llegan a la app | El APK de serie no reclama ningún dominio ni acepta un servidor por intent: la primera vez se pega el enlace en la bienvenida, que exige `https` y el formato de invitación. Un APK compilado con `LAZO_HOST` solo acepta enlaces `https://<LAZO_HOST>/#/unirse/<token>`; con servidor guardado, solo uno del mismo origen y solo cambia la ruta (V-33). `assetlinks.json` solo lleva la huella pública del certificado |
 | APK publicado | Solo el de **release** firmado. El de `scripts/build-apk.sh` es de depuración (`debuggable`, clave de la máquina) y solo sirve para probar. Ver «Firmar el APK» |
 
 ## Firmar el APK
@@ -94,7 +100,9 @@ Se publica solo el APK que sale de `scripts/firmar-apk.sh` (en WSL: `bash script
 3. `zipalign` y `apksigner sign`; luego `apksigner verify --print-certs` imprime el DN y el SHA-256 del certificado, que deben coincidir con los de la release anterior.
 4. Falla si `capacitor.config.json` no lleva `webContentsDebuggingEnabled: false`. Imprime el `sha256sum` del APK para las notas de la release.
 
-Antes de subirlo: `aapt2 dump badging dist-apk/lazo-X.Y.Z.apk | grep -c debuggable` debe dar 0.
+Con `LAZO_HOST` el APK reclama tu dominio y se llama `lazo-X.Y.Z-<host>.apk`: es para tu familia, **no lo publiques**; el script lo avisa al terminar. Sin `LAZO_HOST`, el script falla si el APK reclama algún dominio (V-36).
+
+Antes de subirlo: `aapt2 dump badging dist-apk/lazo-X.Y.Z.apk | grep -c debuggable` y `aapt2 dump xmltree --file AndroidManifest.xml dist-apk/lazo-X.Y.Z.apk | grep -c autoVerify` deben dar 0.
 
 Auditoría de seguridad de Fable y su estado: `docs/security/AUDIT.md`.
 

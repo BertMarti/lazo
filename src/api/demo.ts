@@ -692,7 +692,8 @@ export class DemoApi implements Api {
   }
   private invite(token: string) {
     const inv = this.db.invites.find((i) => i.token === token && i.uses < i.maxUses);
-    if (!inv) throw new ApiError(BAD_INVITE);
+    // V-32: como en el servidor, la invitación caduca con quien la creó si deja de organizar.
+    if (!inv || !this.db.memberships.some((m) => m.group === inv.group && m.user === inv.createdBy && m.role === 'admin')) throw new ApiError(BAD_INVITE);
     return inv;
   }
   private user(id: Id): User {

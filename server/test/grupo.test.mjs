@@ -35,7 +35,39 @@ const ok = async (...a) => {
 };
 const rows = async (col, filter, t = su) => (await ok('GET', `/api/collections/${col}/records?perPage=500${filter ? `&filter=${q(filter)}` : ''}`, null, t)).items;
 const total = async (col, t, filter) => (await ok('GET', `/api/collections/${col}/records?perPage=500${filter ? `&filter=${q(filter)}` : ''}`, null, t)).totalItems;
-const gift = (who, list, title) => ok('POST', '/api/collections/items/records', { list, title, priceCents: 1000, priority: 2, quantity: 1, createdBy: ids[who] }, tok[who]);
+const gift = (who, list, title, extra = {}) => ok('POST', '/api/collections/items/records', { list, title, priceCents: 1000, priority: 2, quantity: 1, createdBy: ids[who], ...extra }, tok[who]);
+
+/** Tiempo real (como en rules.test.mjs): `stop(ms)` espera, cierra y devuelve los mensajes [{ action, record }]. */
+async function listen(token, subscriptions) {
+  const ac = new AbortController();
+  const res = await fetch(BASE + '/api/realtime', { signal: ac.signal });
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (!/"clientId":"([^"]+)"/.test(buf)) buf += dec.decode((await reader.read()).value);
+  const clientId = /"clientId":"([^"]+)"/.exec(buf)[1];
+  assert.equal((await call('POST', '/api/realtime', { clientId, subscriptions }, token)).status, 204);
+  let events = '';
+  const reading = (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        events += dec.decode(value);
+      }
+    } catch {
+      /* abortado */
+    }
+  })();
+  return async (ms = 800) => {
+    await new Promise((r) => setTimeout(r, ms));
+    ac.abort();
+    await reading;
+    return events.split('\n').filter((l) => l.startsWith('data:') && !l.includes('clientId')).map((l) => JSON.parse(l.slice(5)));
+  };
+}
+const SUBS = ['claims/*', 'contributions/*', 'budgets/*', 'items/*', 'lists/*', 'groups/*'];
+const FAKE = 'A'.repeat(32);
 
 /** Todo lo que cuelga de un grupo (como superusuario): colección → ids. */
 async function everything(g) {
@@ -217,5 +249,114 @@ describe('grupo: salir y eliminar', { skip: !BIN && 'Falta PB_BIN (binario de Po
     assert.equal(await total('claims', tok.Ana, `item.list.group = "${ids.other}"`), 1, 'Ana sigue viendo su reserva en el otro grupo');
     // Las cuentas siguen existiendo (pueden estar en otros grupos)
     assert.equal((await call('GET', `/api/collections/users/records/${ids.Carlos}`, null, su)).status, 200);
+  });
+
+  // v1.1.2, V-32 a V-35 y V-37: un grupo nuevo (el de antes ya no existe).
+  test('salir o ser expulsado: caducan sus invitaciones, enlaces y asignación; nada delata la lista propia', async () => {
+    await ok('PATCH', '/api/settings', { rateLimits: { enabled: false } }, su); // muchas entradas seguidas
+    const g = await ok('POST', '/api/collections/groups/records', { name: 'Reyes', occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', allowNewNames: false, plazas: ['Bea', 'Carlos', 'Dani', 'Eva', 'Fer'] }, tok.Ana);
+    const G = g.id;
+    const L = {};
+    for (const l of await rows('lists', `group = "${G}"`)) L[l.name] = l.id;
+    for (const who of ['Bea', 'Carlos', 'Eva']) await ok('POST', '/api/lazo/join', { token: (await ok('POST', '/api/lazo/invite', { group: G, list: L[who] }, tok.Ana)).token }, tok[who]);
+    await ok('PATCH', `/api/collections/groups/records/${G}`, { 'admins+': ids.Carlos }, su);
+    const fakeInfo = await call('POST', '/api/lazo/invite-info', { token: FAKE });
+    const fakeJoin = await call('POST', '/api/lazo/join', { token: FAKE });
+    const shared = (t) => call('GET', `/api/lazo/shared/${t}`);
+    const fakeShare = await shared(FAKE);
+    /** Una invitación muerta responde exactamente como un token inventado. */
+    const dead = async (token, msg) => {
+      for (const [r, f] of [
+        [await call('POST', '/api/lazo/invite-info', { token }), fakeInfo],
+        [await call('POST', '/api/lazo/join', { token }), fakeJoin],
+      ]) {
+        assert.equal(r.status, 400, msg);
+        assert.equal(r.text, f.text, msg);
+      }
+    };
+
+    // V-37.4: el dueño no se cambia y el grupo no se borra por la API REST, ni en lote
+    assert.ok((await call('PATCH', `/api/collections/groups/records/${G}`, { owner: ids.Carlos }, tok.Carlos)).status >= 400, 'PATCH owner por un admin');
+    assert.ok((await call('POST', '/api/batch', { requests: [{ method: 'DELETE', url: `/api/collections/groups/records/${G}` }] }, tok.Ana)).status >= 400, 'lote con DELETE');
+    assert.equal((await ok('GET', `/api/collections/groups/records/${G}`, null, su)).owner, ids.Ana);
+
+    const tren = await gift('Carlos', L.Carlos, 'Tren');
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: tren.id, kind: 'self' }, tok.Bea);
+    const L_Ana = (await rows('lists', `group = "${G}" && user = "${ids.Ana}"`))[0].id;
+    const pluma = await gift('Ana', L_Ana, 'Pluma');
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: pluma.id, kind: 'self' }, tok.Eva);
+    const sorpresa = await gift('Eva', L_Ana, 'Sorpresa', { secret: true });
+    const budget = await ok('POST', '/api/collections/budgets/records', { list: L_Ana, amountCents: 2000 }, tok.Eva);
+    const balon = await gift('Eva', L.Eva, 'Balón');
+    await ok('POST', '/api/lazo/draw', { group: G, participants: [ids.Ana, ids.Bea, ids.Carlos] }, tok.Ana);
+
+    // Carlos (admin) deja invitaciones y lleva la lista de Leo, con enlace de solo lectura
+    const pDani = (await ok('POST', '/api/lazo/invite', { group: G, list: L.Dani }, tok.Carlos)).token;
+    const gen = (await ok('POST', '/api/lazo/invite', { group: G }, tok.Carlos)).token;
+    const leo = await ok('POST', '/api/collections/lists/records', { group: G, name: 'Leo', kind: 'child', managers: [ids.Carlos] }, su);
+    const leoShare = (await ok('POST', '/api/lazo/share', { list: leo.id }, tok.Carlos)).token;
+    assert.equal((await call('POST', '/api/lazo/invite-info', { token: pDani })).status, 200);
+    assert.equal((await shared(leoShare)).status, 200);
+
+    // V-37.1: Bea sale. Carlos no recibe nada de las reservas de su lista; Bea, solo el borrado de su reserva
+    const bea = (await rows('claims', `item = "${tren.id}"`))[0].id;
+    const earCarlos = await listen(tok.Carlos, SUBS);
+    const earBea = await listen(tok.Bea, SUBS);
+    await ok('POST', '/api/lazo/group-leave', { group: G }, tok.Bea);
+    await ok('POST', '/api/lazo/gift', { action: 'reserve', item: balon.id, kind: 'self' }, tok.Ana); // ya fuera: no le llega
+    const heardCarlos = await earCarlos();
+    const heardBea = await earBea();
+    assert.ok(!heardCarlos.some((m) => /claims|contributions|budgets/.test(m.record.collectionName) && m.record.item !== balon.id), JSON.stringify(heardCarlos));
+    assert.ok(!heardCarlos.some((m) => m.record.id === bea), 'Carlos no se entera de que se soltó su reserva');
+    assert.deepEqual(heardBea.map((m) => [m.action, m.record.id]), [['delete', bea]], JSON.stringify(heardBea));
+
+    // V-35: fuera no ve nada, tampoco el sorteo ni su asignación
+    for (const col of ['groups', 'lists', 'items', 'claims', 'contributions', 'budgets', 'payments', 'draws', 'assignments']) assert.equal(await total(col, tok.Bea), 0, `fuera: ${col}`);
+    assert.equal(await total('assignments', tok.Carlos), 1, 'dentro sí ve la suya');
+
+    // V-37.3 (V-5 tras salir): la misma cuenta no entra en otra plaza, ni por enlace personal ni con solicitud aceptada
+    const pFer = (await ok('POST', '/api/lazo/invite', { group: G, list: L.Fer }, tok.Ana)).token;
+    assert.equal((await call('POST', '/api/lazo/join', { token: pFer }, tok.Bea)).status, 400, 'enlace personal');
+    const req = await ok('POST', '/api/lazo/join', { token: (await ok('POST', '/api/lazo/invite', { group: G }, tok.Ana)).token, list: L.Fer }, tok.Bea);
+    assert.equal(req.meta.pending, true);
+    assert.equal((await call('POST', '/api/lazo/join-decide', { request: req.meta.request, accept: true }, tok.Ana)).status, 400, 'solicitud aceptada');
+
+    // V-32 y V-34: Carlos sale. Sus invitaciones mueren como un token falso y el enlace de Leo, como uno inventado
+    await ok('POST', '/api/lazo/group-leave', { group: G }, tok.Carlos);
+    await dead(pDani, 'personal de quien salió');
+    await dead(gen, 'general de quien salió');
+    assert.equal((await rows('lists', `id = "${L.Dani}"`))[0].user, '', 'nadie ha entrado en la plaza de Dani');
+    const r = await shared(leoShare);
+    assert.equal(r.status, 404);
+    assert.equal(r.text, fakeShare.text);
+    assert.deepEqual((await rows('lists', `id = "${leo.id}"`))[0].managers, [ids.Ana]);
+    assert.equal(await total('assignments', tok.Carlos), 0, 'V-35: fuera, sin asignación');
+    assert.equal((await rows('assignments', `giver = "${ids.Carlos}"`)).length, 1, 'la fila del sorteo se conserva');
+
+    // V-32 sin salir: quien deja de organizar invalida sus invitaciones (comprobación en findInvite y join)
+    await ok('PATCH', `/api/collections/groups/records/${G}`, { 'admins+': ids.Eva }, su);
+    const pDani2 = (await ok('POST', '/api/lazo/invite', { group: G, list: L.Dani }, tok.Eva)).token;
+    await ok('PATCH', `/api/collections/groups/records/${G}`, { 'admins-': ids.Eva }, su);
+    await dead(pDani2, 'de quien ya no organiza');
+
+    // Y tras plaza-release: Eva (admin otra vez) deja invitación y la lista de Mía; Ana la expulsa
+    await ok('PATCH', `/api/collections/groups/records/${G}`, { 'admins+': ids.Eva }, su);
+    const pDani3 = (await ok('POST', '/api/lazo/invite', { group: G, list: L.Dani }, tok.Eva)).token;
+    const mia = await ok('POST', '/api/collections/lists/records', { group: G, name: 'Mía', kind: 'child', managers: [ids.Eva] }, su);
+    const miaShare = (await ok('POST', '/api/lazo/share', { list: mia.id }, tok.Eva)).token;
+    await ok('POST', '/api/lazo/plaza-release', { list: L.Eva }, tok.Ana);
+    await dead(pDani3, 'de quien fue expulsada');
+    assert.equal((await rows('invites', `createdBy = "${ids.Eva}" && revoked = false`)).length, 0, 'revocadas, no solo inválidas');
+    assert.equal((await shared(miaShare)).text, fakeShare.text);
+    assert.deepEqual((await rows('lists', `id = "${mia.id}"`))[0].managers, [ids.Ana]);
+
+    // V-37.2: al eliminar, Ana no recibe el borrado de la sorpresa, de las reservas ni del presupuesto de su lista
+    const hidden = new Set([sorpresa.id, budget.id, ...(await rows('claims', `item = "${pluma.id}"`)).map((c) => c.id)]);
+    assert.equal(hidden.size, 3);
+    const earAna = await listen(tok.Ana, SUBS);
+    await ok('POST', '/api/lazo/group-delete', { group: G }, tok.Ana);
+    const heardAna = await earAna();
+    assert.ok(heardAna.length > 0, 'algo recibe (lo que ya veía)');
+    assert.ok(!heardAna.some((m) => hidden.has(m.record.id) || m.record.collectionName === 'budgets'), JSON.stringify(heardAna));
   });
 });

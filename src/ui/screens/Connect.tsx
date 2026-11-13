@@ -21,6 +21,26 @@ export function parseInvite(text: string): { server: string; token: string } | n
   }
 }
 
+/**
+ * V-33: qué hace la app de Android con una URL que le llega (App Link o intent de otra app). Con servidor guardado,
+ * solo un enlace de ese origen, y solo cambia la ruta. Sin él, solo acepta el dominio con el que se compiló el APK
+ * (`host`, de LAZO_HOST); el APK de serie no acepta ninguno y la persona pega su enlace en la bienvenida.
+ */
+export function linkAction(url: string, saved: string | null, host?: string): { hash: string; server?: string } | null {
+  if (!/^https:\/\/[^\s<>"']+$/i.test(url)) return null; // la URL entera, no un enlace escondido dentro
+  const inv = parseInvite(url);
+  if (!inv) return null;
+  const hash = `/unirse/${inv.token}`;
+  if (saved) return inv.server === saved ? { hash } : null;
+  let built = '';
+  try {
+    built = host ? new URL(`https://${host}`).origin : '';
+  } catch {
+    /* host mal escrito: como si no hubiera */
+  }
+  return built && inv.server === built ? { hash, server: inv.server } : null;
+}
+
 /** Antes de canjear el código: ¿hay un Lazo (PocketBase) en esa dirección? */
 export async function checkLazo(origin: string, ms = 8000): Promise<void> {
   let r: Response;

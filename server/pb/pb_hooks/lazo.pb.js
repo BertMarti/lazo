@@ -251,6 +251,7 @@ routerAdd('POST', '/api/lazo/join', (e) => {
     const inv = tx.findRecordById('invites', invite.id);
     if (inv.getBool('revoked') || inv.getInt('expiresAt') < Date.now() || inv.getInt('uses') >= inv.getInt('maxUses')) throw new BadRequestError(L.BAD_INVITE);
     const group = tx.findRecordById('groups', inv.getString('group'));
+    if (!L.isAdmin(group, inv.getString('createdBy'))) throw new BadRequestError(L.BAD_INVITE); // V-32
     if (user && group.getStringSlice('members').includes(user.id)) throw new BadRequestError('Ya estás en este grupo.');
     const personalId = inv.getString('list');
     if (personalId) {
@@ -358,6 +359,7 @@ routerAdd(
       }
       // Su enlace de solo lectura no pasa a quien ocupe la plaza después.
       for (const s of tx.findRecordsByFilter('shares', 'list = {:l}', '', 0, 0, { l: plaza.id })) tx.delete(s);
+      L.soltar(tx, group, who); // V-32 y V-34
     });
     return e.json(200, { ok: true });
   },
@@ -396,6 +398,7 @@ routerAdd(
   'POST',
   '/api/lazo/group-leave',
   (e) => {
+    const L = require(`${__hooks}/lib/lazo.cjs`);
     const me = e.auth.id;
     $app.runInTransaction((tx) => {
       let group;
@@ -430,12 +433,8 @@ routerAdd(
       for (const c of tx.findRecordsByFilter('contributions', 'item.list.group = {:g} && user = {:u} && paid = false', '', 0, 0, { g, u: me })) {
         if (!tx.findRecordsByFilter('claims', 'item = {:i} && status = "bought"', '', 1, 0, { i: c.getString('item') }).length) tx.delete(c);
       }
-      // Las listas de niños que llevaba: sin él; si se quedan sin nadie, las lleva quien creó el grupo.
-      for (const l of tx.findRecordsByFilter('lists', 'group = {:g} && kind = "child" && managers.id ?= {:u}', '', 0, 0, { g, u: me })) {
-        const rest = l.getStringSlice('managers').filter((m) => m !== me);
-        l.set('managers', rest.length ? rest : [group.getString('owner')]);
-        tx.save(l);
-      }
+      // Sus invitaciones (V-32) y las listas de niños que llevaba, con su enlace de solo lectura (V-34).
+      L.soltar(tx, group, me);
     });
     return e.json(200, { ok: true });
   },

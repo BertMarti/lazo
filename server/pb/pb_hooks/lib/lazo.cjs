@@ -14,6 +14,14 @@ function findInvite(app, token) {
     throw new BadRequestError(BAD_INVITE);
   }
   if (inv.getBool('revoked') || inv.getInt('expiresAt') < Date.now() || inv.getInt('uses') >= inv.getInt('maxUses')) throw new BadRequestError(BAD_INVITE);
+  // V-32: la invitación caduca con quien la creó (sale, lo expulsan, deja de organizar o borra su cuenta).
+  let group;
+  try {
+    group = app.findRecordById('groups', inv.getString('group'));
+  } catch {
+    throw new BadRequestError(BAD_INVITE);
+  }
+  if (!isAdmin(group, inv.getString('createdBy'))) throw new BadRequestError(BAD_INVITE);
   return inv;
 }
 
@@ -73,7 +81,25 @@ function reclamar(tx, plaza, userId, via, by) {
 }
 
 function isAdmin(group, userId) {
-  return group.getStringSlice('admins').includes(userId);
+  return !!userId && group.getStringSlice('admins').includes(userId);
+}
+
+/**
+ * Lo que deja quien sale o es expulsado (group-leave y plaza-release): sus invitaciones (V-32) y las listas de
+ * niños que llevaba, sin él y sin su enlace de solo lectura (V-34). Si una se queda sin nadie, la lleva el dueño.
+ */
+function soltar(tx, group, who) {
+  const g = group.id;
+  for (const inv of tx.findRecordsByFilter('invites', 'group = {:g} && createdBy = {:u} && revoked = false', '', 0, 0, { g, u: who })) {
+    inv.set('revoked', true);
+    tx.save(inv);
+  }
+  for (const l of tx.findRecordsByFilter('lists', 'group = {:g} && kind = "child" && managers.id ?= {:u}', '', 0, 0, { g, u: who })) {
+    const rest = l.getStringSlice('managers').filter((m) => m !== who);
+    l.set('managers', rest.length ? rest : [group.getString('owner')]);
+    tx.save(l);
+    for (const s of tx.findRecordsByFilter('shares', 'list = {:l}', '', 0, 0, { l: l.id })) tx.delete(s);
+  }
 }
 
 /** Quien lleva la caja de la plaza: el tesorero, o el suplente si la plaza es la del tesorero. */
@@ -106,4 +132,4 @@ function ownList(app, listId, me) {
   return l;
 }
 
-module.exports = { BAD_INVITE, BAD_SHARE, COLORS, findInvite, newUser, reclamar, isAdmin, keeperOf, ownList };
+module.exports = { BAD_INVITE, BAD_SHARE, COLORS, findInvite, newUser, reclamar, isAdmin, soltar, keeperOf, ownList };

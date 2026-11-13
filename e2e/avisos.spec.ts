@@ -24,6 +24,8 @@ test('la campana abre los avisos y se marcan como leídos', async ({ page }) => 
   await read.click();
   await expect(page.getByRole('list', { name: 'Avisos ya vistos' }).getByRole('link', { name: /Te toca poner/ })).toBeVisible();
   await sheet.getByRole('button', { name: 'Cerrar' }).click();
+  // Cerrar la hoja hace history.back(): recargar antes de que termine aborta la navegación.
+  await page.waitForFunction(() => !history.state?.sheet);
   await page.reload();
   await page.getByRole('button', { name: 'Avisos', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Avisos' })).toContainText('Estás al día');

@@ -9,7 +9,8 @@ JAVA_HOME="$(ls -d "$HOME"/.local/jdk/jdk-21* 2>/dev/null | head -1)"
 [ -n "$JAVA_HOME" ] || { echo "Falta el JDK 21 en ~/.local/jdk" >&2; exit 1; }
 export JAVA_HOME ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME" PATH="$HOME/.local/node/bin:$JAVA_HOME/bin:$PATH"
-npm run build
+# V-33: la app solo acepta servidor por enlace si es el dominio con el que se compila (ninguno sin LAZO_HOST).
+VITE_LAZO_HOST="${LAZO_HOST:-}" npm run build
 [ -d android ] || npx cap add android
 # Android: sin copias de seguridad automáticas (la sesión no debe viajar a la nube del móvil).
 sed -i 's/android:allowBackup="true"/android:allowBackup="false"/' android/app/src/main/AndroidManifest.xml
