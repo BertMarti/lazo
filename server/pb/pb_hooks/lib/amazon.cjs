@@ -4,7 +4,7 @@
 const MSG = {
   NO_ES_LISTA: [422, 'Ese enlace no es una lista de deseos de Amazon.'],
   LISTA_PRIVADA: [422, 'Esa lista no es pública. En Amazon, toca «Invitar» → «Solo ver» → «Copiar enlace» y pega ese enlace.'],
-  VACIA: [422, 'No encuentro productos sin comprar en esa lista.'],
+  VACIA: [422, 'No encuentro productos en esa lista.'],
   AMAZON_BLOQUEA: [503, 'Amazon no deja leer la lista ahora mismo. Prueba dentro de un rato.'],
   OCUPADO: [429, 'Ya se está leyendo otra lista. Prueba en un minuto.'],
   LIMITE: [429, 'Ya has leído tu lista varias veces en la última hora. Prueba más tarde.'],
@@ -57,12 +57,12 @@ function call(path, body, timeout) {
  * por IP, es solo la red de seguridad). ponytail: en memoria; se reinicia con PocketBase.
  */
 const PER_HOUR = 5;
-function allow(app, userId) {
-  const key = `amz:${userId}`;
+function allow(app, userId, kind = 'amz', max = PER_HOUR) {
+  const key = `${kind}:${userId}`;
   const now = Date.now();
   // Se guarda como texto: un array de JS no vuelve como array a otro manejador.
   const recent = JSON.parse(app.store().get(key) || '[]').filter((t) => now - t < 3_600_000);
-  if (recent.length >= PER_HOUR) return false;
+  if (recent.length >= max) return false;
   recent.push(now);
   app.store().set(key, JSON.stringify(recent));
   return true;

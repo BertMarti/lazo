@@ -1744,3 +1744,201 @@ Condiciones de publicación:
 - **Pruebas:** `server/test/*.test.mjs` 68/68 contra PocketBase 0.40.6; `npm run check` en verde (233 pruebas de vitest, 4 saltadas); Playwright completo con `PB_BIN` 163 en verde y 69 saltadas; `scripts/build-apk.sh` compila el APK de depuración.
 
 **Estado:** V-32 resuelto · V-33 resuelto · V-34 resuelto · V-35 resuelto · V-36 resuelto (sin firmar un APK real) · V-37 resuelto (cuelgue de esbuild no reproducido) · V-38 resuelto.
+
+---
+
+## Auditoría v1.2.0 (Fable 5.2)
+
+Fecha: 2026-11-13 · Sobre `main` en `5d8080f` (fusión de `v120-amazon`, un solo commit: `bfb1c1b`). Diff revisado: `86e4c35..HEAD`, 32 archivos.
+
+**Alcance.** La lectura automática de listas de deseos de Amazon desde el servidor (camino a): `server/unfurl/{wishlist,fetch,index,guard}.mjs`, `src/core/amazonServidor.ts`, `server/pb/pb_hooks/amazon.pb.js`, `lib/amazon.cjs`, la migración `1762920000_amazon.js`, `AddGift.tsx`, `AmazonLista.tsx`, `demo.ts`, `pocketbase.ts`, `docker-compose.yml`, el `Dockerfile` de `unfurl`, las fixtures nuevas y los secretos.
+
+**Decisión de quien es dueño del proyecto, que esta auditoría no discute.** La función existe, la enciende quien aloja con `AMAZON_IMPORT=on`, va apagada en el repositorio y él asume el riesgo con las condiciones de Amazon. Nunca se saltan captchas y nunca se usan sesiones ni cookies de Amazon. La recomendación de `docs/legal/AMAZON.md` de no hacer el camino (a) queda superada por esa decisión.
+
+**Método.** Lectura del diff y de los archivos citados. Ejecutado: `node --test server/unfurl/test/*.test.mjs` (**18 de 18**, Node 24 en Windows); `server/test/amazon.test.mjs` contra PocketBase 0.40.6 en WSL (**6 de 6**); `vitest` sobre `amazonServidor.test.ts` y `amazonLista.test.ts` (**34 de 34**); y una sonda propia contra `once()` y `parsePaginaLista` (bombas de descompresión y 3 MB hostiles; resultados abajo). **No ejecutado:** Playwright, el resto de las suites, `gitleaks` (no está instalado aquí; queda el de CI), Docker, ni **ninguna petición a Amazon**: lo que digo de cómo responde Amazon (filtros, 403, vista de invitado) sale de las fixtures y de lo que sé, no de una comprobación en vivo. No se ha tocado código ni se ha leído ningún valor de `.env*`.
+
+**Nota.** Durante la revisión aparecieron en la copia de trabajo cambios sin confirmar que no son míos (`CHANGELOG.md`, `package.json`, `package-lock.json` y `android/app/build.gradle`, la subida a 1.2.0). No están en el diff revisado.
+
+### Resumen
+
+Ningún hallazgo crítico ni alto. **LA REGLA de Lazo se mantiene:** las tres rutas nuevas no leen ni escriben `items`, `claims` ni ninguna colección salvo la pertenencia a un grupo, el servidor no deduplica y la respuesta es la misma la pida quien la pida. El SSRF está bien cerrado y no hay bomba de descompresión. Hay dos hallazgos medios y cinco bajos. El primero (V-39) es el único que toca la sorpresa, y no la de Lazo sino la de Amazon.
+
+| Gravedad | Hallazgos |
+|---|---|
+| Crítico | 0 |
+| Alto | 0 |
+| Medio | 2 (V-39, V-40) |
+| Bajo | 5 (V-41 a V-45) |
+
+### Enmiendas al diseño AMZ que quedan registradas
+
+| Requisito | Decía | Queda | Valoración |
+|---|---|---|---|
+| AMZ-6 | 5 páginas y 100 productos | **10 páginas y 200 productos** (`AMZ_SERVIDOR`); pausa de 1 a 2 s | Decisión del dueño. El camino (b) sigue en 100. Probado: 7 peticiones para 200 y 10 peticiones como mucho |
+| AMZ-7 tiempo | 25 s en total; `$http.send` 30 s | **60 s** en total (un único plazo que incluye las pausas), 6 s por página; `$http.send` 75 s; `requestTimeout` del servicio 90 s | Coherente con 10 páginas. PocketBase sigue esperando más que el servicio |
+| AMZ-7 tamaño | 3 MB por página y 10 MB en total | 3 MB por página; **sin tope total** (30 MB como mucho, una página cada vez, nunca acumuladas) | Aceptable: en memoria hay una sola página |
+| AMZ-7 compresión | Sin `Accept-Encoding`: no hay descompresión | Se sigue sin pedir compresión, pero Amazon comprime igual: **se descomprime en flujo** (`gzip`, `deflate`, `br`) y el tope cuenta los bytes ya descomprimidos | Correcto y medido (abajo). Vale también para `/unfurl` |
+| AMZ-4 | Una sola petición a `amzn.eu`, sin seguir el `Location` | Hasta **4 saltos, solo dentro de `amzn.eu`** (host exacto, `https`, sin puerto), leyendo 1 byte de cuerpo como mucho; el primer `Location` que sea una lista de amazon.es se convierte en identificador y no se visita | Aceptable: no sale de `amzn.eu` |
+| AMZ-12 | 3 cada 10 min y 10 al día por persona; 30 páginas por hora en todo el servidor | **5 lecturas por persona y hora**, en memoria (`$app.store()`, se pierde al reiniciar); 20 por hora e IP como red; una lectura a la vez en todo el servidor | El tope de páginas por hora no existe (V-42) y el enlace corto queda fuera (V-40) |
+| AMZ-13 demo | En la demo no existe el camino (a) | La demo **lo simula** con `DEMO_AMAZON_HTML`: `capacidades` dice `true` y no sale ninguna petición (e2e: cero peticiones a otro origen) | Se cumple el fondo (la demo no toca Amazon). `AMAZON.md` aún dice «nunca en la demo pública» (V-45) |
+| AMZ-13 respuesta | `{ title, image, priceCents, asin }` | Además `url` (siempre `/dp/<ASIN>`), `priority` y `quantity` (enmienda de la v1.1) y `partial` | Sin objeción |
+| AMZ-16 | Ninguna foto antes de confirmar | Sigue así con lo pegado. Si la lista la leyó el servidor, la vista previa **carga ya las fotos** (solo los tres hosts de Amazon, `no-referrer`) | Aceptable: Amazon ya ha recibido la visita del servidor. Documentado en `AMAZON.md` |
+
+### Estado de cada requisito
+
+| Requisito | Estado | Comprobación |
+|---|---|---|
+| AMZ-1 apagada por defecto | Cumplido | Solo vale el valor exacto `on`. Apagada: 404 con y sin sesión en `amazon-lista` y `amazon-corto` (probado), y `index.mjs` no atiende `/wishlist` ni `/amzn` (leído; sin prueba, V-44). Los dos `.env.example` la llevan comentada y `docker-compose.yml` la pasa vacía. Sin `cronAdd` ni reintentos |
+| AMZ-2 solo el identificador | Cumplido | PocketBase y el servicio validan `^[A-Z0-9]{10,16}$` cada uno por su lado; una URL, minúsculas, `../x` o 17 caracteres dan `NO_ES_LISTA` sin llegar al servicio (probado). La URL la construye `listaUrl` |
+| AMZ-3 lista blanca en cada salto | Cumplido | `permitida`: `https:`, `hostname === 'www.amazon.es'`, sin puerto ni credenciales, ruta `/hz/wishlist/`. `new URL` normaliza `..` y `%2e%2e` antes de comparar. Dos redirecciones como mucho. `evil.example`, `amazon.es` sin `www`, `http:`, `:8443`, `/gp/redirect.html` y `169.254.169.254` dan `error` con una sola petición (probado) |
+| AMZ-4 enlace corto | Cumplido con enmienda | Código `^[A-Za-z0-9]{4,20}$` validado dos veces; ver tabla de enmiendas. Fuera del cortacircuitos y del límite por persona: V-40 |
+| AMZ-5 guarda de IP y DNS | Cumplido | `wishlist.mjs` llama a `once()` sin `lookup` ni `allowPrivate`, así que se usa `safeLookup` y la conexión va a la IP validada. `guard.mjs` no cambia. Sin prueba propia en este camino (V-44) |
+| AMZ-6 paginación | Cumplido con enmienda | El testigo de `showMoreUrl` solo vale si el enlace es de `www.amazon.es/hz/wishlist/`, lleva `lid` igual al identificador pedido y casa `^[A-Za-z0-9_=%-]{1,3000}$`. **De la página solo sale el valor del testigo**: la URL la arma `paginaUrl` con `URLSearchParams`, de modo que no se puede construir una URL arbitraria. Testigo repetido, de otra lista o página sin nada nuevo: fin. Sin cookies |
+| AMZ-7 tamaño y tiempo | Cumplido con enmiendas; un pendiente | Ver sonda. Pendiente: límites del contenedor (V-43) |
+| AMZ-8 captcha | Cumplido en la lista | 429, 503, redirección a `validateCaptcha` y el HTML del captcha dan `AMAZON_BLOQUEA` tras **una** petición, y la siguiente llamada no abre conexión durante una hora (probado, también en la segunda página). `User-Agent` `LazoBot`, sin cabeceras de navegador ni `Cookie` (prueba de texto). El enlace corto no entra: V-40 |
+| AMZ-9 títulos | Cumplido | `decode` una vez y `limpiaTitulo` (los mismos del camino b). La fixture hostil deja `&lt;b&gt;` literal. La vista previa pinta nodos de texto |
+| AMZ-10 enlaces, fotos, precios | Cumplido | ASIN `[A-Z0-9]{10}` y enlace construido; ningún `href` se copia. Foto por `fotoSegura` (tres hosts, `https`, sin puerto ni credenciales): `m.media-amazon.com.evil.example`, `evil.example` y `http:` salen sin foto. Precio finito y mayor que cero (`-Infinity` descartado). «Tiene» no se lee (prueba) |
+| AMZ-11 LA REGLA | Cumplido | Las rutas solo consultan `groups` por pertenencia. No reciben id de lista ni de grupo de Lazo. Misma respuesta para Ana y para Bea (probado). El «ya lo tienes» sigue siendo de `esDuplicado` en el cliente sobre `listDetail`, que en la plaza propia no trae sorpresas ni retirados. El alta va por `importItems`, sin cambios |
+| AMZ-12 límites | **Parcial** | 5 por persona y hora (probado: la sexta da 429 sin llegar al servicio y otra persona sigue pudiendo); el identificador inválido no gasta cupo; `busy` y el cortacircuitos sí. Faltan V-40 y V-42 |
+| AMZ-13 proxy y errores | Cumplido | Conjunto cerrado `{code, message}`; `blocked`, `network`, `http_*` y `timeout` llegan como el mismo `ERROR` (probado: sin `<` ni `http` en el cuerpo). Sin productos, `VACIA`. Sin caché. `unfurl` sigue sin puertos y exige `x-lazo-key` en las tres rutas. `Caddyfile` e `index.html` no cambian |
+| AMZ-14 identificador | Cumplido por lectura | Viaja en el cuerpo del `POST` en los dos tramos (probado en el segundo); no se escribe en ninguna colección; `unfurl` no registra nada; el cliente lo tiene solo en el estado de la hoja. No he hecho la búsqueda del centinela en `data.db` y `auxiliary.db` (V-44) |
+| AMZ-15 analizador | Cumplido | Ventanas de 3 000 caracteres y cuantificadores acotados. Sonda con 3 MB: el peor caso, `data-itemid` repetido sin `<li`, 305 ms; el resto, menos de 220 ms |
+| AMZ-16 camino (b) | Cumplido con enmienda | Lo pegado sigue sin fotos antes de confirmar (e2e) |
+
+### Lo que he comprobado y está bien
+
+- **SSRF.** Al servicio solo llegan un identificador o un código, nunca una URL. Los únicos hosts a los que conecta este camino son `www.amazon.es` (ruta `/hz/wishlist/`) y `amzn.eu`, por comparación exacta, en la primera petición y en cada salto. Debajo sigue `safeLookup`: si el DNS de casa resuelve cualquiera de los dos a una IP privada, se rechaza. `allowPrivate` sigue sin ser alcanzable por HTTP.
+- **Descompresión** (sonda contra `once()` con un servidor local, plazo de 2 s):
+
+  | Caso | Resultado | Tiempo | Memoria de más |
+  |---|---|---|---|
+  | gzip de 1 MB que se expande a 1 GB, tope 3 MB | 3 000 000 bytes, `truncated` | 26 ms | inapreciable |
+  | El mismo, tope 1 byte (enlace corto) | 1 byte, `truncated` | 4 ms | 0,2 MB |
+  | Brotli que se expande a 256 MB | 3 000 000 bytes, `truncated` | 21 ms | 6 MB |
+  | Miembros gzip vacíos sin fin (entra mucho, no sale nada) | `timeout` al cumplirse el plazo | 2 001 ms | 42 MB (incluye al servidor de la sonda) |
+  | gzip que se queda a medias y calla | `timeout` | 2 001 ms | 0 |
+  | gzip cortado | `network` | 3 ms | 0 |
+  | `Content-Encoding: gzip, gzip` o desconocido | `not_html`, sin leer | 3 ms | 0 |
+
+  El tope cuenta bytes descomprimidos y la memoria no pasa del tope más un bloque de zlib. Lo único que no se cuenta son los bytes comprimidos que no producen salida, y eso lo acota el plazo (V-43).
+- **Autorización.** `capacidades`: sesión de `users` (401 sin ella); devuelve un único booleano. `amazon-lista` y `amazon-corto`: apagada, 404 antes de mirar la sesión; encendida, 401 sin sesión o con sesión de superusuario (esto último por lectura) y 403 sin grupo. La validación del identificador va antes del cupo.
+- **Errores.** Ningún mensaje lleva HTML, URL, estado HTTP de Amazon ni texto de excepción. `OCUPADO` y `AMAZON_BLOQUEA` dicen a un miembro que otra persona está leyendo una lista o que hubo un bloqueo en la última hora: es actividad del servidor, no estado de ninguna lista.
+- **Demo y vista previa.** La demo devuelve siempre la misma lista inventada, sin mirar el estado de nadie, y marca los duplicados contra lo que la dueña ve. En la vista previa del servidor el único origen nuevo son las fotos de los tres hosts de Amazon; la CSP no cambia.
+- **Fixtures de `test/fixtures/amazon-lista-servidor/`.** Derivadas del HTML real de Amazon pero **sin datos reales**: el identificador es `LAZOTEST00001` (y `OTRALISTA0001`), los ASIN `B0LAZOSV01` a `53`, los `itemId` `ILAZOFICT00xx`, la sesión `000-0000000-0000000`, los testigos `ESHV2_LAZOFICTICIO…`, las fotos `…/images/I/lazo-ficticia-N._SS135_.jpg`, los títulos son genéricos, el autor «Autora Ficticia, Editorial Inventada S.L.» y el título de la página «Lista de ejemplo». No aparece ningún nombre de persona. Lo único auténtico son constantes públicas de Amazon (el identificador del mercado de amazon.es y la imagen de relleno). El directorio solo existe en `bfb1c1b`: no hay versión anterior en el historial con otros datos. En todo el diff los únicos identificadores son esos, `LAZODEMO2026X` y los códigos cortos de prueba. No conozco el identificador real de la lista del dueño, así que lo que afirmo es que nada de lo que hay tiene aspecto real, no que lo haya comparado con él.
+
+### V-39 · Medio · La lectura trae solo «No comprados»: lo que falta delata lo que ya le han comprado en Amazon
+
+`listaUrl` y `paginaUrl` piden `filter=unpurchased`, y el servidor lee la lista como invitado, que es la vista que sí sabe qué se ha comprado (las fixtures llevan «Tiene:» e «Inicia sesión para reservar este artículo»). El campo «Tiene» no se lee, pero el filtro hace lo mismo por omisión: un producto que alguien ya compró desde la lista no llega a la vista previa. El mensaje de `VACIA` lo dice con todas las letras: «No encuentro productos **sin comprar** en esa lista».
+
+*Escenario.* Marta tiene 12 productos en su lista de Amazon. Su tía compra los auriculares desde la lista; Amazon se lo oculta a Marta, que tiene activado no desvelar sorpresas. Marta pega el enlace en Lazo: «He encontrado 11 productos». Faltan los auriculares: ya sabe qué le han comprado. Si lo repite cada semana, ve desaparecer uno a uno los regalos.
+
+*Por qué es medio y no alto.* No es estado de Lazo: ninguna reserva ni compra hecha en Lazo se deduce de aquí, y Marta puede ver lo mismo abriendo su enlace «Solo ver» en una ventana privada. Pero la condición de la enmienda de la v1.1 era justo esta («ese recuento es estado; traerlo a Lazo sería una fuga por otra puerta»), el camino (b) no la tiene (pega lo que Amazon le enseña a ella) y aquí pasa sin que ella lo busque.
+
+*Arreglo.* Que el resultado no dependa de las compras: `filter=all` en `listaUrl` y en `paginaUrl` (`src/core/amazonServidor.ts`), y el mensaje de `VACIA` pasa a «No encuentro productos en esa lista.» (`lib/amazon.cjs`). Corregir «No comprados» en `AMAZON.md`, `HOMELAB.md` y el `CHANGELOG`. **A confirmar con una lista real** que `filter=all` enseña a un invitado también lo comprado; no lo he probado contra Amazon. Si el dueño prefiere mantener el filtro (para que la familia no compre dos veces), que sea una decisión declarada: un riesgo residual en `SECURITY.md` y un aviso en la hoja antes de leer («si falta algo, es que ya te lo han comprado en Amazon»).
+
+*Prueba.* En `amazonServidor.test.ts` y `wishlist.test.mjs`: las dos URL construidas llevan `filter=all`; una fixture con una ficha comprada da esa ficha con los mismos campos que las demás; ningún mensaje de `MSG` contiene «comprar» ni «comprado».
+
+### V-40 · Medio · El enlace corto queda fuera del cortacircuitos y del límite por persona
+
+`resuelveCorto` no mira `state.bloqueadoHasta`, no lo fija cuando `amzn.eu` responde 429 o 503 (devuelve `AMAZON_BLOQUEA` y nada más) y no pasa por la lectura única. `amazon-corto` no llama a `A.allow`. Su único freno es la regla de PocketBase, 10 por minuto e IP: 600 por hora, con hasta 4 saltos cada una, y en paralelo.
+
+*Escenario.* Un sobrino con sesión llama a `amazon-corto` en bucle con `curl`. Salen hasta 2 400 peticiones por hora a `amzn.eu` desde la IP de casa. Amazon empieza a contestar 503: el servidor responde «Amazon no deja leer la lista ahora mismo» y **sigue llamando** en la petición siguiente. El cortacircuitos, que existe para proteger esa IP, no se entera. Al revés también: con el cortacircuitos ya saltado por una lista, cada enlace corto pegado sigue saliendo a Amazon durante esa hora.
+
+*Arreglo.* En `server/unfurl/wishlist.mjs`, dentro de `resuelveCorto`:
+
+```js
+const now = opts.now ?? Date.now;
+if (now() < state.bloqueadoHasta) throw fallo(BLOQUEA); // antes de la primera petición
+// …y en el catch:
+if (e?.code === 'http_503' || e?.code === 'http_429') {
+  state.bloqueadoHasta = now() + AMZ.bloqueoMs;
+  throw fallo(BLOQUEA);
+}
+```
+
+En `lib/amazon.cjs`, `allow(app, userId, kind = 'amz', max = PER_HOUR)` con la clave `` `${kind}:${userId}` ``, y en `amazon-corto`, tras validar el código: `if (!A.allow($app, e.auth.id, 'corto', 30)) return A.fail(e, 'LIMITE');`. Treinta y no cinco porque cada enlace corto de un producto suelto pasa por aquí antes de ir a `unfurl`.
+
+*Prueba.* `wishlist.test.mjs`: tras un captcha en `leeLista`, `resuelveCorto` da `AMAZON_BLOQUEA` con cero peticiones; un 503 en `resuelveCorto` deja a `leeLista` sin tocar la red durante una hora. `amazon.test.mjs`: la llamada 31 de una persona a `amazon-corto` da 429 `LIMITE` y el simulador cuenta 30; otra persona sigue pudiendo.
+
+### V-41 · Bajo · Un enlace de lista que llega de otra app lanza la lectura sin que nadie pulse
+
+Con «Compartir → Lazo», `AddGift` abre `AmazonLista` con el texto recibido y `analiza` llama a `conEnlace` en cuanto ve un enlace de lista: el servidor sale a Amazon sin ningún toque. Es V11-2 con más alcance, porque antes el texto ajeno solo se analizaba en el móvil. Deducido del código; no probado en un Android.
+
+*Escenario.* Una app instalada manda a Lazo cinco `ACTION_SEND` con el enlace de una lista pública cualquiera. La persona tiene sesión en un servidor con la lectura encendida: su servidor hace hasta 50 peticiones a Amazon, ella se queda sin cupo durante una hora y ve la vista previa de una lista ajena (con el aviso «Texto recibido de otra app»). Nada se añade sin pulsar.
+
+*Arreglo.* En `AmazonLista.tsx`, si `deOtraApp` y lo recibido es solo un enlace, no leer: enseñar «Has compartido el enlace de una lista de Amazon» con un botón «Leer la lista», que es quien llama a `conEnlace`.
+
+*Prueba.* e2e con `guardaCompartido(enlace)`: no hay llamada a `amazonLista` (espía en `__lazoDemo` o en la red) hasta pulsar el botón.
+
+### V-42 · Bajo · No hay tope global por hora, el cupo no es atómico y un 403 no cuenta como bloqueo
+
+Tres restos de AMZ-12 y AMZ-8, los tres acotados por la lectura única:
+
+1. El tope de páginas por hora «contado en `unfurl`» no existe. Hoy el límite real es 5 lecturas × 10 páginas por persona, y 20 lecturas por hora e IP; con cada móvil saliendo por su red de datos, una familia de diez puede llegar a 500 páginas por hora.
+2. `allow` lee y escribe `$app.store()` en dos pasos: dos peticiones simultáneas de la misma persona pueden pasar las dos con el cupo en 4. La segunda recibe `OCUPADO`, así que no llega a Amazon. Por lectura; no lo he reproducido.
+3. Solo 429, 503 y el captcha saltan el cortacircuitos. Un 403 (lo que suele contestar un antirrobots) llega como `ERROR` con el botón «Reintentar».
+
+*Arreglo.* (1) En `wishlist.mjs`, `state.paginas = []` con la hora de cada petición; antes de cada página se purgan las de hace más de una hora y, si hay 100 o más (diez lecturas completas), `rate_limited` en la primera página o `partial` en las siguientes; `rate_limited: 'LIMITE'` en `CODES`. (2) Aceptarlo y dejarlo escrito en el comentario de `allow`. (3) Añadir `http_403` a la condición que lanza `BLOQUEA` en `pagina`; una lista que no existe da 404 y no se confunde.
+
+*Prueba.* `wishlist.test.mjs` con `now` inyectado: la página 101 de la hora no abre conexión; un `http_403` deja el cortacircuitos puesto.
+
+### V-43 · Bajo · `unfurl` sigue sin límites de contenedor, y el tope no cuenta los bytes comprimidos
+
+AMZ-7 decía que `mem_limit` y `pids_limit` dejaban de ser opcionales con la importación; `docker-compose.yml` no los lleva. Además, un flujo gzip hecho de miembros vacíos entra sin producir salida: el tope de 3 MB nunca salta y solo lo corta el plazo. En la sonda, 332 MB recibidos en 2 s por loopback sin retener memoria; por Internet y con 6 s serán decenas de megas. Solo puede servirlo Amazon (o cualquier página, en `/unfurl`): es consumo de ancho de banda y de CPU durante unos segundos, no una caída.
+
+*Arreglo.* En el servicio `unfurl` de `server/docker-compose.yml`: `mem_limit: 256m` y `pids_limit: 64`. En `once()` (`fetch.mjs`), cuando hay descompresión, contar también lo recibido y cortar igual que con lo descomprimido:
+
+```js
+let crudo = 0;
+if (unzip) res.on('data', (c) => { if ((crudo += c.length) > max) { res.destroy(); body.destroy(); resolve({ body: Buffer.concat(chunks).toString('utf8'), truncated: true }); } });
+```
+
+*Prueba.* En `wishlist.test.mjs`, junto a la de compresión: un servidor que emite miembros gzip vacíos sin parar termina en `truncated` con menos de 3,2 MB recibidos, sin esperar al plazo.
+
+### V-44 · Bajo · Faltan las pruebas que fijan lo que hoy está bien
+
+`wishlist.test.mjs` inyecta `get`, así que el cableado real (`once` con `safeLookup`) no se ejercita en este camino, y varias pruebas descritas en el diseño no están:
+
+1. AMZ-5: `leeLista` y `resuelveCorto` con el `once` real y un `lookup` falso que devuelve `127.0.0.1`, `169.254.169.254`, `::ffff:10.0.0.1` y una pública más una privada: `error` (o `not_a_list`) sin abrir socket.
+2. AMZ-1 en el servicio: sin `AMAZON_IMPORT`, `POST /wishlist` y `POST /amzn` dan 404 también con la clave buena. Hoy `index.mjs` arranca al importarlo y no se puede probar: hace falta exportar el manejador.
+3. AMZ-14: tras una lectura con un identificador centinela, cero coincidencias en `data.db` y `auxiliary.db` del PocketBase de pruebas.
+4. AMZ-13: el cuerpo de un 200 casa un esquema estricto (solo `productos` y `partial`; en cada producto solo los siete campos).
+5. AMZ-7: goteo lento con el `once` real acaba en `timeout` dentro del plazo total, y PocketBase devuelve el error del servicio y no un 500 propio.
+6. Vista previa del servidor en la app: con una respuesta hostil simulada, toda foto pintada es de los tres hosts y todo enlace guardado casa `/dp/<ASIN>` (repasar `r.productos` con `fotoSegura` y `conAsin` en `AmazonLista.tsx` cuesta dos líneas y deja de fiarlo todo al servidor).
+
+### V-45 · Bajo · `SECURITY.md` y `AMAZON.md` no cuentan lo nuevo
+
+`SECURITY.md` no menciona la lectura de listas. La fila «SSRF» sigue diciendo «6 s de tiempo total y 1,5 MB», que ya solo vale para `/unfurl`. `AMAZON.md` conserva «nunca en la demo pública» mientras la demo la simula.
+
+*Arreglo.* En «Otras medidas» de `SECURITY.md`, una fila «Lista de Amazon desde el servidor»: apagada por defecto; solo `www.amazon.es/hz/wishlist/` y `amzn.eu`; del cliente solo sale un identificador; 10 páginas, 200 productos, 3 MB por página ya descomprimidos y 60 s; 5 por persona y hora, una a la vez, una hora de silencio tras un captcha; sin cookies; no lee ni escribe ninguna lista de Lazo. Añadir `server/test/amazon.test.mjs` y `server/unfurl/test/wishlist.test.mjs` a la lista de pruebas. En `AMAZON.md`, aclarar que la demo la simula sin red. Y lo que salga de V-39.
+
+### Observaciones sin número
+
+- Cualquier miembro puede leer **cualquier** lista pública de Amazon con el servidor de la familia, no solo la suya: es lo que AMZ-13 ya aceptaba (solo listas, con cupo).
+- Una lista cuyo HTML contenga `/errors/validateCaptcha` o la dirección de soporte de Amazon (por ejemplo, en un comentario) salta el cortacircuitos una hora. Falla hacia el lado seguro.
+- Tras un bloqueo en la segunda página se descarta lo ya leído y se responde `AMAZON_BLOQUEA`. Correcto: no insistir pesa más que la lectura parcial.
+- El cupo y el cortacircuitos viven en memoria: reiniciar PocketBase o `unfurl` los pone a cero. Aceptado en la decisión.
+
+### Secretos
+
+- **Repositorio.** En el diff no hay claves, tokens, rutas locales ni direcciones reales: solo IP de documentación en las pruebas y la clave de usar y tirar del `unfurl` simulado. `AMAZON_IMPORT` no es un secreto y va comentada en los dos `.env.example`, que son los únicos `.env*` en el índice. `server/unfurl/amazon.mjs` (generado) está ignorado. `gitleaks` no está instalado aquí: búsqueda por patrones.
+- **Builds.** El diff no añade ninguna variable `VITE_` ni lectura de `import.meta.env`. `.env.local` tiene dos variables, ninguna con prefijo `VITE_` (he mirado nombres, no valores). En `dist/`, `dist-demo/` y `android/app/src/main/assets/public/` de esta copia, cero cadenas con forma de clave; son builds que ya estaban ahí, no los he regenerado con este código. `DEMO_AMAZON_BLOQUEA` y la lista de la demo entran en todos los builds: son datos inventados.
+- **Sigue igual.** Los commits llevan el correo de un dominio corporativo (observación de la v1.1.2).
+
+### Veredicto
+
+**Apto** para publicar. No hay hallazgos críticos ni altos; la función va apagada en el repositorio, en la demo no sale a ningún sitio y el APK no cambia de superficie. Con ella encendida, el servidor solo conecta con `www.amazon.es/hz/wishlist/` y con `amzn.eu`, no hay bomba de descompresión, los errores no filtran nada y ninguna ruta nueva lee una lista de Lazo. Las fixtures no llevan datos reales y no hay secretos en el repositorio ni en los builds.
+
+Condiciones:
+
+1. **V-39 y V-40 antes de poner `AMAZON_IMPORT=on` en un servidor con familia dentro**, y mejor en esta misma versión: son unas quince líneas. V-39 admite la alternativa de aceptarlo por escrito; lo que no debería pasar es que se quede como está sin que nadie lo haya decidido.
+2. Los cambios sin confirmar de la 1.2.0 (`CHANGELOG`, versiones) no están auditados; el `CHANGELOG` repite «No comprados» y habrá que ajustarlo según V-39.
+3. Los bajos pueden ir en la siguiente.
+
+### Estado tras la auditoría v1.2.0 (Opus 5.5)
+
+- **V-39:** aceptado por decisión del dueño del proyecto (pidió expresamente el filtro «No comprados»). Recogido en `SECURITY.md`; el mensaje `VACIA` ya es neutro («No encuentro productos en esa lista.»).
+- **V-40:** corregido. `resuelveCorto` consulta y fija el cortacircuitos; `amazon-corto` pasa por `allow(app, userId, 'corto', 30)`.
+- **V-43:** en parte: `mem_limit: 256m` y `pids_limit: 64` en `unfurl`. El contador de bytes crudos queda para la v1.2.1.
+- **V-45:** corregido (`SECURITY.md` y `AMAZON.md`).
+- **V-41, V-42, V-44:** pendientes para la v1.2.1.

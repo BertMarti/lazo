@@ -95,7 +95,7 @@ Una pista práctica: que hoy Amazon haya cortado una simple descarga de su pági
 2. **Camino (a): no implementarlo en la v1.1.** Aporta comodidad, pero choca con la letra de la licencia, pone en juego la IP de casa y lo más probable es que Amazon lo corte. *(v1.2: el dueño del proyecto decidió hacerlo para su servidor, con las condiciones del punto 3; ver «Lectura desde el servidor».)*
 3. **Si más adelante se decide hacerlo**, que sea:
    - **apagado por defecto**, y lo enciende quien aloja el servidor sabiendo lo que hay (una variable del servidor, no un ajuste de cada usuario);
-   - nunca en la demo pública;
+   - nunca en la demo pública (allí la lectura solo se simula con una lista de ejemplo, sin ninguna petición a Amazon);
    - cumpliendo los requisitos AMZ-1 a AMZ-16 de `docs/security/AUDIT.md`;
    - después de leer a mano las condiciones vigentes y, si se quiere hacer bien, de preguntar a Amazon.
 4. **La vía oficial** para leer datos de productos es la API de afiliados de Amazon (Product Advertising API). Exige cuenta de afiliado y ventas, y Lazo no lleva afiliados: no aplica. Amazon no ofrece una exportación oficial de listas de deseos.

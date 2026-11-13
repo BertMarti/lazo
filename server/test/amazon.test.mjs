@@ -71,7 +71,7 @@ async function startPb(env) {
     tok[who] = (await ok('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 3600 }, su)).token;
   }
   for (const who of ['ana', 'bea']) await ok('POST', '/api/collections/groups/records', { name: `Grupo de ${who}`, occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: [] }, tok[who]);
-  return { call, tok, dir, stop: () => (proc.kill(), rmSync(dir, { recursive: true, force: true })) };
+  return { call, tok, su, dir, stop: () => (proc.kill(), rmSync(dir, { recursive: true, force: true })) };
 }
 
 describe('lista de Amazon desde el servidor', { skip: !BIN && 'Falta PB_BIN (binario de PocketBase)' }, () => {
@@ -154,5 +154,18 @@ describe('lista de Amazon desde el servidor', { skip: !BIN && 'Falta PB_BIN (bin
     const before = seen.length;
     assert.equal((await on.call('POST', '/api/lazo/amazon-corto', { corto: 'https://amzn.eu/d/x' }, on.tok.ana)).json.code, 'NO_ES_LISTA');
     assert.equal(seen.length, before);
+  });
+
+  test('V-40: enlace corto, 30 por persona y hora; otra persona sigue pudiendo', async () => {
+    // ana ya gastó 2 en la prueba anterior. El límite por IP (10/min) se apaga aquí para ver el de por persona.
+    await on.call('PATCH', '/api/settings', { rateLimits: { enabled: false } }, on.su);
+    for (let i = 0; i < 28; i++) assert.equal((await on.call('POST', '/api/lazo/amazon-corto', { corto: 'aB3dE5f' }, on.tok.ana)).status, 200);
+    const before = seen.length;
+    const r = await on.call('POST', '/api/lazo/amazon-corto', { corto: 'aB3dE5f' }, on.tok.ana);
+    assert.equal(r.status, 429);
+    assert.equal(r.json.code, 'LIMITE');
+    assert.equal(seen.length, before);
+    assert.equal((await on.call('POST', '/api/lazo/amazon-corto', { corto: 'aB3dE5f' }, on.tok.bea)).status, 200);
+    await on.call('PATCH', '/api/settings', { rateLimits: { enabled: true } }, on.su);
   });
 });

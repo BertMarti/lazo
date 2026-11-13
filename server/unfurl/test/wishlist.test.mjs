@@ -193,3 +193,18 @@ test('las páginas comprimidas se descomprimen con el tope sobre lo descomprimid
   assert.ok(cut.body.length <= AMZ.bytesPagina);
   s.close();
 });
+
+test('V-40: el enlace corto respeta y fija el cortacircuitos de una hora', async () => {
+  const cap = fake(err('http_503'));
+  await assert.rejects(() => leeLista(LID, { get: cap.get, ...noSleep }), { code: BLOQUEA });
+  const c = fake({ redirect: `https://www.amazon.es/hz/wishlist/ls/${LID}` });
+  await assert.rejects(() => resuelveCorto('aB3dE5f', { get: c.get }), { code: BLOQUEA });
+  assert.equal(c.urls.length, 0);
+
+  _reset();
+  const c503 = fake(err('http_503'));
+  await assert.rejects(() => resuelveCorto('aB3dE5f', { get: c503.get }), { code: BLOQUEA });
+  const l = fake({ body: P1 });
+  await assert.rejects(() => leeLista(LID, { get: l.get, ...noSleep }), { code: BLOQUEA });
+  assert.equal(l.urls.length, 0);
+});

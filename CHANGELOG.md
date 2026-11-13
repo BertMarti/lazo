@@ -4,6 +4,17 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [1.2.0] - 2026-11-13 · Lista de Amazon
+
+### Añadido
+- **Importar tu lista de deseos de Amazon pegando el enlace.** Copia el enlace de tu lista («Invitar → Solo ver → Copiar enlace», también vale el corto `amzn.eu`), pégalo en «Añadir» y Lazo la lee entera desde tu servidor: los productos «No comprados», con foto y su enlace de Amazon. Ves la vista previa («He encontrado 96 productos»), desmarcas lo que no quieras y los añades de una vez. Los que ya tenías salen desmarcados.
+- Amazon no enseña los precios de una lista sin iniciar sesión, así que los regalos llegan sin precio: puedes ponerlo después.
+- Si Amazon pide un captcha, Lazo no insiste: te avisa para que lo intentes más tarde y te deja el modo de copiar y pegar la página.
+- **Solo funciona si el dueño del servidor la activa** (`AMAZON_IMPORT=on` en `server/.env`). Viene apagada: lee `docs/legal/AMAZON.md` para conocer el riesgo antes de encenderla.
+
+### Corregido
+- Las vistas previas de enlaces de Amazon salían vacías porque Amazon envía las páginas comprimidas; ahora se leen bien.
+
 ## [1.1.3] - 2026-11-13 · Eliminar grupo
 
 ### Corregido

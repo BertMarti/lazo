@@ -30,6 +30,8 @@ routerAdd('POST', '/api/lazo/amazon-corto', (e) => {
   A.guard($app, e);
   const corto = String(e.requestInfo().body.corto || '');
   if (!/^[A-Za-z0-9]{4,20}$/.test(corto)) return A.fail(e, 'NO_ES_LISTA');
+  // V-40: 30 por persona y hora (cada enlace corto de un producto suelto también pasa por aquí).
+  if (!A.allow($app, e.auth.id, 'corto', 30)) return A.fail(e, 'LIMITE');
   const r = A.call('/amzn', { corto }, 10);
   if (r.code) return A.fail(e, r.code);
   return e.json(200, { id: String(r.json.id) });

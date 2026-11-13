@@ -117,6 +117,9 @@ export async function leeLista(id, opts = {}) {
  */
 export async function resuelveCorto(codigo, opts = {}) {
   if (typeof codigo !== 'string' || !CODIGO_CORTO.test(codigo)) throw fallo('not_a_list');
+  const now = opts.now ?? Date.now;
+  // V-40: el acortador también respeta (y fija) el cortacircuitos de una hora.
+  if (now() < state.bloqueadoHasta) throw fallo(BLOQUEA);
   const get = opts.get ?? ((u, d) => once(u, d, { maxBytes: 1 }));
   let u = new URL(`https://amzn.eu/d/${codigo}`);
   const deadline = Date.now() + AMZ.msPagina;
@@ -125,7 +128,10 @@ export async function resuelveCorto(codigo, opts = {}) {
     try {
       res = await get(u, deadline);
     } catch (e) {
-      if (e?.code === 'http_503' || e?.code === 'http_429') throw fallo(BLOQUEA);
+      if (e?.code === 'http_503' || e?.code === 'http_429') {
+        state.bloqueadoHasta = now() + AMZ.bloqueoMs;
+        throw fallo(BLOQUEA);
+      }
       throw fallo('not_a_list');
     }
     if (!res.redirect) throw fallo('not_a_list');

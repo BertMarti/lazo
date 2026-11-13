@@ -31,6 +31,9 @@ services:
     environment:
       UNFURL_KEY: ${UNFURL_KEY:?Falta UNFURL_KEY en .env}
       AMAZON_IMPORT: ${AMAZON_IMPORT:-}
+    # V-43: topes de memoria y procesos.
+    mem_limit: 256m
+    pids_limit: 64
     # Sin puertos publicados: solo lo alcanza PocketBase por la red interna. Sale a Internet para leer páginas.
     networks: [interna, salida]
 
