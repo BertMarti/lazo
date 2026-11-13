@@ -72,6 +72,7 @@ const conAsin = (asin: string | undefined) => (asin && ASIN.test(asin) ? { asin,
  * desde el ASIN, foto solo de los hosts de Amazon, título limpio y números en su rango. Sin ASIN o sin título, fuera.
  */
 export function saneaProducto(p: AmazonProducto): AmazonProducto | null {
+  if (!p || typeof p !== 'object' || typeof p.asin !== 'string') return null; // V-50: null, arrays y demás, fuera
   const a = conAsin(p.asin);
   const title = limpiaTitulo(String(p.title ?? ''));
   if (!a || !title) return null;

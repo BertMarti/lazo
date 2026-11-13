@@ -1950,3 +1950,145 @@ Condiciones:
 - **V-43:** corregido. `once()` cuenta también los bytes crudos cuando descomprime, con el mismo tope.
 - **V-44:** las seis pruebas: guarda de IP con el `once` real (`opts.dns` va debajo de `safeLookup`), 404 del servicio apagado (`index.mjs` exporta `servidor()` y solo arranca con `import.meta.main`), centinela en `data.db` y `auxiliary.db`, esquema estricto, goteo lento (y el `timeout` del servicio llega como `ERROR`, no como un 500) y saneado en el cliente (`saneaProducto`).
 - **Nuevo:** con la importación apagada (o si `capacidades` falla), el enlace de una lista enseña cómo encenderla (`AMAZON_IMPORT=on` en `server/.env` y `docker compose up -d --build`) y el enlace a los riesgos; el modo manual sigue debajo.
+
+---
+
+## Auditoría v1.2.1 (Fable 5.2)
+
+Fecha: 2026-11-13 · Sobre `main` en `82facb5`. Diff revisado: `1fc6149..HEAD` (13 archivos) más el cambio sin confirmar de `server/unfurl/index.mjs` (el arranque deja de depender de `import.meta.main`).
+
+**Método.** Lectura del diff y de los archivos que toca. Ejecutado: `node --test server/unfurl/test/*.test.mjs` con la copia de trabajo (**26 de 26**, Node 24.19 en Windows); una sonda contra `servidor()` (clave vacía, cuerpos con `dns`, `lookup` y `allowPrivate`, variantes de ruta con la función apagada); el arranque real de `node index.mjs` con y sin clave; una sonda de `saneaProducto` y de la clasificación de lo compartido; y una mutación de `fetch.mjs` **en una copia fuera del repo**. **No ejecutado:** las pruebas contra PocketBase, `vitest`, Playwright, `gitleaks` (no está instalado aquí; queda el de CI), Docker ni ninguna petición a Amazon. El enlace a los riesgos lo he comprobado contra el árbol y el remoto, no por HTTP. No se ha tocado código ni se ha leído ningún valor de `.env*`.
+
+**Efecto de una sonda mía.** La mutación (poner `opts.dns` en lugar de `safeLookup`) hizo que la prueba de AMZ-5 intentara conectar desde esta máquina al puerto 443 de `127.0.0.1`, `169.254.169.254` y `10.0.0.1`. No llegó a la IP pública del cuarto caso. No hay nada que deshacer.
+
+**Nota.** Durante la revisión aparecieron en la copia de trabajo cambios sin confirmar que no son míos (`CHANGELOG.md`, `package.json`, `package-lock.json`, `android/app/build.gradle`: la subida a 1.2.1). Los he leído; no cambian nada de seguridad.
+
+### Resumen
+
+Ningún hallazgo crítico, alto ni medio. **LA REGLA no se toca:** el diff no añade ninguna lectura de `items`, `claims` ni de ninguna colección, y el aviso nuevo no depende del estado de ninguna lista. V-42, V-43 y V-44 quedan cerrados. **V-41 queda cerrado para el enlace solo y abierto por un camino lateral (V-46).** Seis hallazgos bajos.
+
+| Gravedad | Hallazgos |
+|---|---|
+| Crítico | 0 |
+| Alto | 0 |
+| Medio | 0 |
+| Bajo | 6 (V-46 a V-51) |
+
+### Cierre de V-41 a V-44
+
+| Hallazgo | Estado | Comprobación |
+|---|---|---|
+| V-41 | **Cerrado en parte** | El enlace solo de una lista, compartido desde otra app, llega a `leer(ref, false)` y se queda en «Leer la lista» sin llamar a `amazonLista` (leído; e2e con espía, no ejecutado). Falla el camino de `fromUrl`: V-46. El `amzn.eu/d/…` se resuelve sin toque, como dice la sección de estado: V-49 |
+| V-42 | Cerrado | `cuentaPagina` va antes de cada petición, también de cada redirección; la que pasa de 60 no abre conexión (probado). En la primera página da `rate_limited` → `LIMITE`; después, `partial`. `http_403` salta el cortacircuitos en la lista y en el enlace corto (probado). La falta de atomicidad de `allow` está escrita en su comentario. El enlace corto no cuenta en el tope: V-49 |
+| V-43 | Cerrado | `once()` cuenta lo recibido cuando descomprime y corta con el mismo tope (probado: miembros gzip vacíos acaban en `truncated` sin esperar al plazo). `mem_limit` y `pids_limit` siguen en `docker-compose.yml` |
+| V-44 | Cerrado, con un matiz | Las seis pruebas existen. La de AMZ-5 no distingue bien lo que quiere fijar: V-50 |
+
+### Respuesta a lo que se pidió mirar
+
+- **Aviso con la importación apagada.**
+  - *Fuga:* ninguna. Las tres cadenas (`AMAZON_IMPORT=on`, el comando y el enlace) son constantes del código, iguales en todos los servidores; no llevan host, ruta real, versión ni nada del `.env`. Lo único que el aviso revela es que la función está apagada, y eso ya lo da `capacidades` a cualquier sesión. No depende de la lista ni de quién mira.
+  - *Enlace:* fijo (`RIESGOS`), `https://github.com/BertMarti/lazo/blob/main/docs/legal/AMAZON.md`. Coincide con el remoto `origin` y el archivo está en el índice. Lleva `target="_blank"` y `rel="noopener noreferrer"`. Apunta a `main`, no a una etiqueta: si el archivo se mueve, se rompe.
+  - *Fallo de `capacidades`:* sí, cuenta como apagada, dos veces (`pocketbase.ts` y el `catch` de `conEnlace`). Es el lado seguro para Amazon (no sale ninguna petición), pero el texto afirma algo que puede ser falso: V-48.
+  - *Portapapeles:* `navigator.clipboard.writeText` solo dentro de `copiar`, que solo se llama desde el `onClick` de «Copiar». El diff no añade ninguna lectura del portapapeles. Si falla, sale un aviso y el texto se puede seleccionar a mano.
+  - *Demo:* `capacidades` de la demo da siempre `true`, así que el aviso no aparece en la demo pública.
+- **`opts.dns`:** no se puede inyectar. `index.mjs` llama a `leeLista(body.id)`, `resuelveCorto(body.corto)` y `unfurl(body.url)` con un solo argumento; `opts` nunca sale del cuerpo. Sonda: un cuerpo con `dns`, `lookup` y `allowPrivate` hacia `http://127.0.0.1/` da `blocked`; `id` como array u objeto da `not_a_list`. Además `dns` va debajo de `safeLookup`: cambia quién resuelve, no quita `isBlockedIp`.
+- **`servidor()` exportado:** el 404 se mantiene. Sonda con la clave buena y `amazon: false`: `POST /wishlist`, `/amzn`, `//wishlist`, `/wishlist?`, `GET /wishlist` y `PUT /amzn` dan 404. El 404 sigue yendo antes de mirar la clave. Un resto: V-47.
+- **Arranque sin `import.meta.main` (sin confirmar):** correcto. `node index.mjs` arranca desde su carpeta y por ruta relativa desde otra; sin clave sale con 1; al importarlo en las pruebas no arranca. Falla hacia el lado seguro: si la comparación no casa (enlace simbólico, letra de unidad en otra caja), el proceso termina sin escuchar y sin mensaje. En el contenedor (`WORKDIR /app`, `node index.mjs`) casa.
+- **`saneaProducto`:** cumple. El enlace se construye desde el ASIN, la foto pasa por `fotoSegura`, el título por `limpiaTitulo`, los números solo si son enteros en su rango, y los campos de más se descartan. Sonda: `javascript:`, `m.media-amazon.com@evil.example`, `1e99`, `'1'` y `1.5` salen fuera. Dos detalles en V-50.
+- **Mensaje de `LIMITE`:** neutro y sin datos. Recibirlo en la primera lectura de la hora dice que otras personas han leído listas: es actividad del servidor, como `OCUPADO`, no estado de ninguna lista. Con el cupo de enlaces cortos el texto no es exacto («listas»), pero no filtra nada.
+
+### V-46 · Bajo · V-41 se salta: un enlace de lista con texto alrededor, compartido desde otra app, se lee sin que nadie pulse
+
+`AddGift.fromUrl` recibe `deOtraApp`, pero solo lo pasa en la rama del enlace corto. La rama del enlace de lista lo pierde:
+
+```ts
+if (id) return setStep({ kind: 'amazon', enlace: { id } });
+```
+
+A esa rama se llega con lo compartido cuando `comoLista` devuelve `null` y la primera URL es la de la lista: un texto con el enlace, más de 200 caracteres de relleno y **una sola** ficha reconocible. `AmazonLista` recibe `deOtraApp` sin definir, llama a `conEnlace(enlace, true)` y lee. Tampoco sale el aviso «Texto recibido de otra app».
+
+*Escenario.* El de V-41, cambiando el texto: una app instalada manda `ACTION_SEND` con `https://www.amazon.es/hz/wishlist/ls/<ID>`, treinta palabras y «Taza bonita de regalo / 12,99 €». El servidor de la familia hace hasta 10 peticiones a Amazon por cada envío, la persona gasta su cupo de la hora y la app puede agotar el tope de 60 páginas de todo el servidor. Nada se añade sin pulsar.
+
+*Comprobado.* Con ese texto, `soloEnlace` es `false`, `parseListaPegada` da 1 producto, `comoLista` da `null` y `listaId(firstUrl(text))` da el identificador. El resto del camino, por lectura; no lo he ejecutado en un Android ni en Playwright.
+
+*Arreglo.* En `src/ui/screens/AddGift.tsx`: `if (id) return setStep({ kind: 'amazon', enlace: { id }, deOtraApp });`.
+
+*Prueba.* En `e2e/amazon-lista.spec.ts`, junto a la de V-41: `compartir(page, texto)` con ese texto; cero llamadas a `amazonLista` hasta pulsar «Leer la lista».
+
+### V-47 · Bajo · `servidor()` acepta una clave vacía
+
+La comprobación de los 32 caracteres se ha quedado en el bloque de arranque. `servidor({ key: '' })` compara dos búferes vacíos y da por buena cualquier petición sin cabecera `x-lazo-key`. Sonda: `POST /unfurl` sin cabecera pasa la clave y llega al analizador de la URL.
+
+*Escenario.* Hoy no se alcanza: en producción solo llama `index.mjs`, que sale con 1 si la clave es corta. Es una trampa para quien reutilice `servidor()` (otra entrada, otra prueba que acabe escuchando en una red) leyendo la clave de una variable sin definir.
+
+*Arreglo.* Mover la comprobación dentro de `servidor()`: `if (typeof key !== 'string' || key.length < 32) throw new Error('Falta UNFURL_KEY (al menos 32 caracteres).');`, y que el arranque la capture para imprimir y salir.
+
+*Prueba.* En `wishlist.test.mjs`: `assert.throws(() => servidor({ key: '', amazon: false }))`.
+
+### V-48 · Bajo · Un fallo de `capacidades` se enseña como «apagada en tu servidor», y el aviso invita a reiniciar
+
+Sin red, con la sesión caducada (401), con un 429 o un 5xx, `capacidades` devuelve `amazon: false` y la app dice «La importación automática está apagada en tu servidor», con los dos pasos para encenderla. Puede ser falso.
+
+*Escenario.* El servidor la tiene encendida y el cortacircuitos acaba de saltar por un captcha. La hija, con mala cobertura, pega el enlace y enseña el aviso a su padre. Él repite `docker compose up -d --build`: el servicio se reinicia y con él el cortacircuitos y los cupos, que viven en memoria. La siguiente lectura vuelve a llamar a Amazon dentro de la hora de silencio. No es una fuga; es un aviso que empuja en contra de la única defensa de la IP de casa.
+
+Menor, en el mismo aviso: los botones de copiar van antes que «lee los riesgos», cuando `SECURITY.md` dice que se enciende después de leerlos.
+
+*Arreglo.* En `pocketbase.ts`, que `capacidades` distinga: `amazon: false` solo con un 200 o un 404 (servidor antiguo); en los demás casos, un tercer valor (`amazon: null`) que `conEnlace` trata como «No hemos podido preguntar a tu servidor; copia y pega la página», sin el aviso de encendido. En `Apagada`, subir la frase de los riesgos encima de los pasos.
+
+*Prueba.* e2e: con `capacidades` devolviendo `null` (o lanzando), no aparece `AMAZON_IMPORT=on` y sí el modo manual. Hoy el caso «servidor antiguo, sin la ruta» fija lo contrario y habría que partirlo en dos.
+
+### V-49 · Bajo · El enlace corto sigue fuera del tope global y sale sin toque
+
+Dos restos de V-41 y V-42, los dos declarados en parte:
+
+1. `resuelveCorto` no pasa por `cuentaPagina`. Su único freno es 30 por persona y hora, con hasta 4 saltos: una familia de diez puede llegar a 1 200 peticiones por hora a `amzn.eu`.
+2. Un `amzn.eu/d/…` compartido desde otra app llama a `amazon-corto` sin que nadie pulse. Es coherente con lo que ya pasa con cualquier producto compartido (se lee la tienda sin preguntar), pero una app puede gastar los 30 de la persona y, si `amzn.eu` contesta 403, 429 o 503, dejar el cortacircuitos puesto una hora para todos.
+
+*Arreglo.* (1) En `resuelveCorto`, `cuentaPagina(now)` antes de cada `get`, y `rate_limited` ya llega como `LIMITE`. Si se prefiere no mezclar los dos contadores, un `state.cortos` aparte con el mismo tope. (2) Aceptarlo y dejarlo escrito en `SECURITY.md`, o enseñar «Leer la lista» antes de resolver cuando `deOtraApp`; lo segundo añade un toque a cada producto compartido desde la app de Amazon, así que lo razonable es aceptarlo.
+
+*Prueba.* `wishlist.test.mjs`: con 60 peticiones en la hora, `resuelveCorto` da `rate_limited` con cero peticiones.
+
+### V-50 · Bajo · Tres pruebas que no fijan del todo lo que dicen
+
+1. **AMZ-5.** `leeLista` convierte `blocked` en `error`, que es también lo que da una conexión rechazada. Con la mutación (`opts.dns` en lugar de `safeLookup`), los casos de `127.0.0.1` y `169.254.169.254` **pasan**; la prueba solo falla en el tercero, por un `timeout` de 6 s contra `10.0.0.1`. En una red donde esa IP rechace el 443, pasaría entera y el cuarto caso saldría a una IP pública. *Arreglo:* añadir la comprobación directa, `await assert.rejects(() => once(new URL('https://www.amazon.es/'), Date.now() + 2000, { dns }), { code: 'blocked' })`, para cada juego de direcciones.
+2. **Arranque.** Nada prueba que `node index.mjs` escuche ni que salga con 1 sin clave. Es justo lo que cambia en la copia de trabajo, y su fallo es silencioso. *Arreglo:* una prueba que lance `node index.mjs` con `PORT` libre y una clave de 40 caracteres y espere el 200 de `/health`, y otra sin clave que espere el código 1.
+3. **`saneaProducto`.** Un producto `null` lanza `TypeError` (lo recoge el `catch` de `leer` y se pierde la vista previa entera) y un `asin` que sea un array de un elemento pasa la expresión regular y se guarda como array (el enlace sale bien). *Arreglo:* `if (typeof p?.asin !== 'string') return null;` al principio, y esos dos casos en `amazonLista.test.ts`.
+
+### V-51 · Bajo · `SECURITY.md` y la sección de estado no cuentan lo nuevo
+
+`SECURITY.md` sigue en «5 lecturas por persona y hora y 30 enlaces cortos»: faltan el tope de 60 páginas por hora en todo el servidor, que el 403 también corta una hora y que un enlace llegado de otra app espera a un toque. «Estado en la v1.2.1» dice que `index.mjs` «solo arranca con `import.meta.main`», que deja de ser cierto con el cambio sin confirmar, y da V-41 por corregido sin la salvedad de V-46.
+
+*Arreglo.* Tres frases en «Lectura de listas de Amazon» de `SECURITY.md` y `server/unfurl/test/wishlist.test.mjs` y `server/test/amazon.test.mjs` en la lista de pruebas (ya lo pedía V-45). Corregir las dos frases de la sección de estado cuando se confirme el cambio.
+
+### Observaciones sin número
+
+- En la hoja de fallo, «Reintentar» sale también con `LIMITE` y `AMAZON_BLOQUEA`. No llega a Amazon, pero con el tope del servidor cada toque gasta una de las 5 lecturas de la persona.
+- Un miembro con sesión puede gastar las 60 páginas de la hora y dejar a los demás en `LIMITE`. Es el precio del tope y está dentro de la familia.
+- `HEAD` todavía lleva `import.meta.main`: con un Node anterior a 24.2 el servicio no arranca y no dice nada. El cambio sin confirmar lo arregla y debe entrar en la versión.
+- El `Dockerfile` sigue en `node:24-alpine` sin fijar por digest (G-12).
+
+### Secretos
+
+- **Repositorio.** En el diff y en el cambio sin confirmar no hay claves, tokens, rutas locales ni direcciones reales: solo IP de pruebas (`127.0.0.1`, `10.0.0.1`, `169.254.169.254`, `93.184.216.34`) y la clave de usar y tirar `'k'.repeat(40)`. `AMAZON_IMPORT=on` no es un secreto. Los únicos `.env*` en el índice son los dos `.env.example`; `.env`, `.env.local`, `server/.env`, `server/data/` y `server/unfurl/amazon.mjs` están ignorados. Búsqueda por patrones, sin `gitleaks`.
+- **Builds.** El diff no añade ninguna variable `VITE_` ni lectura de `import.meta.env` en `src/`. `.env.local` no tiene ninguna variable con prefijo `VITE_` (he mirado nombres, no valores). `dist/`, `dist-demo/` y `android/app/src/main/assets/public/` de esta copia no contienen cadenas con forma de clave, pero **son anteriores a este código** (no llevan el aviso nuevo): no los he regenerado. Lo que la v1.2.1 añade al bundle son las tres constantes del aviso.
+- **Sigue igual.** Los commits llevan el correo de un dominio corporativo (observación de la v1.1.2).
+
+### Veredicto
+
+**Apto** para publicar. No hay hallazgos críticos, altos ni medios; nadie ve nada nuevo de su propia lista, el aviso no filtra nada del servidor, `opts.dns` no es alcanzable desde una petición, el 404 con la función apagada se mantiene y no hay secretos en el repositorio.
+
+Condiciones:
+
+1. **Confirmar el cambio de `server/unfurl/index.mjs` antes de etiquetar**: es parte de lo auditado y sin él la versión depende de Node 24.2 o posterior.
+2. **V-46 en esta misma versión**: es una línea y sin ella el `CHANGELOG` («Lazo ya no la lee sola») y el cierre de V-41 no son del todo ciertos.
+3. V-47 a V-51 pueden ir en la siguiente. Los builds de la demo y del APK hay que regenerarlos con este código; los que hay en disco no los he auditado como v1.2.1.
+
+### Estado tras la auditoría v1.2.1 (Opus 5.5)
+
+- **Arranque de `unfurl`:** `import.meta.main` sustituido por `import.meta.url === pathToFileURL(process.argv[1]).href` (funciona con cualquier Node 24). Comprobado arrancando `node index.mjs` y pidiendo `/health`.
+- **V-46:** corregido. `fromUrl` pasa `deOtraApp` también en la rama del enlace de lista; con él, V-41 queda cerrado. E2E de un texto largo compartido.
+- **V-47:** corregido. `servidor()` lanza sin una clave de 32 caracteres; prueba.
+- **V-48:** corregido. Solo un 404 (servidor antiguo) cuenta como apagada; sin red, 401 o 5xx se ofrece el modo manual sin el aviso de encendido. «Lee los riesgos» va antes de los pasos. E2E.
+- **V-49:** el enlace corto cuenta para el tope global; que se resuelva sin pulsar al llegar de otra app queda aceptado en `SECURITY.md`.
+- **V-50:** `saneaProducto` descarta `null`, arrays y ASIN que no son texto (prueba). Pendiente: la prueba de la guarda de IP sigue dependiendo de `opts.dns`; queda para la próxima versión.
+- **V-51:** corregido (`SECURITY.md` y este estado).

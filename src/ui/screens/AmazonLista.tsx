@@ -117,11 +117,12 @@ export function AmazonLista({ listId, enlace, compartido, deOtraApp, onNoEsLista
   /** Con el enlace de una lista: si el servidor sabe leerla, la lee; si no, cómo encenderlo y los pasos de copiar y pegar. */
   const conEnlace = (ref: EnlaceLista, tocado = true) => {
     setLeyendo(true);
-    // Si la pregunta falla (sin red, servidor antiguo sin la ruta), cuenta como apagada.
-    void api.capacidades().catch(() => ({ amazon: false })).then((c) => {
+    // Servidor antiguo sin la ruta: apagada. Sin respuesta (sin red, 5xx…): no se sabe, así que solo el modo manual (V-48).
+    void api.capacidades().catch((e: { status?: number }) => (e?.status === 404 ? { amazon: false } : { amazon: false, sinRespuesta: true })).then((c: { amazon: boolean; sinRespuesta?: boolean }) => {
       if (c.amazon) return leer(ref, tocado);
       setLeyendo(false);
       if (ref.corto && onNoEsLista) return onNoEsLista();
+      if (c.sinRespuesta) return setHint('No he podido preguntar a tu servidor si lee listas de Amazon. Mientras tanto, copia y pega la página de tu lista: sigue estos pasos.');
       setHint(undefined);
       setApagada(true);
     });
@@ -308,7 +309,13 @@ const RIESGOS = 'https://github.com/BertMarti/lazo/blob/main/docs/legal/AMAZON.m
 function Apagada() {
   return (
     <div className="banner amz-apagada" role="status">
-      <p>La importación automática está apagada en tu servidor. Quien lo aloja puede encenderla así:</p>
+      <p>
+        La importación automática está apagada en tu servidor. Antes de encenderla,{' '}
+        <a href={RIESGOS} target="_blank" rel="noopener noreferrer">
+          lee los riesgos
+        </a>
+        . Quien lo aloja puede encenderla así:
+      </p>
       <ol className="steps">
         <li>
           Añade esta línea a <code>server/.env</code>:
@@ -320,11 +327,7 @@ function Apagada() {
         </li>
       </ol>
       <p>
-        Antes,{' '}
-        <a href={RIESGOS} target="_blank" rel="noopener noreferrer">
-          lee los riesgos
-        </a>
-        . Si el servidor no es tuyo, enséñale esto a quien lo aloja. Mientras tanto, copia y pega la página de tu lista: sigue estos pasos.
+        Si el servidor no es tuyo, enséñale esto a quien lo aloja. Mientras tanto, copia y pega la página de tu lista: sigue estos pasos.
       </p>
     </div>
   );

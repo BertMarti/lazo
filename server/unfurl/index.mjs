@@ -2,6 +2,7 @@
 // POST /unfurl {"url": "..."} → {"title","image","priceCents","currency","store","url"}
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import { safeFetch } from './fetch.mjs';
 import { UnfurlError } from './guard.mjs';
 import { parseMeta } from './meta.mjs';
@@ -14,6 +15,8 @@ export async function unfurl(url, opts) {
 
 /** El servidor HTTP sin arrancar: las pruebas lo crean con su clave y con la importación encendida o apagada. */
 export function servidor({ key, amazon }) {
+  // V-47: sin clave buena no hay servicio (una vacía dejaría pasar peticiones sin cabecera).
+  if (typeof key !== 'string' || key.length < 32) throw new Error('Falta UNFURL_KEY (al menos 32 caracteres).');
   const sameKey = (got) => {
     const a = Buffer.from(String(got ?? ''));
     const b = Buffer.from(key);
@@ -47,7 +50,8 @@ export function servidor({ key, amazon }) {
   return server;
 }
 
-if (import.meta.main) {
+// Solo arranca al ejecutarse (`node index.mjs`), no al importarse en las pruebas. Sin import.meta.main: Node < 24.2.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const KEY = process.env.UNFURL_KEY ?? '';
   if (KEY.length < 32) {
     console.error('Falta UNFURL_KEY (al menos 32 caracteres).');

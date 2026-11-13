@@ -250,11 +250,12 @@ export class PocketBaseApi implements Api {
 
   unfurl = (url: string) => this.read(() => this.pb.send<PageMeta>('/api/lazo/unfurl', { method: 'POST', body: { url } }));
 
-  private caps?: Promise<{ amazon: boolean }>;
+  private caps?: Promise<{ amazon: boolean; sinRespuesta?: boolean }>;
   capacidades = () =>
     (this.caps ??= this.pb.send<{ amazon: boolean }>('/api/lazo/capacidades', { method: 'GET' }).then(
       (c) => ({ amazon: c.amazon === true }),
-      () => ((this.caps = undefined), { amazon: false }), // sin red o servidor antiguo: modo manual
+      // V-48: un 404 es un servidor antiguo (apagada); lo demás (sin red, 401, 5xx) no dice nada: modo manual sin aviso.
+      (e: { status?: number }) => ((this.caps = undefined), e?.status === 404 ? { amazon: false } : { amazon: false, sinRespuesta: true }),
     ));
 
   /** Las rutas de Amazon responden `{code, message}`: el código llega a la pantalla para elegir qué ofrecer. */

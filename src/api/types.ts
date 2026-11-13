@@ -146,7 +146,8 @@ export interface Api {
   drawInfo(groupId: Id): Promise<DrawInfo>;
   unfurl(url: string): Promise<PageMeta>;
   /** Qué tiene encendido el servidor. La lectura de listas de Amazon va apagada salvo `AMAZON_IMPORT=on`. */
-  capacidades(): Promise<{ amazon: boolean }>;
+  /** `sinRespuesta`: no se ha podido preguntar (sin red, 401, 5xx…): no se sabe si está apagada. Un 404 es un servidor antiguo: apagada. */
+  capacidades(): Promise<{ amazon: boolean; sinRespuesta?: boolean }>;
   /**
    * Lista de Amazon leída por el servidor (solo el identificador viaja). Falla con `ApiError.code`: AMAZON_BLOQUEA,
    * NO_ES_LISTA, LISTA_PRIVADA, VACIA, LIMITE, OCUPADO o ERROR.

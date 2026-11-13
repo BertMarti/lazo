@@ -324,3 +324,16 @@ test('V-44 (AMZ-7): un goteo lento con el `once` real acaba en `timeout` dentro 
   s.closeAllConnections();
   s.close();
 });
+
+test('V-47: servidor() no arranca sin una clave de 32 caracteres', async () => {
+  const { servidor } = await import('../index.mjs');
+  for (const key of ['', 'corta', undefined, null]) assert.throws(() => servidor({ key, amazon: true }), /UNFURL_KEY/);
+});
+
+test('V-49: el enlace corto también cuenta para el tope global de páginas por hora', async () => {
+  let n = 0;
+  const get = async () => (n++, { redirect: `https://www.amazon.es/hz/wishlist/ls/${LID}` });
+  for (let i = 0; i < AMZ.paginasHora; i++) await resuelveCorto('aB3dE5f', { get });
+  await assert.rejects(() => resuelveCorto('aB3dE5f', { get }), { code: 'rate_limited' });
+  assert.equal(n, AMZ.paginasHora);
+});

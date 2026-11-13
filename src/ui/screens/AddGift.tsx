@@ -68,7 +68,7 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
   const fromUrl = async (url: string, noEsLista = false, deOtraApp = false) => {
     if (busyRef.current) return;
     const id = listaId(url);
-    if (id) return setStep({ kind: 'amazon', enlace: { id } });
+    if (id) return setStep({ kind: 'amazon', enlace: { id }, deOtraApp });
     // amzn.eu/d/…: puede ser una lista o un producto. Si el servidor lee listas, lo averigua él (sin abrir la lista).
     const corto = noEsLista ? null : codigoCorto(url);
     if (corto && (await api.capacidades()).amazon) return setStep({ kind: 'amazon', enlace: { corto }, corto: url, deOtraApp });

@@ -172,6 +172,41 @@ test('V-41: el enlace de una lista que llega de otra app no se lee hasta pulsar 
   expect(await page.evaluate(() => (window as unknown as { __lazoDemo: Demo }).__lazoDemo.__lecturas)).toBe(1);
 });
 
+test('V-46: un texto largo de otra app con el enlace de una lista tampoco se lee hasta pulsar', async ({ page }) => {
+  await page.goto('/#/l/l-alberto');
+  await expect(page.locator('.gift').first()).toBeVisible();
+  await page.evaluate(() => {
+    const d = (window as unknown as { __lazoDemo: Demo }).__lazoDemo;
+    const real = d.amazonLista.bind(d);
+    d.__lecturas = 0;
+    d.amazonLista = (id) => (d.__lecturas!++, real(id));
+  });
+  // Una sola ficha reconocible y relleno: no cuenta como lista pegada y va por el enlace (fromUrl).
+  await compartir(page, `${DEMO_AMAZON_LISTA}
+Taza de cerámica azul grande para el desayuno
+12,99 €
+Prioridad: media
+${'Gracias por todo. '.repeat(15)}`);
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('button', { name: 'Leer la lista' })).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => (window as unknown as { __lazoDemo: Demo }).__lazoDemo.__lecturas)).toBe(0);
+});
+
+test('V-48: si no se puede preguntar al servidor, no dice que esté apagada', async ({ page }) => {
+  await page.goto('/#/l/l-alberto/nuevo');
+  await expect(page.getByRole('heading', { name: 'Añadir a tu lista' })).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { __lazoDemo: Demo }).__lazoDemo.capacidades = async () => {
+      throw Object.assign(new Error('sin red'), { status: 0 });
+    };
+  });
+  await paste(page, DEMO_AMAZON_LISTA);
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText('No he podido preguntar a tu servidor si lee listas de Amazon.', { exact: false })).toBeVisible();
+  await expect(sheet.getByText('La importación automática está apagada')).toHaveCount(0);
+});
+
 for (const [caso, capacidades] of [
   ['apagada', 'false'],
   ['servidor antiguo, sin la ruta', 'falla'],
@@ -182,14 +217,14 @@ for (const [caso, capacidades] of [
     await page.evaluate((c) => {
       const d = (window as unknown as { __lazoDemo: Demo }).__lazoDemo;
       d.capacidades = async () => {
-        if (c === 'falla') throw new Error('404');
+        if (c === 'falla') throw Object.assign(new Error('404'), { status: 404 });
         return { amazon: false };
       };
     }, capacidades);
     await paste(page, DEMO_AMAZON_LISTA);
     const sheet = page.getByRole('dialog');
     const aviso = sheet.getByRole('status');
-    await expect(aviso).toContainText('La importación automática está apagada en tu servidor. Quien lo aloja puede encenderla así:');
+    await expect(aviso).toContainText('La importación automática está apagada en tu servidor. Antes de encenderla, lee los riesgos. Quien lo aloja puede encenderla así:');
     await expect(aviso.locator('code', { hasText: '.env' })).toHaveText('server/.env');
     await expect(aviso.locator('.amz-copiable code')).toHaveText(['AMAZON_IMPORT=on', 'cd lazo/server && docker compose up -d --build']);
     await expect(aviso.getByRole('link', { name: 'lee los riesgos' })).toHaveAttribute('href', 'https://github.com/BertMarti/lazo/blob/main/docs/legal/AMAZON.md');

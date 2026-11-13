@@ -133,6 +133,7 @@ export async function resuelveCorto(codigo, opts = {}) {
   const now = opts.now ?? Date.now;
   // V-40: el acortador también respeta (y fija) el cortacircuitos de una hora.
   if (now() < state.bloqueadoHasta) throw fallo(BLOQUEA);
+  cuentaPagina(now); // V-49: también cuenta para el tope global de 60 por hora
   const get = opts.get ?? ((u, d) => once(u, d, { maxBytes: 1, dns: opts.dns }));
   let u = new URL(`https://amzn.eu/d/${codigo}`);
   const deadline = Date.now() + AMZ.msPagina;

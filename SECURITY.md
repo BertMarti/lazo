@@ -109,6 +109,9 @@ Antes de subirlo: `aapt2 dump badging dist-apk/lazo-X.Y.Z.apk | grep -c debuggab
 - **Apagada por defecto.** Solo la enciende quien aloja el servidor, con `AMAZON_IMPORT=on` en `server/.env`, después de leer `docs/legal/AMAZON.md` (las condiciones de Amazon lo prohíben y puede bloquear la IP de casa con captchas).
 - Al servidor solo llega el identificador de la lista; la URL la construye él, solo hacia `www.amazon.es` y `amzn.eu`. No usa cookies ni sesiones de Amazon y nunca intenta saltarse un captcha: si aparece, deja de llamar a Amazon durante una hora.
 - Como mucho 10 páginas y 200 productos, con una pausa entre páginas, una lectura a la vez, 5 lecturas por persona y hora y 30 enlaces cortos por persona y hora.
+- Tope global de 60 peticiones a Amazon por hora en todo el servidor (listas y enlaces cortos). Un 403, 429, 503 o captcha deja el servidor sin llamar a Amazon durante una hora.
+- Un enlace de lista que llega desde otra app («Compartir → Lazo») no se lee hasta que la persona pulsa «Leer la lista». Un enlace corto `amzn.eu` compartido sí se resuelve sin pulsar (solo la redirección, sin abrir la lista): riesgo aceptado (V-49).
+- Con la importación apagada, la app enseña a cualquiera la línea `AMAZON_IMPORT=on` y el comando para encenderla: son constantes públicas del código y solo revelan que está apagada.
 - **Riesgo aceptado (V-39):** se leen solo los productos «No comprados», como pidió el dueño del proyecto. Quien importa su propia lista podría deducir lo que falta, pero eso mismo lo ve abriendo su enlace de Amazon en una ventana privada; Lazo no guarda ni muestra qué se ha comprado en Amazon.
 
 Auditoría de seguridad de Fable y su estado: `docs/security/AUDIT.md`.

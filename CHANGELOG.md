@@ -4,6 +4,20 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [1.2.1] - 2026-11-13 · Lista de Amazon, más segura
+
+### Añadido
+- **Si la importación de Amazon está apagada en tu servidor, la app te dice cómo encenderla:** la línea exacta para `server/.env` (`AMAZON_IMPORT=on`) y el comando (`cd lazo/server && docker compose up -d --build`), cada uno con su botón «Copiar», y el enlace a los riesgos. Mientras tanto, el modo de copiar y pegar la página sigue debajo.
+
+### Cambiado
+- Si compartes el enlace de una lista de Amazon desde otra app, Lazo ya no la lee sola: te pregunta con un botón «Leer la lista».
+- El aviso de límite ahora dice «Ya se han leído muchas listas en la última hora. Prueba más tarde.»
+
+### Seguridad
+- Tope de 60 páginas de Amazon por hora en todo el servidor; un «403» de Amazon también lo frena una hora.
+- El servicio que lee las páginas corta antes los datos comprimidos que no llevan a nada.
+- Seis pruebas nuevas (auditoría v1.2.0, V-41 a V-44).
+
 ## [1.2.0] - 2026-11-13 · Lista de Amazon
 
 ### Añadido
