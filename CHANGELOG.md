@@ -4,6 +4,10 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+### Lo nuevo
+- **Eliminar el grupo.** Quien lo creó tiene, al pie del grupo, «Eliminar el grupo». Avisa de que se pierden todas las listas, reservas, la hucha, el sorteo y los enlaces, ofrece «Descargar una copia antes» y solo deja borrar tras escribir el nombre exacto del grupo. En el servidor se borra todo de una vez, sin dejar restos, y solo puede hacerlo el dueño.
+- **Salir del grupo**, para quien no lo creó. Su lista se queda como un sitio libre al que se le puede volver a invitar; lo que tenía reservado para otros y lo que iba a poner a medias se suelta para que otro pueda regalarlo, y lo ya comprado o pagado se queda apuntado. Quien lleva las cuentas de la hucha no puede salir, y quien creó el grupo tampoco (pasar el grupo a otra persona aún no se puede).
+
 ## [1.1.1] - 2026-11-13 · Bienvenida
 
 Arreglos de lo que encontramos al probar la app de Android en un móvil de verdad.

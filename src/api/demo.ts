@@ -155,6 +155,56 @@ export class DemoApi implements Api {
     this.save();
   }
 
+  /** Igual que POST /api/lazo/group-delete: solo el dueño, y se va todo lo que cuelga del grupo. */
+  async deleteGroup(groupId: Id) {
+    const g = this.db.groups.find((x) => x.id === groupId);
+    if (!g || g.owner !== this.viewer) throw new ApiError('Solo quien creó el grupo puede eliminarlo.');
+    const lists = new Set(this.db.lists.filter((l) => l.group === groupId).map((l) => l.id));
+    const items = new Set(this.db.items.filter((i) => lists.has(i.list)).map((i) => i.id));
+    const draws = new Set(this.db.draws.filter((d) => d.group === groupId).map((d) => d.id));
+    const db = this.db;
+    db.groups = db.groups.filter((x) => x.id !== groupId);
+    db.memberships = db.memberships.filter((m) => m.group !== groupId);
+    db.lists = db.lists.filter((l) => !lists.has(l.id));
+    db.items = db.items.filter((i) => !items.has(i.id));
+    db.claims = db.claims.filter((c) => !items.has(c.item));
+    db.contributions = db.contributions.filter((c) => !items.has(c.item));
+    db.budgets = db.budgets.filter((b) => !lists.has(b.list));
+    db.payments = db.payments.filter((p) => p.group !== groupId);
+    db.draws = db.draws.filter((d) => !draws.has(d.id));
+    db.assignments = db.assignments.filter((a) => !draws.has(a.draw));
+    db.invites = db.invites.filter((i) => i.group !== groupId);
+    db.requests = db.requests.filter((r) => r.group !== groupId);
+    this.writeShares(Object.fromEntries(Object.entries(this.shares()).filter(([, l]) => !lists.has(l))));
+    this.save();
+  }
+
+  /** Igual que POST /api/lazo/group-leave: la plaza queda libre y se suelta lo que solo era promesa (nunca lo comprado ni lo pagado). */
+  async leaveGroup(groupId: Id) {
+    const g = this.member(groupId);
+    if (g.owner === this.viewer) throw new ApiError('Quien creó el grupo no puede salir: tendría que eliminarlo.');
+    const me = this.viewer;
+    const plaza = this.db.lists.find((l) => l.group === groupId && l.kind === 'person' && l.user === me);
+    if (plaza && (plaza.id === g.treasurer || plaza.id === g.deputy)) throw new ApiError('Llevas las cuentas de la hucha y no puedes salir del grupo.');
+    const db = this.db;
+    db.memberships = db.memberships.filter((m) => !(m.group === groupId && m.user === me));
+    if (plaza) {
+      this.writeShares(this.dropShares(plaza.id));
+      Object.assign(plaza, { prevUser: me, user: undefined, claimedAt: 0, via: undefined, approvedBy: undefined });
+      db.invites = db.invites.filter((i) => i.list !== plaza.id);
+    }
+    db.requests = db.requests.filter((r) => !(r.group === groupId && r.user === me));
+    const inGroup = new Set(db.items.filter((i) => db.lists.some((l) => l.id === i.list && l.group === groupId)).map((i) => i.id));
+    const bought = new Set(db.claims.filter((c) => c.status === 'bought').map((c) => c.item));
+    db.claims = db.claims.filter((c) => !(inGroup.has(c.item) && c.user === me && c.status === 'reserved' && c.kind !== 'pot'));
+    db.contributions = db.contributions.filter((c) => !(inGroup.has(c.item) && c.user === me && !c.paid && !bought.has(c.item)));
+    for (const l of db.lists) if (l.group === groupId && l.kind === 'child' && l.managers.includes(me)) {
+      const rest = l.managers.filter((m) => m !== me);
+      l.managers = rest.length ? rest : [g.owner];
+    }
+    this.save();
+  }
+
   async saveItem(listId: Id, input: ItemInput, id?: Id) {
     if (id) {
       const item = this.db.items.find((i) => i.id === id && i.list === listId);

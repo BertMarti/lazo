@@ -364,6 +364,84 @@ routerAdd(
   $apis.requireAuth('users'),
 );
 
+// ——— Eliminar el grupo: solo quien lo creó. Es la única puerta (groups.deleteRule = null desde v1.1.2) ———
+// El borrado arrastra en la misma transacción todo lo que cuelga del grupo por cascadeDelete: plazas, regalos,
+// reservas, aportaciones, presupuestos, pagos, sorteos, asignaciones, enlaces, solicitudes y enlaces de solo lectura.
+// Misma respuesta (403) si el grupo no existe o no es tuyo; nunca mira qué hay dentro.
+routerAdd(
+  'POST',
+  '/api/lazo/group-delete',
+  (e) => {
+    const no = () => new ForbiddenError('Solo quien creó el grupo puede eliminarlo.');
+    $app.runInTransaction((tx) => {
+      let group;
+      try {
+        group = tx.findRecordById('groups', String(e.requestInfo().body.group || ''));
+      } catch {
+        throw no();
+      }
+      if (group.getString('owner') !== e.auth.id) throw no();
+      tx.delete(group);
+    });
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
+// ——— Salir del grupo (cualquiera menos el dueño). Su plaza queda libre, como con plaza-release, y además se
+// suelta lo que solo era una promesa suya hacia otros: reservas sin comprar y aportaciones sin pagar a regalos
+// sin comprar. Lo comprado y lo pagado se queda apuntado (ese dinero ya se movió). Su lista no se toca y la
+// respuesta es siempre la misma: no depende de lo que tenga reservado ni de lo que haya en su lista.
+routerAdd(
+  'POST',
+  '/api/lazo/group-leave',
+  (e) => {
+    const me = e.auth.id;
+    $app.runInTransaction((tx) => {
+      let group;
+      try {
+        group = tx.findRecordById('groups', String(e.requestInfo().body.group || ''));
+      } catch {
+        throw new ForbiddenError('No perteneces a este grupo.');
+      }
+      if (!group.getStringSlice('members').includes(me)) throw new ForbiddenError('No perteneces a este grupo.');
+      if (group.getString('owner') === me) throw new ForbiddenError('Quien creó el grupo no puede salir: tendría que eliminarlo.');
+      const plaza = tx.findRecordsByFilter('lists', 'group = {:g} && kind = "person" && user = {:u}', '', 1, 0, { g: group.id, u: me })[0];
+      if (plaza && [group.getString('treasurer'), group.getString('deputy')].includes(plaza.id)) throw new BadRequestError('Llevas las cuentas de la hucha y no puedes salir del grupo.');
+      group.set('members-', me);
+      group.set('admins-', me);
+      tx.save(group);
+      if (plaza) {
+        plaza.set('prevUser', me); // V-5: no puede volver en otra plaza
+        plaza.set('user', '');
+        plaza.set('claimedAt', 0);
+        plaza.set('via', '');
+        plaza.set('approvedBy', '');
+        tx.save(plaza);
+        for (const inv of tx.findRecordsByFilter('invites', 'list = {:l} && revoked = false', '', 0, 0, { l: plaza.id })) {
+          inv.set('revoked', true);
+          tx.save(inv);
+        }
+        for (const s of tx.findRecordsByFilter('shares', 'list = {:l}', '', 0, 0, { l: plaza.id })) tx.delete(s);
+      }
+      for (const r of tx.findRecordsByFilter('joinRequests', 'group = {:g} && user = {:u}', '', 0, 0, { g: group.id, u: me })) tx.delete(r);
+      const g = group.id;
+      for (const c of tx.findRecordsByFilter('claims', 'item.list.group = {:g} && user = {:u} && status = "reserved" && kind != "pot"', '', 0, 0, { g, u: me })) tx.delete(c);
+      for (const c of tx.findRecordsByFilter('contributions', 'item.list.group = {:g} && user = {:u} && paid = false', '', 0, 0, { g, u: me })) {
+        if (!tx.findRecordsByFilter('claims', 'item = {:i} && status = "bought"', '', 1, 0, { i: c.getString('item') }).length) tx.delete(c);
+      }
+      // Las listas de niños que llevaba: sin él; si se quedan sin nadie, las lleva quien creó el grupo.
+      for (const l of tx.findRecordsByFilter('lists', 'group = {:g} && kind = "child" && managers.id ?= {:u}', '', 0, 0, { g, u: me })) {
+        const rest = l.getStringSlice('managers').filter((m) => m !== me);
+        l.set('managers', rest.length ? rest : [group.getString('owner')]);
+        tx.save(l);
+      }
+    });
+    return e.json(200, { ok: true });
+  },
+  $apis.requireAuth('users'),
+);
+
 // ——— Enlace de solo lectura de MI lista (o la de un niño que llevo). Crear otra vez rota el token; solo se guarda el hash ———
 routerAdd(
   'POST',

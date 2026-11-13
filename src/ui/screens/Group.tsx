@@ -11,6 +11,7 @@ import { GiftCard } from '../Gift';
 import { MemberCard } from '../MemberCard';
 import type { Title } from '../title';
 import { BudgetSheet } from './BudgetSheet';
+import { GroupExit } from './GroupExit';
 import { InviteSheet } from './Invite';
 
 /** Grupo = elegir persona. Tarjetas de plaza: la mía primero, luego por nombre; las libres al final. */
@@ -117,6 +118,7 @@ export function GroupScreen({ id, onTitle }: { id: string; onTitle: (t: Title) =
           </div>
         </section>
       )}
+      <GroupExit key={me.id} group={g} myPlaza={myPlaza?.id} />
       {inviting && <InviteSheet groupId={id} focusList={typeof inviting === 'string' ? inviting : undefined} onClose={() => setInviting(false)} onChanged={reload} />}
       {budgetFor && (
         <BudgetSheet

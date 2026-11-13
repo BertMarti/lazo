@@ -193,6 +193,8 @@ export class PocketBaseApi implements Api {
   addPlaza = (groupId: Id, name: string) => this.run(async () => list(await this.pb.collection('lists').create({ group: groupId, name, kind: 'person' })));
 
   releasePlaza = (listId: Id) => this.run(async () => void (await this.pb.send('/api/lazo/plaza-release', { method: 'POST', body: { list: listId } })));
+  deleteGroup = (groupId: Id) => this.run(async () => void (await this.pb.send('/api/lazo/group-delete', { method: 'POST', body: { group: groupId } })));
+  leaveGroup = (groupId: Id) => this.run(async () => void (await this.pb.send('/api/lazo/group-leave', { method: 'POST', body: { group: groupId } })));
 
   addSurprise = (listId: Id, input: ItemInput) =>
     this.run(async () => item(await this.pb.collection('items').create({ ...input, url: input.url ?? '', image: input.image ?? '', list: listId, createdBy: this.uid(), currency: 'EUR', secret: true })));
