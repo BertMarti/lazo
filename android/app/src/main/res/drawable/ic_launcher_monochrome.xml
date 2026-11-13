@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por scripts/iconos.py: no editar a mano. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FF000000" android:pathData="M 46.26 45.40 C 41.10 37.66 32.50 30.78 28.20 34.22 C 23.47 38.09 23.47 56.58 28.20 60.02 C 32.50 63.46 41.10 59.16 46.26 54.00 Z" />
+    <path android:fillColor="#FF000000" android:pathData="M 61.74 45.40 C 66.90 37.66 75.50 30.78 79.80 34.22 C 84.53 38.09 84.53 56.58 79.80 60.02 C 75.50 63.46 66.90 59.16 61.74 54.00 Z" />
+    <path android:fillColor="#FF000000" android:pathData="M 46.18 54.87 L 37.58 74.65 L 43.07 72.81 L 45.48 78.07 L 54.08 58.29 Z" />
+    <path android:fillColor="#FF000000" android:pathData="M 61.82 54.87 L 70.42 74.65 L 64.93 72.81 L 62.52 78.07 L 53.92 58.29 Z" />
+    <path android:fillColor="#FF000000" android:pathData="M 52.28 43.25 L 55.72 43.25 C 57.86 43.25 59.59 44.98 59.59 47.12 L 59.59 52.28 C 59.59 54.42 57.86 56.15 55.72 56.15 L 52.28 56.15 C 50.14 56.15 48.41 54.42 48.41 52.28 L 48.41 47.12 C 48.41 44.98 50.14 43.25 52.28 43.25 Z" />
+</vector>
