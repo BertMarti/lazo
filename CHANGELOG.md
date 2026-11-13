@@ -4,6 +4,12 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [1.1.3] - 2026-11-13 · Eliminar grupo
+
+### Corregido
+- **Eliminar el grupo no funcionaba en el móvil.** Había que escribir el nombre del grupo para confirmar, y la comparación era tan estricta que un espacio de más o un carácter invisible del teclado la hacían fallar. Ahora es lo de siempre: quien creó el grupo ve el botón rojo «Eliminar grupo» y, al pulsarlo, un aviso sencillo con «Cancelar» y «Eliminar» (y la opción de descargar antes una copia). Los demás no ven el botón, y el servidor sigue comprobando que solo quien lo creó puede eliminarlo.
+- Los nombres de las plazas ya no se confunden por espacios duros o caracteres invisibles que mete el teclado del móvil.
+
 ## [1.1.2] - 2026-11-13 · Atrás
 
 Lo que pidió la familia al usar Lazo de verdad: volver atrás como en cualquier app, poder borrar un grupo y salir de él.

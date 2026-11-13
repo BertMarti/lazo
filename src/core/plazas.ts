@@ -1,6 +1,15 @@
-/** Nombres de plaza: sin mayúsculas, tildes ni espacios de más, para detectar repetidos. */
+/**
+ * Nombres de plaza: sin mayúsculas, tildes, espacios de más ni caracteres invisibles (el teclado del móvil
+ * mete a veces espacios duros o de ancho cero), para detectar repetidos.
+ */
 export const normName = (s: string) =>
-  s.normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  s
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\p{Cf}/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 
 /** «¿Quiénes sois?» (un nombre por línea) → plazas: sin vacíos, sin repetidos, sin el creador, máx. 40 de 40 caracteres. */
 export function parsePlazas(text: string | string[], creatorName = ''): string[] {

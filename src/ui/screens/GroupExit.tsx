@@ -7,7 +7,10 @@ import { go, lastGroup, useApi } from '../ctx';
 import { errorText, useToast } from '../kit';
 
 /**
- * Al pie del grupo. Quien lo creó puede eliminarlo (escribiendo su nombre); los demás, salir.
+ * Al pie del grupo. Solo quien lo creó ve «Eliminar grupo» (confirmación sencilla); los demás, salir.
+ * Antes había que escribir el nombre del grupo para confirmar: la comparación exacta fallaba en el móvil
+ * (el teclado añade espacios y formas Unicode distintas) y bloqueaba el borrado. El servidor sigue
+ * comprobando que solo el dueño puede eliminar.
  * Ningún texto depende de lo que haya reservado nadie: la confirmación es la misma para todos.
  */
 export function GroupExit({ group, myPlaza }: { group: Group; myPlaza?: string }) {
@@ -15,7 +18,6 @@ export function GroupExit({ group, myPlaza }: { group: Group; myPlaza?: string }
   const toast = useToast();
   const owner = api.me()?.id === group.owner;
   const [asking, setAsking] = useState(false);
-  const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const keepsHucha = !!myPlaza && (myPlaza === group.treasurer || myPlaza === group.deputy);
@@ -38,7 +40,6 @@ export function GroupExit({ group, myPlaza }: { group: Group; myPlaza?: string }
   };
   const cancel = () => {
     setAsking(false);
-    setTyped('');
     setErr('');
   };
 
@@ -49,29 +50,23 @@ export function GroupExit({ group, myPlaza }: { group: Group; myPlaza?: string }
         <p className="meta">Solo puedes hacerlo tú, porque lo creaste. Para irte sin eliminarlo tendrías que pasar el grupo a otra persona, y eso aún no se puede.</p>
         {asking ? (
           <div role="alertdialog" aria-labelledby="grupo-fin-q" aria-describedby="grupo-fin-d" className="stack">
-            <p id="grupo-fin-q" className="group-exit-q">¿Eliminar «{group.name}» para todos?</p>
-            <p id="grupo-fin-d">Se borran para siempre todas las listas y sus regalos, las reservas y las compras, la hucha y sus pagos, el sorteo del amigo invisible y todos los enlaces. Nadie podrá volver a entrar. No se puede deshacer.</p>
-            <ButtonGroup>
-              <Button variant="secondary" icon={DownloadSimple} loading={busy === 'copia'} onClick={() => act('copia', async () => {
-                downloadCopia(await exportGroup(api, group.id));
-                toast('Copia descargada.');
-              })}>Descargar una copia antes</Button>
-            </ButtonGroup>
-            <label className="field">
-              <span>Para confirmarlo, escribe el nombre del grupo: «{group.name}»</span>
-              <input className="input" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} maxLength={80} />
-            </label>
+            <p id="grupo-fin-q" className="group-exit-q">¿Eliminar «{group.name}»?</p>
+            <p id="grupo-fin-d">Se borrarán las listas, las reservas y la hucha para todos. No se puede deshacer.</p>
             {err && <p className="notice notice-error" role="alert">{err}</p>}
             <ButtonGroup>
-              <Button variant="danger" icon={Trash} disabled={typed.trim() !== group.name} loading={busy === 'borrar'} onClick={() => act('borrar', () => api.deleteGroup(group.id), `«${group.name}» se ha eliminado.`)}>
-                Eliminar el grupo
+              <Button variant="secondary" disabled={busy === 'borrar'} onClick={cancel}>Cancelar</Button>
+              <Button variant="danger" icon={Trash} loading={busy === 'borrar'} disabled={busy === 'copia'} onClick={() => act('borrar', () => api.deleteGroup(group.id), `«${group.name}» se ha eliminado.`)}>
+                Eliminar
               </Button>
-              <Button variant="secondary" disabled={busy === 'borrar'} onClick={cancel}>No, dejarlo</Button>
             </ButtonGroup>
+            <Button variant="link" icon={DownloadSimple} loading={busy === 'copia'} onClick={() => act('copia', async () => {
+              downloadCopia(await exportGroup(api, group.id));
+              toast('Copia descargada.');
+            })}>Descargar antes una copia</Button>
           </div>
         ) : (
           <ButtonGroup>
-            <Button variant="secondary" icon={Trash} onClick={() => setAsking(true)}>Eliminar el grupo</Button>
+            <Button variant="danger" icon={Trash} onClick={() => setAsking(true)}>Eliminar grupo</Button>
           </ButtonGroup>
         )}
       </section>

@@ -18,7 +18,7 @@ test('Papá sale del grupo: su sitio queda libre y lo que reservó para Javier s
 
   await page.goto('/#/g/navidad');
   await page.getByLabel('Ver como').selectOption('papa');
-  await expect(page.getByRole('button', { name: 'Eliminar el grupo' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Eliminar grupo' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Salir del grupo' }).click();
   const dialog = page.getByRole('alertdialog', { name: '¿Salir de «Navidad en familia»?' });
   await expect(dialog).toContainText('Tu lista y tus regalos se quedan en el grupo como un sitio libre.');
@@ -42,30 +42,35 @@ test('quien lleva la hucha no puede salir, y quien no creó el grupo no puede el
   await page.getByLabel('Ver como').selectOption('samira');
   await expect(page.getByText('Llevas las cuentas de la hucha, así que no puedes salir del grupo.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Salir del grupo' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Eliminar el grupo' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Eliminar grupo' })).toHaveCount(0);
 });
 
-test('Alberto elimina el grupo: copia antes, nombre exacto y no queda nada', async ({ page }) => {
+test('Alberto elimina el grupo: botón rojo solo para él, diálogo sencillo y no queda nada', async ({ page }) => {
   await page.goto('/#/g/navidad');
+  // Nadie más ve el botón
+  for (const who of ['javier', 'samira', 'marta', 'papa']) {
+    await page.getByLabel('Ver como').selectOption(who);
+    await expect(page.getByRole('button', { name: 'Eliminar grupo' })).toHaveCount(0);
+  }
   await page.getByLabel('Ver como').selectOption('alberto');
   await expect(page.getByRole('button', { name: 'Salir del grupo' })).toHaveCount(0);
-  await expect(page.getByText('pasar el grupo a otra persona, y eso aún no se puede')).toBeVisible();
-  await page.getByRole('button', { name: 'Eliminar el grupo' }).click();
-  const dialog = page.getByRole('alertdialog', { name: '¿Eliminar «Navidad en familia» para todos?' });
-  await expect(dialog).toContainText('la hucha y sus pagos, el sorteo del amigo invisible y todos los enlaces');
+  const boton = page.getByRole('button', { name: 'Eliminar grupo' });
+  await expect(boton).toHaveClass(/btn-danger/);
+  await boton.click();
+  const dialog = page.getByRole('alertdialog', { name: '¿Eliminar «Navidad en familia»?' });
+  await expect(dialog).toContainText('Se borrarán las listas, las reservas y la hucha para todos. No se puede deshacer.');
+  // Sin escribir nada: dos botones y la copia como enlace secundario
+  await expect(dialog.getByRole('textbox')).toHaveCount(0);
 
   const download = page.waitForEvent('download');
-  await dialog.getByRole('button', { name: 'Descargar una copia antes' }).click();
+  await dialog.getByRole('button', { name: 'Descargar antes una copia' }).click();
   expect((await download).suggestedFilename()).toMatch(/^lazo-navidad-en-familia-\d{4}-\d{2}-\d{2}\.json$/);
 
-  const borrar = dialog.getByRole('button', { name: 'Eliminar el grupo' });
-  await expect(borrar).toBeDisabled();
-  const name = dialog.getByLabel(/escribe el nombre del grupo/);
-  await name.fill('Navidad');
-  await expect(borrar).toBeDisabled();
-  await name.fill('Navidad en familia');
-  await expect(borrar).toBeEnabled();
-  await borrar.click();
+  // Cancelar cierra sin borrar
+  await dialog.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await boton.click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('«Navidad en familia» se ha eliminado.');
   await expect(page.locator('.group-card', { hasText: 'Navidad en familia' })).toHaveCount(0);
 
