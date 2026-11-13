@@ -1575,3 +1575,158 @@ El comportamiento es correcto por construcción, pero la prueba descrita en AMZ-
 - **V11-4:** `olvidaCompartido()` al cerrar sesión (`PocketBaseApi.signOut`, probado en `test/api/signout.test.ts`) y cuando `AmazonDestino` no encuentra plaza.
 - **V11-5:** el identificador de las pruebas es ahora `LAZOPRUEBA01` (sigue casando con `listaId`). El anterior sigue en el historial de git.
 - **V11-6:** prueba AMZ-11 en `server/test/rules.test.mjs` (A cogido y B libre, quitados y reimportados en un lote: misma respuesta y dos filas nuevas) y prueba de la enmienda a AMZ-10 en `test/core/amazonLista.test.ts`: «Necesita 2 · Tiene 1» da solo `quantity: 2`, y «Tiene» y «Comprado» no se leen ni en texto ni en HTML.
+
+---
+
+## v1.1.2 (Fable 5.2)
+
+Fecha: 2026-11-13 · Sobre `main` en `1483991` (cuatro commits por delante de `origin/main`). No existe la etiqueta `v1.1.1`: la base del diff es `aceec10` («release: versión 1.1.1»).
+
+**Alcance.** Eliminar y salir del grupo (`e6fb15e`), atrás nativo y App Links (`72dde44`), `me()` cacheado y error boundary (`a9daba4`), icono (`d053c32`), y secretos en el repositorio y en los builds.
+
+**Método.** Lectura del diff `aceec10..HEAD` y de `lazo.pb.js`, `lib/lazo.cjs`, las seis migraciones, `main.tsx`, `ctx.ts`, `atras.ts`, `pocketbase.ts`, `Connect.tsx`, `GroupExit.tsx`, `Join.tsx`, `MainActivity.java`, los dos manifiestos, `build.gradle`, `firmar-apk.sh` y `Caddyfile`. Ejecutado: `server/test/*.test.mjs` contra PocketBase 0.40.6 (**66 de 66**) y una sonda propia contra un PocketBase temporal con los hooks y migraciones actuales (salir, volver, tiempo real, borrado, tiempos). **No ejecutado:** vitest, Playwright, Gradle ni ningún Android real; no se ha construido el APK. El código de `@capacitor/app` no está en `node_modules` de esta copia (falta `npm ci`), así que lo que digo de `appUrlOpen` y `getLaunchUrl` sale de la documentación del plugin, no de leerlo. No se ha tocado código ni se ha leído ningún valor de `.env*`.
+
+**Nota sobre las pruebas.** La suite pasa, pero el proceso de uno de los ficheros no terminó solo: se quedó vivo un `esbuild --service` hijo junto al PocketBase de `familia.test.mjs` y hubo que matarlos a mano (9 minutos de reloj). No afecta al resultado; en CI puede colgar el trabajo.
+
+### Resumen
+
+Ningún hallazgo crítico ni alto. **LA REGLA se mantiene desde la propia sesión**: ni salir, ni eliminar, ni volver dan a nadie una vista de su lista. Hay dos hallazgos medios, los dos con arreglo de pocas líneas, y cinco bajos.
+
+| Gravedad | Hallazgos |
+|---|---|
+| Crítico | 0 |
+| Alto | 0 |
+| Medio | 2 (V-32, V-33) |
+| Bajo | 5 (V-34 a V-38) |
+
+### Respuesta a las preguntas
+
+| Pregunta | Respuesta | Comprobación |
+|---|---|---|
+| ¿Se deduce algo de la propia lista al salir (respuesta, tiempos, reservas soltadas)? | **No** | `group-leave` no lee ninguna fila de la lista de quien sale: solo sus reservas y aportaciones hacia otros, y los enlaces de su plaza por id. Respuesta idéntica con mucho o con nada (prueba existente). Sonda: Carlos, con una reserva de Bea en su lista, recibe al salir Bea solo `groups:update` y `lists:update`; ningún evento de `claims`. Bea recibe el `delete` de su propia reserva y nada más; tras salir, su suscripción antigua no recibe nada. No he medido tiempos de `group-leave` (por lectura no dependen de la lista propia) |
+| ¿Puede borrar quien no es dueño? | **No** | Sonda: `group-delete` por un admin 403; `DELETE` REST 403 (también a la dueña); lote con `DELETE` 403; `PATCH owner` por un admin 404; `PATCH members-` por un miembro 404 |
+| ¿Quedan huérfanos visibles? | **No** | Tras eliminar, cero filas en las doce colecciones del servidor (sonda), además de la prueba que los busca por id. Quedan las cuentas, que es lo esperado |
+| ¿El borrado delata a la dueña lo oculto de su lista? | **No** | Respuesta fija. Tiempo real: a la dueña le llegan 5 de 6 `items:delete` y 3 de 4 `claims:delete`; los que faltan son la sorpresa y la reserva de su lista, y no recibe ningún `budgets:delete`. Tiempo: con 60 regalos en su lista, 15 ms sin compras ocultas y 21 ms con 60 (medianas de 5, en loopback): 0,1 ms por fila, una sola medida posible y por debajo del ruido de la red. Sin hallazgo |
+| ¿Salir y volver da otra vista? | **No con la misma cuenta** | Sonda: Bea sale y prueba otra plaza con su cuenta. Enlace personal: 400. Enlace general: queda pendiente y, al aceptarla el admin, 400 (V-5). Si vuelve a su plaza, la regla le oculta lo suyo desde la primera petición (prueba existente). Con una cuenta nueva hace falta un admin (R1), **salvo V-32** |
+| ¿Salir y volver borra rastros? | Nada que no hiciera ya `plaza-release` | Salir vacía `via`, `approvedBy` y `claimedAt` de la plaza, igual que liberarla. La transparencia de R1 sigue siendo solo del estado actual. Pendiente antiguo, no nuevo |
+| ¿Un enlace malicioso cambia el servidor? | **Con sesión, no. En el primer arranque, sí** | Con servidor guardado solo se acepta un enlace del mismo origen, y lo único que hace es `location.hash`. Sin servidor guardado, ver V-33 |
+| ¿Redirecciones abiertas? | **No** | El fragmento debe casar entero con `#/unirse/<20 a 64 alfanuméricos>`; nunca se navega a una URL, solo se cambia el hash. `go()` y `stepsBackTo` solo comparan rutas internas. El filtro del manifiesto reclama únicamente `https://<LAZO_HOST>/` con `path="/"`: ni `/api` ni `/_/` |
+| ¿`me()` puede quedarse con otro usuario? | **No** | Se recalcula de `authStore.record` en cada llamada y la caché se sustituye si cambia `id`, `name` o `color`; sin sesión vuelve a `null`. `User` no tiene más campos. `GroupExit` lleva `key={me.id}` |
+
+Otras cosas comprobadas y bien: `assetlinks.json` solo lleva la huella pública del certificado (no es un secreto) y el APK de serie no reclama ningún dominio; `ErrorBoundary` no pinta el error, solo lo manda a la consola de un WebView no depurable; `?fallo` y `__lazoDemo` solo existen con `VITE_DEMO`; el proxy de Vite es solo de desarrollo; borrar la cuenta tras salir da 400 si quedan compras o un sorteo a su nombre, y la compra no pierde a su comprador.
+
+### V-32 · Medio · Las invitaciones de quien sale (o es expulsado) siguen abriendo el grupo
+
+`group-leave` y `plaza-release` solo anulan los enlaces **de la plaza** que se libera. Los que esa persona creó como admin (el general y los personales de otras plazas libres) siguen vivos, y un enlace personal entra al momento, sin que nadie lo apruebe.
+
+*Escenario.* Carlos organiza sin ser el dueño. Genera el enlace personal de la plaza libre «Dani» y sale del grupo (o el dueño lo expulsa precisamente porque no se fía). Su lista queda como plaza libre: todos los miembros ven sus reservas y compras. Carlos abre el enlace de Dani en una ventana privada, entra como cuenta nueva y lee quién le ha reservado y comprado qué, con precios. Después pide que le devuelvan su plaza. Confirmado en la sonda: tras salir Carlos, `invite-info` 200, `join` 200, y la cuenta nueva ve las 2 filas de `claims` de la antigua lista de Carlos; la plaza queda con `approvedBy` = Carlos, que ya no es miembro.
+
+*Por qué no es R1.* R1 acepta que un admin se quede una llave **mientras es de confianza para decidir quién entra**. Aquí la llave sobrevive a esa confianza, y desde la 1.1.2 perderla es un botón al alcance del propio interesado. El enlace general no es problema: sigue necesitando que un admin acepte.
+
+*Arreglo.* Una invitación vale mientras quien la creó siga organizando. En `server/pb/pb_hooks/lib/lazo.cjs`, al final de `findInvite`, antes del `return`:
+
+```js
+// V-32: la invitación caduca con quien la creó (sale, lo expulsan o borra su cuenta).
+if (!isAdmin(app.findRecordById('groups', inv.getString('group')), inv.getString('createdBy'))) throw new BadRequestError(BAD_INVITE);
+```
+
+y la misma condición dentro de la transacción de `join`, tras cargar `group`: `if (!L.isAdmin(group, inv.getString('createdBy'))) throw new BadRequestError(L.BAD_INVITE);`. Mismo mensaje que un token falso. Repetirlo en `inviteInfo` y `join` de `src/api/demo.ts`.
+
+*Prueba.* En `server/test/grupo.test.mjs`: Carlos (admin) crea un enlace personal de una plaza libre y uno general; sale; `invite-info` y `join` con los dos dan 400 con el mismo cuerpo que un token inventado. Lo mismo tras `plaza-release` de un admin.
+
+### V-33 · Medio · Cualquier app instalada puede fijar el servidor de Lazo en el primer arranque
+
+`invite()` en `src/main.tsx` se registra en **todos** los APK, también en el de serie, que no reclama ningún dominio. Si aún no hay servidor guardado, se fía del origen de la URL que llega por `appUrlOpen` o `getLaunchUrl`, lo guarda y recarga, sin exigir `https`, sin `checkLazo` y sin que la persona vea ni confirme la dirección. `MainActivity` es exportada, de modo que la URL no tiene por qué venir de un App Link verificado: otra app puede mandar un `ACTION_VIEW` explícito a la actividad.
+
+*Escenario.* La abuela instala Lazo. Antes de pegar su invitación, una app maliciosa del mismo móvil lanza `com.bertmarti.lazo/.MainActivity` con `https://lazo-falso.example/#/unirse/AAAAAAAAAAAAAAAAAAAA`. Lazo guarda ese servidor y enseña «Te han invitado a Navidad · lo organiza Marta» servido por el atacante. Entra, y su nombre y lo que pida van a un servidor ajeno. No hay pantalla para cambiar de servidor, y la invitación buena, cuando llegue, se descarta en silencio porque su origen no coincide. Variante: una URL `content://…#/unirse/…` guarda el origen `"null"` y la app queda inservible hasta borrar sus datos.
+
+*Lo que no puede hacer.* Robar una sesión: solo actúa cuando no hay servidor guardado, y cerrar sesión no borra `lazo:server`. No he encontrado ningún camino que deje un token con el servidor vacío. Tampoco se alcanza desde una web: sin filtro no hay App Link, y con `LAZO_HOST` el sistema solo entrega los de ese dominio.
+
+*Reservas.* Deducido del código; no probado en un dispositivo. En Android 13 o posterior el sistema puede descartar un intent explícito que no case con ningún filtro, lo que lo dejaría en bajo; en versiones anteriores se entrega.
+
+*Arreglo.* Reutilizar `parseInvite` (ya exige `https` y el token) y aceptar un servidor nuevo solo si es el dominio con el que se compiló el APK:
+
+```ts
+const invite = (url?: string) => {
+  const inv = url ? parseInvite(url) : null;
+  if (!inv) return;
+  const saved = read(SERVER_KEY);
+  if (saved) {
+    if (inv.server === saved) location.hash = `/unirse/${inv.token}`;
+    return;
+  }
+  const host = import.meta.env.VITE_LAZO_HOST;
+  if (!host || inv.server !== `https://${host}`) return; // un APK que no reclama dominio no acepta servidor por intent
+  // …guardar, poner el hash y recargar, como hoy
+};
+```
+
+con `VITE_LAZO_HOST="${LAZO_HOST:-}" npm run build` en `scripts/firmar-apk.sh`. Así el APK de serie ignora cualquier URL en el primer arranque (la persona pega el enlace en «Me han invitado», que sí valida).
+
+*Prueba.* Sacar la decisión a una función pura y, en `test/ui/applink.test.ts`: sin servidor guardado y sin host de compilación, ninguna URL devuelve servidor; con host, solo `https://<host>/#/unirse/<token>`; `http://`, `content://`, otro host, `https://host@otro.example/…` y un token corto no devuelven nada; con servidor guardado, otro origen no cambia nada.
+
+### V-34 · Bajo · El enlace de solo lectura de la lista de un niño sobrevive a quien sale
+
+Salir borra el enlace de solo lectura de la plaza propia, pero no el de las listas de niños que esa persona llevaba. Por lectura del código (`group-leave` solo borra `shares` con `list = plaza.id`); no sondeado.
+
+*Escenario.* El tío Javier lleva la lista de Leo, crea su enlace de solo lectura y sale del grupo. El enlace sigue enseñando el nombre de Leo y lo que pide a quien lo tenga. Nadie del grupo puede saber que existe, porque `shares` no se lee desde la API; solo se rota si alguien crea otro por casualidad. No hay estado, pero son datos de un menor en manos de quien ya no está.
+
+*Arreglo.* En el bucle de listas de niños de `group-leave`, antes de `tx.save(l)`:
+
+```js
+for (const s of tx.findRecordsByFilter('shares', 'list = {:l}', '', 0, 0, { l: l.id })) tx.delete(s);
+```
+
+`plaza-release` tiene el mismo hueco y además no saca al expulsado de `managers`: conviene que haga el mismo bucle que `group-leave`.
+
+*Prueba.* En `server/test/share.test.mjs`: quien lleva la lista de un niño crea el enlace y sale; `GET /api/lazo/shared/<token>` da el mismo 404 que un token falso. Igual tras `plaza-release`.
+
+### V-35 · Bajo · Quien sale conserva su asignación del amigo invisible
+
+La regla de `assignments` es `giver = yo`, sin exigir pertenencia. Sonda: fuera del grupo, Bea lista 0 filas en todas las colecciones menos `assignments` (1, con el id de su destinatario). Ya lo sabía, así que no es una fuga de la regla; pero «fuera no ve nada» no es cierto del todo y la prueba no lo mira.
+
+*Arreglo.* Migración nueva: `assignments.listRule = assignments.viewRule = '@request.auth.id != "" && giver = @request.auth.id && draw.group.members.id ?= @request.auth.id'`.
+
+*Prueba.* En `grupo.test.mjs`, añadir `assignments` y `draws` al bucle «fuera: no ve nada», con un sorteo hecho antes de salir.
+
+### V-36 · Bajo · El APK compilado con `LAZO_HOST` se llama igual que el público
+
+`firmar-apk.sh` escribe siempre `dist-apk/lazo-<versión>.apk`, lleve o no un dominio dentro. Si la variable está en el entorno al preparar la release, el APK publicado lleva en el manifiesto el dominio de casa de quien lo firma (a la vista de cualquiera con `aapt2`) y reclama sus enlaces en todos los móviles.
+
+*Arreglo.* `OUT="dist-apk/lazo-$VER${LAZO_HOST:+-$LAZO_HOST}.apk"` y un aviso al terminar («este APK lleva tu dominio: no lo publiques»). Añadir a la lista de antes de subir: `aapt2 dump xmltree --file AndroidManifest.xml dist-apk/lazo-X.Y.Z.apk | grep -c autoVerify` debe dar 0.
+
+*Prueba.* Manual, en la lista de publicación de `SECURITY.md`.
+
+### V-37 · Bajo · Faltan las pruebas que fijan lo que hoy está bien
+
+Lo comprobado en la sonda no tiene prueba que impida una regresión:
+
+1. Tiempo real al salir: el dueño de una lista no recibe eventos de `claims` ni `contributions` cuando sale quien le había reservado; quien sale no recibe nada después.
+2. Tiempo real al eliminar: la dueña no recibe `delete` de la sorpresa, las reservas ni el presupuesto de su lista.
+3. V-5 tras salir: la misma cuenta en otra plaza da 400 por enlace personal y al aceptar una solicitud del enlace general.
+4. `PATCH owner` por un admin y un lote con `DELETE` sobre `groups` siguen cerrados.
+
+Las cuatro caben en `server/test/grupo.test.mjs` con el `listen` de `rules.test.mjs`. De paso, averiguar qué fichero deja vivo el servicio de esbuild.
+
+### V-38 · Bajo · `SECURITY.md` no cuenta lo nuevo
+
+No menciona `group-delete`, `group-leave` ni los App Links. Añadir a «Plazas y entrada»: salir suelta solo lo prometido, nunca toca la lista propia y responde siempre igual; eliminar es solo del dueño y solo por el endpoint; las invitaciones caducan con quien las creó (V-32). A «Otras medidas»: el APK de serie no reclama dominios ni acepta servidor por intent (V-33), `assetlinks.json` solo lleva la huella pública, y la comprobación de V-36.
+
+### Secretos
+
+- **Repositorio.** En el diff no hay claves, tokens, rutas locales ni direcciones reales: solo `milazo.duckdns.org` de ejemplo y las credenciales de usar y tirar del PocketBase de pruebas (`su@lazo.invalid`). Siguen fuera del índice `.env`, `.env.local`, `*.jks`, `dist/`, `dist-demo/`, `dist-apk/` y `server/data/`. `gitleaks` no está instalado en esta máquina: la búsqueda ha sido por patrones, y queda el gitleaks de CI.
+- **Builds.** El código solo lee `VITE_DEMO` y `VITE_SERVER_URL`; `vite.config.ts` no cambia `envPrefix` ni usa `define`. `.env.local` solo tiene nombres sin prefijo `VITE_` (he mirado los nombres, no los valores), así que Vite no los mete en la demo ni en el APK. En `dist/`, `dist-demo/` y `android/app/src/main/assets/public/` de esta copia no hay ninguna cadena con forma de clave de Gemini, NVIDIA, Groq o Anthropic.
+- **`assetlinks.json`.** Se publica en la demo y en cada servidor; es la huella del certificado, que ya imprime cualquier APK. Quien firme con otra clave y no la cambie solo consigue que la verificación falle y el enlace se abra en el navegador.
+- **Observación, no nueva.** Todos los commits llevan un correo de autor de un dominio corporativo, ya público en `origin`. Si no es intencionado, se arregla en la configuración de git para los próximos; reescribir el historial es decisión del autor.
+
+### Veredicto
+
+**Apto.** No hay hallazgos críticos ni altos, las 66 pruebas de servidor pasan contra PocketBase real y no conozco ninguna vía nueva por la que alguien vea o deduzca el estado de su propia lista desde su sesión. No hay secretos en el repositorio ni en los builds.
+
+V-32 y V-33 deberían entrar en esta misma versión: son unas diez líneas entre los dos y cierran las dos únicas puertas nuevas (una llave que sobrevive a quien sale y un servidor que se fija sin preguntar). Los bajos pueden ir en la siguiente.
+
+Condiciones de publicación:
+
+1. El APK público sale de `scripts/firmar-apk.sh` **sin** `LAZO_HOST` en el entorno (V-36) y `grep -c debuggable` sigue dando 0.
+2. `versionName` y `versionCode` de `android/app/build.gradle` (hoy `1.1.1` y `12`) y `version` de `package.json` suben antes de firmar; con el mismo `versionCode` Android no actualiza.
+3. `npm ci` antes de compilar: `@capacitor/app` está en `package.json` pero no instalado en esta copia.
