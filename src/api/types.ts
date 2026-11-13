@@ -107,6 +107,10 @@ export interface Api {
   addChildList(groupId: Id, name: string, birthYear?: number): Promise<GiftList>;
   addPlaza(groupId: Id, name: string): Promise<GiftList>;
   releasePlaza(listId: Id): Promise<void>;
+  /** Solo quien creó el grupo. Se borra todo lo del grupo: listas, reservas, hucha, sorteo y enlaces. */
+  deleteGroup(groupId: Id): Promise<void>;
+  /** Cualquiera menos el dueño: su plaza queda libre y se sueltan sus reservas sin comprar y sus aportaciones sin pagar. */
+  leaveGroup(groupId: Id): Promise<void>;
   saveItem(listId: Id, input: ItemInput, id?: Id): Promise<Item>;
   /** Regalo sorpresa en la plaza de otra persona: ella no lo verá. */
   addSurprise(listId: Id, input: ItemInput): Promise<Item>;

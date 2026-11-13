@@ -44,4 +44,11 @@ export const lastGroup = {
       /* sin almacenamiento */
     }
   },
+  clear: () => {
+    try {
+      localStorage.removeItem('lazo:last-group');
+    } catch {
+      /* sin almacenamiento */
+    }
+  },
 };

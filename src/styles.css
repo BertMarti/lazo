@@ -741,3 +741,8 @@ table.map-table .select { min-width: 9rem; }
 .connect-path > .btn-ghost { justify-self: start; }
 .steps { margin: 0; padding-left: var(--s-6); display: grid; gap: var(--s-2); }
 .steps code { font-weight: 800; overflow-wrap: anywhere; }
+
+/* v112-grupo */
+.group-exit { margin-top: var(--s-8); max-width: 640px; }
+.group-exit-q { font-weight: 700; font-size: var(--t-big); }
+.group-exit-list { margin: 0; padding-left: var(--s-6); display: grid; gap: var(--s-2); }
