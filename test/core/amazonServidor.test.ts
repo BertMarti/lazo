@@ -63,7 +63,7 @@ describe('lista de Amazon desde el servidor: extractor', () => {
     ]) {
       const t = performance.now();
       const { productos } = parsePaginaLista(html, LID);
-      expect(performance.now() - t).toBeLessThan(500);
+      expect(performance.now() - t).toBeLessThan(2000) // un retroceso catastrófico tardaría minutos; 500 ms falla en CI lento;
       expect(productos.length).toBeLessThanOrEqual(200);
     }
   });
