@@ -490,6 +490,10 @@ dialog.sheet:not(:has(.sheet-foot)) .sheet-body { padding-bottom: calc(var(--s-5
 .amz-titulo { display: block; font-weight: 700; overflow-wrap: anywhere; }
 .amz-progreso { width: 100%; height: 8px; accent-color: var(--terracota); }
 .amz-dup { color: var(--terracota-tinta); font-weight: 700; }
+.amz-apagada { margin-bottom: 0; font-weight: 600; }
+.amz-apagada a { color: inherit; font-weight: 800; }
+.amz-copiable { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-top: var(--s-2); }
+.amz-copiable code { flex: 1 1 12rem; min-width: 0; padding: var(--s-2) var(--s-3); border-radius: var(--r-m); background: var(--tarjeta); color: var(--tinta); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; overflow-wrap: anywhere; user-select: all; }
 .sheet-photo { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-m); overflow: hidden; background: var(--hundido); }
 .sheet-photo img { width: 100%; height: 100%; object-fit: cover; }
 

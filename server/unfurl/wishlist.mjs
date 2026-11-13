@@ -5,16 +5,27 @@ import { once } from './fetch.mjs';
 import { UnfurlError } from './guard.mjs';
 import { AMZ_SERVIDOR, CODIGO_CORTO, ID_LISTA, esBloqueo, idDeUrl, listaUrl, paginaUrl, parsePaginaLista } from './amazon.mjs';
 
-export const AMZ = { ...AMZ_SERVIDOR, msPagina: 6000, msTotal: 60_000, pausa: [1000, 2000], saltos: 2, bloqueoMs: 3_600_000 };
+export const AMZ = { ...AMZ_SERVIDOR, msPagina: 6000, msTotal: 60_000, pausa: [1000, 2000], saltos: 2, bloqueoMs: 3_600_000, paginasHora: 60 };
 
 /** Códigos que salen de aquí: un conjunto cerrado, nunca HTML, cabeceras ni la URL final (AMZ-13). */
 export const BLOQUEA = 'AMAZON_BLOQUEA';
 
-const state = { enCurso: false, bloqueadoHasta: 0 };
+const state = { enCurso: false, bloqueadoHasta: 0, paginas: [] };
 /** Solo para las pruebas. */
-export const _reset = () => Object.assign(state, { enCurso: false, bloqueadoHasta: 0 });
+export const _reset = () => Object.assign(state, { enCurso: false, bloqueadoHasta: 0, paginas: [] });
 
 const fallo = (code) => new UnfurlError(code);
+
+/** Lo que Amazon contesta cuando no quiere robots: corta y salta el cortacircuitos (V-42: también el 403). */
+const BLOQUEOS = new Set(['http_403', 'http_429', 'http_503']);
+
+/** V-42: como mucho 60 peticiones de lista por hora en todo el servidor, las pida quien las pida. En memoria. */
+function cuentaPagina(now) {
+  const t = now();
+  state.paginas = state.paginas.filter((p) => t - p < AMZ.bloqueoMs);
+  if (state.paginas.length >= AMZ.paginasHora) throw fallo('rate_limited');
+  state.paginas.push(t);
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** AMZ-3: https, host exacto www.amazon.es, sin puerto ni credenciales y ruta de listas. */
@@ -24,14 +35,16 @@ function permitida(u) {
 
 /** Una página con sus redirecciones revalidadas. Cualquier bloqueo corta la importación. */
 async function pagina(url, opts, deadline) {
-  const get = opts.get ?? ((u, d) => once(u, d, { maxBytes: AMZ.bytesPagina }));
+  // `dns` solo existe para las pruebas: va DEBAJO de safeLookup, que sigue rechazando las IP privadas (AMZ-5).
+  const get = opts.get ?? ((u, d) => once(u, d, { maxBytes: AMZ.bytesPagina, dns: opts.dns }));
   let u = new URL(url);
   for (let hop = 0; ; hop++) {
+    cuentaPagina(opts.now ?? Date.now);
     let res;
     try {
       res = await get(u, Math.min(deadline, Date.now() + AMZ.msPagina));
     } catch (e) {
-      if (e?.code === 'http_503' || e?.code === 'http_429') throw fallo(BLOQUEA);
+      if (BLOQUEOS.has(e?.code)) throw fallo(BLOQUEA);
       if (e?.code === 'http_404') throw fallo('not_a_list');
       throw fallo(e?.code === 'timeout' ? 'timeout' : 'error');
     }
@@ -120,7 +133,7 @@ export async function resuelveCorto(codigo, opts = {}) {
   const now = opts.now ?? Date.now;
   // V-40: el acortador también respeta (y fija) el cortacircuitos de una hora.
   if (now() < state.bloqueadoHasta) throw fallo(BLOQUEA);
-  const get = opts.get ?? ((u, d) => once(u, d, { maxBytes: 1 }));
+  const get = opts.get ?? ((u, d) => once(u, d, { maxBytes: 1, dns: opts.dns }));
   let u = new URL(`https://amzn.eu/d/${codigo}`);
   const deadline = Date.now() + AMZ.msPagina;
   for (let hop = 0; hop < 4; hop++) {
@@ -128,7 +141,7 @@ export async function resuelveCorto(codigo, opts = {}) {
     try {
       res = await get(u, deadline);
     } catch (e) {
-      if (e?.code === 'http_503' || e?.code === 'http_429') {
+      if (BLOQUEOS.has(e?.code)) {
         state.bloqueadoHasta = now() + AMZ.bloqueoMs;
         throw fallo(BLOQUEA);
       }

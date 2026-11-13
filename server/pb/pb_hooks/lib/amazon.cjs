@@ -7,11 +7,12 @@ const MSG = {
   VACIA: [422, 'No encuentro productos en esa lista.'],
   AMAZON_BLOQUEA: [503, 'Amazon no deja leer la lista ahora mismo. Prueba dentro de un rato.'],
   OCUPADO: [429, 'Ya se está leyendo otra lista. Prueba en un minuto.'],
-  LIMITE: [429, 'Ya has leído tu lista varias veces en la última hora. Prueba más tarde.'],
+  // Vale para el cupo de cada persona y para el tope de páginas de todo el servidor (V-42).
+  LIMITE: [429, 'Ya se han leído muchas listas en la última hora. Prueba más tarde.'],
   ERROR: [502, 'No hemos podido leer la lista. Prueba otra vez o copia y pega la página.'],
 };
 // Códigos del servicio → los del cliente. Lo demás (blocked, network, http_*…) es el mismo ERROR (AMZ-13).
-const CODES = { not_a_list: 'NO_ES_LISTA', private_list: 'LISTA_PRIVADA', empty: 'VACIA', AMAZON_BLOQUEA: 'AMAZON_BLOQUEA', busy: 'OCUPADO' };
+const CODES = { not_a_list: 'NO_ES_LISTA', private_list: 'LISTA_PRIVADA', empty: 'VACIA', AMAZON_BLOQUEA: 'AMAZON_BLOQUEA', busy: 'OCUPADO', rate_limited: 'LIMITE' };
 
 /** Respuesta de error de un conjunto cerrado: `{code, message}`, nunca HTML ni la URL de Amazon. */
 function fail(e, code) {
@@ -54,7 +55,8 @@ function call(path, body, timeout) {
 
 /**
  * Límite por persona: 5 lecturas por hora (en casa toda la familia sale por la misma IP, así que el de PocketBase,
- * por IP, es solo la red de seguridad). ponytail: en memoria; se reinicia con PocketBase.
+ * por IP, es solo la red de seguridad). ponytail: en memoria; se reinicia con PocketBase. No es atómico (V-42): dos
+ * peticiones simultáneas pueden pasar con el cupo en 4, pero la segunda recibe OCUPADO y no llega a Amazon.
  */
 const PER_HOUR = 5;
 function allow(app, userId, kind = 'amz', max = PER_HOUR) {

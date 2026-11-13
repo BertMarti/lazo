@@ -67,6 +67,18 @@ export function fotoSegura(src: string | null | undefined): string | undefined {
 
 const conAsin = (asin: string | undefined) => (asin && ASIN.test(asin) ? { asin, url: `https://www.amazon.es/dp/${asin}` } : null);
 
+/**
+ * V-44: lo que devuelve el servidor (camino a) se repasa aquí como lo pegado, sin fiarlo todo a él: enlace construido
+ * desde el ASIN, foto solo de los hosts de Amazon, título limpio y números en su rango. Sin ASIN o sin título, fuera.
+ */
+export function saneaProducto(p: AmazonProducto): AmazonProducto | null {
+  const a = conAsin(p.asin);
+  const title = limpiaTitulo(String(p.title ?? ''));
+  if (!a || !title) return null;
+  const entero = (v: unknown, max: number) => (Number.isInteger(v) && (v as number) >= 1 && (v as number) <= max ? (v as number) : undefined);
+  return { title, ...a, image: fotoSegura(p.image), priceCents: entero(p.priceCents, LIMITS.amount), priority: entero(p.priority, 3) as Priority | undefined, quantity: entero(p.quantity, LIMITS.quantity) };
+}
+
 const PRECIO = /^(?:precio:?\s*)?(\d{1,3}(?:\.\d{3})*|\d+)(?:,\d{2})?\s?€$/i;
 const PRECIO_EN = /(\d{1,3}(?:\.\d{3})*|\d+),\d{2}\s?€/;
 const PRECIO_AL_ANADIR = /^precio (?:cuando se añadió|al añadirlo):?\s*(\d[\d.]*,\d{2})\s?€/i;

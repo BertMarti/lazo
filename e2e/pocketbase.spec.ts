@@ -43,3 +43,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
     expect(errores).toEqual([]);
   });
 }
+
+test('servidor real con la importación de Amazon apagada: el enlace de una lista dice cómo encenderla', async ({ page, request }) => {
+  const { token, record, group } = await grupoNuevo(request);
+  await page.addInitScript(([t, r]) => localStorage.setItem('pocketbase_auth', JSON.stringify({ token: t, record: r })), [token, record] as const);
+  await page.goto(`/#/g/${group}`);
+  await page.locator('.member[data-mine]').getByRole('button', { name: 'Añadir' }).click();
+  await expect(page.getByRole('dialog', { name: 'Añadir a tu lista' })).toBeVisible();
+  await page.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', 'https://www.amazon.es/hz/wishlist/ls/LAZOTEST00001?ref_=wl_share');
+    document.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  const aviso = page.getByRole('dialog').getByRole('status');
+  await expect(aviso).toContainText('La importación automática está apagada en tu servidor.');
+  await expect(aviso.locator('.amz-copiable code')).toHaveText(['AMAZON_IMPORT=on', 'cd lazo/server && docker compose up -d --build']);
+});

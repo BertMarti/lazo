@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
-import { ArrowClockwise, ClipboardText } from '@phosphor-icons/react';
+import { ArrowClockwise, ClipboardText, Copy, ListChecks } from '@phosphor-icons/react';
 import { useEffect, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode } from 'react';
-import { esDuplicado, listaId, MAX_PEGADO, parseListaPegada, soloEnlace, type AmazonProducto } from '../../core/amazonLista';
+import { esDuplicado, listaId, MAX_PEGADO, parseListaPegada, saneaProducto, soloEnlace, type AmazonProducto } from '../../core/amazonLista';
 import { ApiError } from '../../api/types';
 import { formatMoney } from '../../core/money';
 import type { Item } from '../../core/types';
@@ -58,8 +58,6 @@ const PASOS: Record<Plataforma, [Dibujo, string][]> = {
   ],
 };
 
-const SOLO_ENLACE =
-  'Eso es solo el enlace de la lista. Lazo no entra en Amazon por ti: necesita el texto de la página. Ábrela en el navegador y sigue los pasos.';
 const NADA = 'No encuentro productos en lo que has pegado. Copia la página entera de tu lista (sigue los pasos) y vuelve a pegarla.';
 
 /** El enlace de una lista: su identificador o el código de un `amzn.eu/d/…` (que el servidor resuelve). */
@@ -70,11 +68,11 @@ export type EnlaceLista = { id: string; corto?: undefined } | { corto: string; i
  * el servidor (camino a). Si no, o si Amazon no deja, copiar y pegar la página (camino b, docs/legal/AMAZON.md): lo
  * pegado se analiza aquí, no se guarda ni se envía. En los dos casos solo se crean los regalos que la persona marca.
  */
-export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNoEsLista, onClose, onSaved }: { listId: string; aviso?: string; enlace?: EnlaceLista; compartido?: { text: string; html?: string }; deOtraApp?: boolean; onNoEsLista?: () => void; onClose: () => void; onSaved: () => void }) {
+export function AmazonLista({ listId, enlace, compartido, deOtraApp, onNoEsLista, onClose, onSaved }: { listId: string; enlace?: EnlaceLista; compartido?: { text: string; html?: string }; deOtraApp?: boolean; onNoEsLista?: () => void; onClose: () => void; onSaved: () => void }) {
   const api = useApi();
   const toast = useToast();
   const [plat, setPlat] = useState<Plataforma>(() => plataforma());
-  const [hint, setHint] = useState(enlace ? undefined : aviso);
+  const [hint, setHint] = useState<string>();
   // En el APK el WebView puede no dejar leer el portapapeles: el campo de pegar está a la vista desde el principio.
   const [aMano, setAMano] = useState(() => Capacitor.isNativePlatform());
   const [ajeno, setAjeno] = useState(false);
@@ -84,22 +82,29 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
   const [leyendo, setLeyendo] = useState(!!enlace);
   const [fallo, setFallo] = useState<{ code?: string; message: string; id?: string } | null>(null);
   const [delServidor, setDelServidor] = useState<{ partial?: boolean } | null>(null);
+  // V-41: el identificador de una lista llegada de otra app, a la espera de que alguien pulse «Leer la lista».
+  const [pendiente, setPendiente] = useState<string | null>(null);
+  // El servidor no lee listas (AMAZON_IMPORT apagada o servidor antiguo): se explica cómo encenderlo.
+  const [apagada, setApagada] = useState(false);
 
   // AMZ-11: los duplicados, solo contra lo que la dueña ve de su lista (el servidor ya no le manda sorpresas ni retirados).
   useEffect(() => {
     api.listDetail(listId).then((d) => setVisibles(d.items), () => setVisibles([]));
   }, [api, listId]);
 
-  const leer = async (ref: EnlaceLista) => {
+  /** `tocado`: alguien ha pulsado. Lo que llega de otra app no sale a Amazon hasta que pulse «Leer la lista» (V-41). */
+  const leer = async (ref: EnlaceLista, tocado = true) => {
     setLeyendo(true);
     setFallo(null);
     setHint(undefined);
+    setPendiente(null);
     let id = ref.id;
     try {
       id ??= await api.amazonCorto(ref.corto!);
+      if (!tocado) return setPendiente(id);
       const r = await api.amazonLista(id);
       setDelServidor({ partial: r.partial });
-      setProductos(r.productos);
+      setProductos(r.productos.flatMap((p) => saneaProducto(p) ?? []));
     } catch (e) {
       const code = e instanceof ApiError ? e.code : undefined;
       if (code === 'NO_ES_LISTA' && ref.corto && onNoEsLista) return onNoEsLista(); // era un producto, no una lista
@@ -109,22 +114,24 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
     }
   };
 
-  /** Con el enlace de una lista: si el servidor sabe leerla, la lee; si no, los pasos de copiar y pegar. */
-  const conEnlace = (ref: EnlaceLista, sinLectura: string | undefined) => {
+  /** Con el enlace de una lista: si el servidor sabe leerla, la lee; si no, cómo encenderlo y los pasos de copiar y pegar. */
+  const conEnlace = (ref: EnlaceLista, tocado = true) => {
     setLeyendo(true);
-    void api.capacidades().then((c) => {
-      if (c.amazon) return leer(ref);
+    // Si la pregunta falla (sin red, servidor antiguo sin la ruta), cuenta como apagada.
+    void api.capacidades().catch(() => ({ amazon: false })).then((c) => {
+      if (c.amazon) return leer(ref, tocado);
       setLeyendo(false);
       if (ref.corto && onNoEsLista) return onNoEsLista();
-      setHint(sinLectura);
+      setHint(undefined);
+      setApagada(true);
     });
   };
 
   useEffect(() => {
-    if (enlace) conEnlace(enlace, aviso);
+    if (enlace) conEnlace(enlace, !deOtraApp);
   }, []);
 
-  const analiza = (text: string, html?: string) => {
+  const analiza = (text: string, html?: string, tocado = true) => {
     const t = text.slice(0, MAX_PEGADO);
     const found = parseListaPegada(t, html?.slice(0, MAX_PEGADO));
     setAjeno(false);
@@ -133,14 +140,14 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
     if (found.length) {
       setProductos(found);
       setHint(undefined);
-    } else if (soloEnlace(t) && id) conEnlace({ id }, SOLO_ENLACE);
+    } else if (soloEnlace(t) && id) conEnlace({ id }, tocado);
     else setHint(NADA);
   };
 
-  // Lo compartido desde otra app (Android) va directo a la vista previa.
+  // Lo compartido desde otra app (Android) va directo a la vista previa; si es solo un enlace, se pregunta antes.
   useEffect(() => {
     if (!compartido) return;
-    analiza(compartido.text, compartido.html);
+    analiza(compartido.text, compartido.html, !deOtraApp);
     setAjeno(!!deOtraApp); // V11-2: que se vea que no lo ha pegado ella
     olvidaCompartido();
   }, [compartido]);
@@ -205,6 +212,29 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
     );
   }
 
+  // V-41: un enlace llegado de otra app no hace salir al servidor hacia Amazon sin que nadie pulse.
+  if (pendiente) {
+    return (
+      <Sheet
+        title="Importar lista de Amazon"
+        onClose={onClose}
+        footer={
+          <ButtonGroup align="stretch">
+            <Button variant="primary" icon={ListChecks} onClick={() => conEnlace({ id: pendiente })} data-autofocus>
+              Leer la lista
+            </Button>
+            <Button variant="secondary" icon={ClipboardText} onClick={() => setPendiente(null)}>
+              Copiar y pegar la página
+            </Button>
+          </ButtonGroup>
+        }
+      >
+        <p className="notice" role="status">Has compartido el enlace de una lista de Amazon.</p>
+        <p className="meta">Si pulsas «Leer la lista», tu servidor la abrirá en Amazon y te enseñará lo que hay. No se añade nada hasta que elijas.</p>
+      </Sheet>
+    );
+  }
+
   if (productos && visibles) return <Vista productos={productos} visibles={visibles ?? []} ajeno={ajeno} delServidor={delServidor} onBack={() => setProductos(null)} onClose={onClose} onAdd={async (sel) => {
     try {
       const n = await api.importItems(listId, sel.map((p) => ({ title: p.title, priceCents: p.priceCents, url: p.url, image: p.image, store: 'Amazon', priority: p.priority ?? 2, quantity: p.quantity ?? 1 })));
@@ -218,6 +248,7 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
 
   return (
     <Sheet title="Importar lista de Amazon" onClose={onClose}>
+      {apagada && <Apagada />}
       {hint && <p className="notice" role="status">{hint}</p>}
       <div className="stack">
         <div className="segmented" role="radiogroup" aria-label="Tu dispositivo">
@@ -238,7 +269,7 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
         </ol>
       </div>
       <div className="stack">
-        <Button variant="primary" size="lg" wide icon={ClipboardText} onClick={pegar} data-autofocus>
+        <Button variant="primary" size="lg" wide icon={ClipboardText} onClick={pegar} data-autofocus={apagada ? undefined : true /* apagada: que el aviso de arriba quede a la vista */}>
           Pegar
         </Button>
         {aMano && (
@@ -263,6 +294,58 @@ export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNo
         )}
       </div>
     </Sheet>
+  );
+}
+
+const LINEA_ENV = 'AMAZON_IMPORT=on';
+const COMANDO ='cd lazo/server && docker compose up -d --build';
+const RIESGOS = 'https://github.com/BertMarti/lazo/blob/main/docs/legal/AMAZON.md';
+
+/**
+ * El enlace es de una lista, pero el servidor no las lee (AMAZON_IMPORT apagada, o un servidor antiguo sin la ruta).
+ * Puede leerlo alguien de la familia que no aloja el servidor: se dice qué tiene que hacer quien lo aloja.
+ */
+function Apagada() {
+  return (
+    <div className="banner amz-apagada" role="status">
+      <p>La importación automática está apagada en tu servidor. Quien lo aloja puede encenderla así:</p>
+      <ol className="steps">
+        <li>
+          Añade esta línea a <code>server/.env</code>:
+          <Copiable texto={LINEA_ENV} />
+        </li>
+        <li>
+          Vuelve a arrancar el servidor:
+          <Copiable texto={COMANDO} />
+        </li>
+      </ol>
+      <p>
+        Antes,{' '}
+        <a href={RIESGOS} target="_blank" rel="noopener noreferrer">
+          lee los riesgos
+        </a>
+        . Si el servidor no es tuyo, enséñale esto a quien lo aloja. Mientras tanto, copia y pega la página de tu lista: sigue estos pasos.
+      </p>
+    </div>
+  );
+}
+
+function Copiable({ texto }: { texto: string }) {
+  const toast = useToast();
+  const copiar = () =>
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(texto))
+      .then(
+      () => toast('Copiado.'),
+      () => toast('No se ha podido copiar. Mantén el dedo encima del texto y cópialo a mano.'),
+    );
+  return (
+    <span className="amz-copiable">
+      <code>{texto}</code>
+      <Button size="sm" icon={Copy} onClick={() => void copiar()} aria-label={`Copiar ${texto}`}>
+        Copiar
+      </Button>
+    </span>
   );
 }
 

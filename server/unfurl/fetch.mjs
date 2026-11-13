@@ -49,7 +49,7 @@ export function once(url, deadline, opts) {
       url,
       {
         method: 'GET',
-        lookup: opts.allowPrivate ? undefined : (opts.lookup ?? safeLookup()),
+        lookup: opts.allowPrivate ? undefined : (opts.lookup ?? safeLookup(opts.dns)),
         headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'es-ES,es;q=0.9' },
         timeout: remaining,
         maxHeaderSize: 32 * 1024,
@@ -81,15 +81,20 @@ export function once(url, deadline, opts) {
         const body = unzip ? res.pipe(unzip()) : res;
         let size = 0;
         const chunks = [];
+        // Suficiente: los metadatos están en la cabecera. Cortamos y nos quedamos con lo leído.
+        const corta = () => {
+          res.destroy();
+          if (body !== res) body.destroy();
+          resolve({ body: Buffer.concat(chunks).toString('utf8'), truncated: true });
+        };
+        // V-43: lo recibido, aún comprimido, tiene el mismo tope: un gzip que no produce salida no espera al plazo.
+        let crudo = 0;
+        if (unzip) res.on('data', (c) => (crudo += c.length) > max && corta());
         body.on('data', (c) => {
           size += c.length;
           if (size > max) {
-            // Suficiente: los metadatos están en la cabecera. Cortamos y nos quedamos con lo leído.
             chunks.push(c.subarray(0, c.length - (size - max)));
-            res.destroy();
-            if (body !== res) body.destroy();
-            resolve({ body: Buffer.concat(chunks).toString('utf8'), truncated: true });
-            return;
+            return corta();
           }
           chunks.push(c);
         });

@@ -208,3 +208,119 @@ test('V-40: el enlace corto respeta y fija el cortacircuitos de una hora', async
   await assert.rejects(() => leeLista(LID, { get: l.get, ...noSleep }), { code: BLOQUEA });
   assert.equal(l.urls.length, 0);
 });
+
+/** Una lista de `k` páginas de un producto cada una (la última sin «ver más»). ASIN únicos en todo el archivo. */
+let asinN = 0;
+const paginas = (k) => {
+  let i = 0;
+  return fake(() => {
+    i++;
+    const n = ++asinN;
+    const more = i < k ? `<input type="hidden" name="showMoreUrl" value="/hz/wishlist/slv/items?paginationToken=T${n}&amp;lid=${LID}"/>` : '';
+    return { body: `<li data-itemId="I${n}"><a id="itemName_I${n}" title="P ${n}" href="/dp/B1${String(n).padStart(8, '0')}/">x</a></li>${more}` };
+  });
+};
+
+test('V-42: como mucho 60 páginas por hora en todo el servidor; la que pasa del tope no abre conexión', async () => {
+  for (let i = 0; i < 7; i++) assert.equal((await leeLista(LID, { get: paginas(8).get, ...noSleep })).productos.length, 8); // 56
+  const corta = paginas(10);
+  const r = await leeLista(LID, { get: corta.get, ...noSleep });
+  assert.equal(corta.urls.length, 4); // de la 57 a la 60
+  assert.equal(r.productos.length, 4);
+  assert.equal(r.partial, true);
+  const nada = paginas(1);
+  await assert.rejects(() => leeLista(LID, { get: nada.get, ...noSleep }), { code: 'rate_limited' });
+  assert.equal(nada.urls.length, 0);
+  const luego = paginas(1);
+  assert.equal((await leeLista(LID, { get: luego.get, now: () => Date.now() + AMZ.bloqueoMs + 1, ...noSleep })).productos.length, 1);
+});
+
+test('V-42: un 403 es un bloqueo: AMAZON_BLOQUEA y una hora sin tocar Amazon (lista y enlace corto)', async () => {
+  await assert.rejects(() => leeLista(LID, { get: fake(err('http_403')).get, ...noSleep }), { code: BLOQUEA });
+  const g = fake({ body: P1 });
+  await assert.rejects(() => leeLista(LID, { get: g.get, ...noSleep }), { code: BLOQUEA });
+  assert.equal(g.urls.length, 0);
+  _reset();
+  await assert.rejects(() => resuelveCorto('aB3dE5f', { get: fake(err('http_403')).get }), { code: BLOQUEA });
+  const h = fake({ body: P1 });
+  await assert.rejects(() => leeLista(LID, { get: h.get, ...noSleep }), { code: BLOQUEA });
+  assert.equal(h.urls.length, 0);
+});
+
+test('V-43: un gzip que no produce salida se corta por lo recibido, sin esperar al plazo', async () => {
+  const vacio = gzipSync(Buffer.alloc(0));
+  const tanda = Buffer.concat(Array.from({ length: 2000 }, () => vacio));
+  const s = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Encoding': 'gzip' });
+    const sigue = () => {
+      while (!res.destroyed && res.write(tanda));
+      if (!res.destroyed) res.once('drain', sigue);
+    };
+    sigue();
+  });
+  await new Promise((r) => s.listen(0, '127.0.0.1', r));
+  const t = Date.now();
+  const r = await once(new URL(`http://127.0.0.1:${s.address().port}/`), t + 20_000, { allowPrivate: true, maxBytes: AMZ.bytesPagina });
+  assert.equal(r.truncated, true);
+  assert.equal(r.body, '');
+  assert.ok(Date.now() - t < 10_000, `${Date.now() - t} ms`);
+  s.closeAllConnections();
+  s.close();
+});
+
+test('V-44 (AMZ-5): con el `once` real, un DNS que da una IP privada corta antes de conectar', async () => {
+  for (const addrs of [[{ address: '127.0.0.1', family: 4 }], [{ address: '169.254.169.254', family: 4 }], [{ address: '::ffff:10.0.0.1', family: 6 }], [{ address: '93.184.216.34', family: 4 }, { address: '10.0.0.1', family: 4 }]]) {
+    const hosts = [];
+    const dns = (host, _o, cb) => (hosts.push(host), setImmediate(() => cb(null, addrs)));
+    _reset();
+    await assert.rejects(() => leeLista(LID, { dns, ...noSleep }), { code: 'error' }, JSON.stringify(addrs));
+    await assert.rejects(() => resuelveCorto('aB3dE5f', { dns }), { code: 'not_a_list' }, JSON.stringify(addrs));
+    assert.deepEqual([...new Set(hosts)], ['www.amazon.es', 'amzn.eu']);
+  }
+});
+
+test('V-44 (AMZ-1): con la importación apagada, /wishlist y /amzn dan 404 también con la clave buena', async () => {
+  const { servidor } = await import('../index.mjs');
+  const key = 'k'.repeat(40);
+  for (const amazon of [false, true]) {
+    const s = servidor({ key, amazon });
+    await new Promise((r) => s.listen(0, '127.0.0.1', r));
+    for (const [path, body] of [['/wishlist', { id: 'no vale' }], ['/amzn', { corto: '../x' }]]) {
+      const r = await fetch(`http://127.0.0.1:${s.address().port}${path}`, { method: 'POST', headers: { 'x-lazo-key': key }, body: JSON.stringify(body) });
+      // Encendida, el identificador inválido da 422 sin salir a la red: así se ve que la ruta existe.
+      assert.equal(r.status, amazon ? 422 : 404, `${path} ${amazon}`);
+    }
+    s.close();
+  }
+});
+
+test('V-44 (AMZ-13): la respuesta casa un esquema estricto', async () => {
+  const CAMPOS = new Set(['title', 'asin', 'url', 'image', 'priceCents', 'priority', 'quantity']);
+  for (const answers of [[{ body: P1 }, { body: P2 }], [{ body: fx('hostil.html') }]]) {
+    _reset();
+    const r = await leeLista(LID, { get: fake(...answers).get, ...noSleep });
+    assert.ok(Object.keys(r).every((k) => k === 'productos' || k === 'partial'), Object.keys(r).join());
+    for (const p of r.productos) {
+      assert.ok(Object.keys(p).every((k) => CAMPOS.has(k)), Object.keys(p).join());
+      assert.equal(typeof p.title, 'string');
+      assert.match(p.asin, /^[A-Z0-9]{10}$/);
+      assert.equal(p.url, `https://www.amazon.es/dp/${p.asin}`);
+      if (p.image !== undefined) assert.match(p.image, /^https:\/\/(m\.media-amazon\.com|images-(eu|na)\.ssl-images-amazon\.com)\//);
+      if (p.priceCents !== undefined) assert.ok(Number.isInteger(p.priceCents) && p.priceCents > 0);
+    }
+  }
+});
+
+test('V-44 (AMZ-7): un goteo lento con el `once` real acaba en `timeout` dentro del plazo', async () => {
+  const s = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    const t = setInterval(() => res.write('a'), 200);
+    res.on('close', () => clearInterval(t));
+  });
+  await new Promise((r) => s.listen(0, '127.0.0.1', r));
+  const t = Date.now();
+  await assert.rejects(() => once(new URL(`http://127.0.0.1:${s.address().port}/`), t + 1500, { allowPrivate: true }), { code: 'timeout' });
+  assert.ok(Date.now() - t < 1500 + 2000, `${Date.now() - t} ms`);
+  s.closeAllConnections();
+  s.close();
+});

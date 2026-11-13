@@ -1942,3 +1942,11 @@ Condiciones:
 - **V-43:** en parte: `mem_limit: 256m` y `pids_limit: 64` en `unfurl`. El contador de bytes crudos queda para la v1.2.1.
 - **V-45:** corregido (`SECURITY.md` y `AMAZON.md`).
 - **V-41, V-42, V-44:** pendientes para la v1.2.1.
+
+### Estado en la v1.2.1
+
+- **V-41:** corregido. Lo que llega de otra app (también un `amzn.eu/d/…`, que se resuelve pero no se lee) enseña «Has compartido el enlace de una lista de Amazon» y solo «Leer la lista» llama a `conEnlace`. Lo pegado a mano se lee como antes (e2e con espía en `__lazoDemo`).
+- **V-42:** corregido. Tope global de 60 peticiones de lista por hora en `state.paginas` (`rate_limited` → `LIMITE`; en una página posterior, `partial`). `http_403` salta el cortacircuitos en la lista y en el enlace corto. La falta de atomicidad de `allow` queda aceptada y escrita en su comentario. El mensaje de `LIMITE` pasa a ser neutro, porque ahora también lo da el tope del servidor.
+- **V-43:** corregido. `once()` cuenta también los bytes crudos cuando descomprime, con el mismo tope.
+- **V-44:** las seis pruebas: guarda de IP con el `once` real (`opts.dns` va debajo de `safeLookup`), 404 del servicio apagado (`index.mjs` exporta `servidor()` y solo arranca con `import.meta.main`), centinela en `data.db` y `auxiliary.db`, esquema estricto, goteo lento (y el `timeout` del servicio llega como `ERROR`, no como un 500) y saneado en el cliente (`saneaProducto`).
+- **Nuevo:** con la importación apagada (o si `capacidades` falla), el enlace de una lista enseña cómo encenderla (`AMAZON_IMPORT=on` en `server/.env` y `docker compose up -d --build`) y el enlace a los riesgos; el modo manual sigue debajo.

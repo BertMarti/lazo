@@ -6,7 +6,7 @@ import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtempSync, cpSync, rmSync } from 'node:fs';
+import { mkdtempSync, cpSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -28,7 +28,9 @@ const fakeUnfurl = http.createServer(async (req, res) => {
     res.end(JSON.stringify(j));
   };
   if (req.url === '/amzn') return b.corto === 'aB3dE5f' ? send(200, { id: LID }) : send(422, { error: 'not_a_list' });
-  const err = { LAZOBLOQUEA01: 'AMAZON_BLOQUEA', LAZOPRIVADA01: 'private_list', LAZOVACIA0001: 'empty', LAZORED000001: 'network', LAZOHTTP00001: 'http_500' }[b.id];
+  const err = { LAZOBLOQUEA01: 'AMAZON_BLOQUEA', LAZOPRIVADA01: 'private_list', LAZOVACIA0001: 'empty', LAZORED000001: 'network', LAZOHTTP00001: 'http_500', LAZOTOPE00001: 'rate_limited', LAZOLENTO0001: 'timeout' }[b.id];
+  // El goteo lento: el servicio se rinde al cumplirse su plazo y lo dice con `timeout`.
+  if (b.id === 'LAZOLENTO0001') await new Promise((r) => setTimeout(r, 1500));
   if (err) return send(422, { error: err });
   send(200, { productos: PRODUCTOS });
 });
@@ -66,11 +68,11 @@ async function startPb(env) {
   };
   const su = (await ok('POST', '/api/collections/_superusers/auth-with-password', { identity: 'su@lazo.invalid', password: 'superuser-de-pruebas-123' })).token;
   const tok = {};
-  for (const who of ['ana', 'bea', 'fuera']) {
+  for (const who of ['ana', 'bea', 'cris', 'fuera']) {
     const u = await ok('POST', '/api/collections/users/records', { email: `${who}@lazo.invalid`, password: 'x'.repeat(20), passwordConfirm: 'x'.repeat(20), name: who }, su);
     tok[who] = (await ok('POST', `/api/collections/users/impersonate/${u.id}`, { duration: 3600 }, su)).token;
   }
-  for (const who of ['ana', 'bea']) await ok('POST', '/api/collections/groups/records', { name: `Grupo de ${who}`, occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: [] }, tok[who]);
+  for (const who of ['ana', 'bea', 'cris']) await ok('POST', '/api/collections/groups/records', { name: `Grupo de ${who}`, occasion: 'navidad', currency: 'EUR', buyMode: 'mixto', plazas: [] }, tok[who]);
   return { call, tok, su, dir, stop: () => (proc.kill(), rmSync(dir, { recursive: true, force: true })) };
 }
 
@@ -167,5 +169,34 @@ describe('lista de Amazon desde el servidor', { skip: !BIN && 'Falta PB_BIN (bin
     assert.equal(seen.length, before);
     assert.equal((await on.call('POST', '/api/lazo/amazon-corto', { corto: 'aB3dE5f' }, on.tok.bea)).status, 200);
     await on.call('PATCH', '/api/settings', { rateLimits: { enabled: true } }, on.su);
+  });
+
+  test('V-42 y V-44 (AMZ-7): el tope del servidor es LIMITE, y el plazo agotado del servicio es su ERROR, no un 500 propio', async () => {
+    const tope = await on.call('POST', '/api/lazo/amazon-lista', { id: 'LAZOTOPE00001' }, on.tok.cris);
+    assert.equal(tope.status, 429);
+    assert.equal(tope.json.code, 'LIMITE');
+    const lento = await on.call('POST', '/api/lazo/amazon-lista', { id: 'LAZOLENTO0001' }, on.tok.cris);
+    assert.equal(lento.status, 502);
+    assert.deepEqual(Object.keys(lento.json).sort(), ['code', 'message']);
+    assert.equal(lento.json.code, 'ERROR');
+  });
+
+  test('V-44 (AMZ-14): el identificador no queda en data.db ni en auxiliary.db', async () => {
+    const CENTINELA = 'LAZOCENTINELA9';
+    assert.equal((await on.call('POST', '/api/lazo/amazon-lista', { id: CENTINELA }, on.tok.cris)).status, 200);
+    assert.equal(JSON.parse(seen.at(-1).body).id, CENTINELA);
+    // PocketBase escribe los registros de peticiones por tandas (cada pocos segundos): se espera a que lo haga.
+    const leeDb = () =>
+      readdirSync(join(on.dir, 'pb_data'))
+        .filter((f) => /^(data|auxiliary)\.db/.test(f))
+        .map((f) => readFileSync(join(on.dir, 'pb_data', f)).toString('latin1'))
+        .join('\n');
+    let db = '';
+    for (let i = 0; i < 50 && !db.includes('/api/lazo/amazon-lista'); i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      db = leeDb();
+    }
+    assert.ok(db.includes('/api/lazo/amazon-lista'), 'el registro de peticiones ya está escrito');
+    assert.ok(!db.includes(CENTINELA));
   });
 });

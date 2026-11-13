@@ -150,6 +150,87 @@ test('V11-2: lo que llega de otra app se dice y no crea nada sin pulsar «Añadi
   expect(await page.evaluate(async (m) => (await import(m)).leeCompartido(), '/src/ui/compartido.ts')).toBeNull();
 });
 
+/** La API de la demo (window.__lazoDemo, solo con VITE_DEMO): aquí se espía o se cambia lo que respondería el servidor. */
+type Demo = { amazonLista: (id: string) => Promise<unknown>; capacidades: () => Promise<{ amazon: boolean }>; __lecturas?: number };
+
+test('V-41: el enlace de una lista que llega de otra app no se lee hasta pulsar «Leer la lista»', async ({ page }) => {
+  await page.goto('/#/l/l-alberto');
+  await expect(page.locator('.gift').first()).toBeVisible();
+  await page.evaluate(() => {
+    const d = (window as unknown as { __lazoDemo: Demo }).__lazoDemo;
+    const real = d.amazonLista.bind(d);
+    d.__lecturas = 0;
+    d.amazonLista = (id) => (d.__lecturas!++, real(id));
+  });
+  await compartir(page, DEMO_AMAZON_LISTA);
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('status')).toHaveText('Has compartido el enlace de una lista de Amazon.');
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => (window as unknown as { __lazoDemo: Demo }).__lazoDemo.__lecturas)).toBe(0);
+  await sheet.getByRole('button', { name: 'Leer la lista' }).click();
+  await expect(sheet.getByText('He encontrado 8 productos.')).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __lazoDemo: Demo }).__lazoDemo.__lecturas)).toBe(1);
+});
+
+for (const [caso, capacidades] of [
+  ['apagada', 'false'],
+  ['servidor antiguo, sin la ruta', 'falla'],
+] as const) {
+  test(`importación ${caso}: dice qué hacer para encenderla y el modo manual sigue debajo`, async ({ page, context, browserName }) => {
+    await page.goto('/#/l/l-alberto/nuevo');
+    await expect(page.getByRole('heading', { name: 'Añadir a tu lista' })).toBeVisible();
+    await page.evaluate((c) => {
+      const d = (window as unknown as { __lazoDemo: Demo }).__lazoDemo;
+      d.capacidades = async () => {
+        if (c === 'falla') throw new Error('404');
+        return { amazon: false };
+      };
+    }, capacidades);
+    await paste(page, DEMO_AMAZON_LISTA);
+    const sheet = page.getByRole('dialog');
+    const aviso = sheet.getByRole('status');
+    await expect(aviso).toContainText('La importación automática está apagada en tu servidor. Quien lo aloja puede encenderla así:');
+    await expect(aviso.locator('code', { hasText: '.env' })).toHaveText('server/.env');
+    await expect(aviso.locator('.amz-copiable code')).toHaveText(['AMAZON_IMPORT=on', 'cd lazo/server && docker compose up -d --build']);
+    await expect(aviso.getByRole('link', { name: 'lee los riesgos' })).toHaveAttribute('href', 'https://github.com/BertMarti/lazo/blob/main/docs/legal/AMAZON.md');
+    await expect(aviso).toContainText('Si el servidor no es tuyo, enséñale esto a quien lo aloja.');
+    if (browserName === 'chromium') {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+      await aviso.getByRole('button', { name: 'Copiar cd lazo/server && docker compose up -d --build' }).click();
+      await expect(page.getByText('Copiado.')).toBeVisible();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('cd lazo/server && docker compose up -d --build');
+    }
+    // Debajo, el modo manual de siempre.
+    await expect(sheet.getByRole('button', { name: 'Pegar', exact: true })).toBeVisible();
+    await paste(page, 'texto de la página', DEMO_AMAZON_HTML);
+    await expect(sheet.getByText('He encontrado 8 productos.')).toBeVisible();
+  });
+}
+
+test('V-44: la vista previa del servidor se repasa en la app (fotos de Amazon y enlaces /dp/ construidos)', async ({ page }) => {
+  await page.goto('/#/l/l-alberto/nuevo');
+  await expect(page.getByRole('heading', { name: 'Añadir a tu lista' })).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { __lazoDemo: Demo }).__lazoDemo.amazonLista = async () => ({
+      productos: [
+        { title: 'Taza hostil', asin: 'B0LAZOHOS1', url: 'javascript:alert(1)', image: 'https://evil.example/x.jpg' },
+        { title: 'Sin ASIN', url: 'https://evil.example/' },
+        { title: 'Termo hostil', asin: 'B0LAZOHOS2', url: 'https://evil.example/dp/B0LAZOHOS2', image: 'https://m.media-amazon.com/images/I/lazo-ficticia-1._SS135_.jpg', priority: 9, quantity: -3 },
+        { title: '', asin: 'B0LAZOHOS3' },
+      ],
+    });
+  });
+  await paste(page, DEMO_AMAZON_LISTA);
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText('He encontrado 2 productos.')).toBeVisible();
+  for (const src of await sheet.locator('img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('src'))))
+    expect(src).toMatch(/^https:\/\/(m\.media-amazon\.com|images-(eu|na)\.ssl-images-amazon\.com)\//);
+  await sheet.getByRole('button', { name: 'Añadir 2', exact: true }).click();
+  await expect(page.getByText('2 regalos añadidos.')).toBeVisible();
+  const urls = await page.evaluate(() => JSON.parse(localStorage.getItem('lazo-demo-v4') ?? '{}').items.filter((i: { title: string }) => / hostil$/.test(i.title)).map((i: { url: string }) => i.url));
+  expect(urls.sort()).toEqual(['https://www.amazon.es/dp/B0LAZOHOS1', 'https://www.amazon.es/dp/B0LAZOHOS2']);
+});
+
 test('compartir el enlace de un producto suelto lo añade como siempre, sin pasar por la lista de Amazon', async ({ page }) => {
   await page.goto('/#/l/l-alberto');
   await expect(page.locator('.gift').first()).toBeVisible();

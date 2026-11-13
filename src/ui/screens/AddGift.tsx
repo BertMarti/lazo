@@ -22,16 +22,15 @@ type Step =
   | { kind: 'reading' }
   | { kind: 'added'; item: Item }
   | { kind: 'manual'; url?: string; hint?: string }
-  | { kind: 'amazon'; aviso?: string; enlace?: EnlaceLista; corto?: string; pegado?: Pegado; deOtraApp?: boolean };
+  | { kind: 'amazon'; enlace?: EnlaceLista; corto?: string; pegado?: Pegado; deOtraApp?: boolean };
 
-const ENLACE_DE_LISTA = 'Es el enlace de una lista de Amazon. Lazo no entra en Amazon por ti, así que necesita el texto de la página: sigue estos pasos.';
 
 /** ¿Lo pegado es una lista de Amazon (su enlace, o la página copiada entera)? Con el enlace, el servidor puede leerla. */
 function comoLista(p: Pegado): Step | null {
   const id = listaId(p.text);
-  if (id && soloEnlace(p.text)) return { kind: 'amazon', aviso: ENLACE_DE_LISTA, enlace: { id } };
+  if (id && soloEnlace(p.text)) return { kind: 'amazon', enlace: { id } };
   const n = parseListaPegada(p.text, p.html).length; // V11-1: una sola pasada
-  if (id && !n) return { kind: 'amazon', aviso: ENLACE_DE_LISTA, enlace: { id } };
+  if (id && !n) return { kind: 'amazon', enlace: { id } };
   return n >= 2 ? { kind: 'amazon', pegado: p } : null;
 }
 
@@ -66,13 +65,13 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
       .catch(() => {});
   }, []);
 
-  const fromUrl = async (url: string, noEsLista = false) => {
+  const fromUrl = async (url: string, noEsLista = false, deOtraApp = false) => {
     if (busyRef.current) return;
     const id = listaId(url);
-    if (id) return setStep({ kind: 'amazon', aviso: ENLACE_DE_LISTA, enlace: { id } });
+    if (id) return setStep({ kind: 'amazon', enlace: { id } });
     // amzn.eu/d/…: puede ser una lista o un producto. Si el servidor lee listas, lo averigua él (sin abrir la lista).
     const corto = noEsLista ? null : codigoCorto(url);
-    if (corto && (await api.capacidades()).amazon) return setStep({ kind: 'amazon', enlace: { corto }, corto: url });
+    if (corto && (await api.capacidades()).amazon) return setStep({ kind: 'amazon', enlace: { corto }, corto: url, deOtraApp });
     busyRef.current = true;
     setStep({ kind: 'reading' });
     try {
@@ -114,7 +113,7 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
   useEffect(() => {
     if (!suelto) return;
     olvidaCompartido();
-    void fromUrl(suelto);
+    void fromUrl(suelto, false, true);
   }, []);
 
   // Pegar en cualquier punto de la hoja.
@@ -142,7 +141,6 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
     return (
       <AmazonLista
         listId={listId}
-        aviso={step.aviso}
         enlace={step.enlace}
         compartido={step.pegado}
         deOtraApp={step.deOtraApp}
