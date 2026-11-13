@@ -185,6 +185,10 @@ Puede **«Apuntar una sorpresa»** en tu lista. Los demás la ven para no repeti
 
 En Android, descarga la app desde [la última versión](https://github.com/BertMarti/lazo/releases/latest). En cualquier móvil (también iPhone), abre tu Lazo en el navegador y pulsa **«Añadir a pantalla de inicio»**.
 
+Al abrir la app por primera vez eliges cómo empezar: **«Me han invitado»** (pegas el enlace de WhatsApp), **«Tengo un código»** (la dirección de tu Lazo y un código de 8 letras) o **«Quiero organizar un grupo»** (cómo montarlo en casa).
+
+<p align="center"><img src="docs/capturas/bienvenida/inicio-claro.png" width="270" alt="Primera pantalla de la app de Android: Te damos la bienvenida a Lazo, con los caminos Me han invitado, Tengo un código y Quiero organizar un grupo" /></p>
+
 ## Privacidad y legal
 
 En lenguaje llano:

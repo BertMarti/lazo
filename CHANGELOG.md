@@ -4,6 +4,18 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [1.1.1] - 2026-11-13 · Bienvenida
+
+Arreglos de lo que encontramos al probar la app de Android en un móvil de verdad.
+
+### Corregido
+- **La app ya no se mete bajo la barra de estado** (la hora y los iconos) ni bajo la barra de gestos: cabecera, pestañas, hojas y avisos respetan las zonas seguras del móvil, en claro y en oscuro.
+- **El primer arranque ya no es un callejón sin salida.** «Te damos la bienvenida a Lazo» ofrece tres caminos: «Me han invitado» (pegar el enlace), «Tengo un código» (explica de dónde sale la dirección de tu Lazo y comprueba la conexión antes de entrar) y «Quiero organizar un grupo» (cómo montarlo en casa, con la guía). Y, debajo, la demo.
+
+### Cambiado
+- Los nombres de ejemplo de la demo pasan a ser genéricos: Marta y Javier.
+- **El README es ahora una guía para usuarios**, paso a paso y con capturas reales del móvil: crear el grupo, invitar, entrar, añadir regalos (enlace, Amazon y Excel), reservar y la hucha, la regla de la sorpresa, el amigo invisible, el día de la entrega, imprimir y preguntas frecuentes. Lo técnico está en `docs/DESARROLLO.md`.
+
 ## [1.1.0] - 2026-11-12 · Lista de Amazon
 
 Trae a Lazo la lista que ya tienes hecha en Amazon, en un momento y sin que Lazo entre en Amazon por ti.
