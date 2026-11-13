@@ -9,6 +9,7 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 Arreglos de lo que encontramos al probar la app de Android en un móvil de verdad.
 
 ### Corregido
+- **Con un servidor real, abrir una lista dejaba la pantalla en negro** (por ejemplo, al pulsar «Añadir» en «Tu lista»). En la demo no pasaba. Arreglado en el origen, con una prueba contra PocketBase real; y si alguna pantalla falla, ahora sale un aviso con «Volver» en vez de quedarse vacía.
 - **La app ya no se mete bajo la barra de estado** (la hora y los iconos) ni bajo la barra de gestos: cabecera, pestañas, hojas y avisos respetan las zonas seguras del móvil, en claro y en oscuro.
 - **El primer arranque ya no es un callejón sin salida.** «Te damos la bienvenida a Lazo» ofrece tres caminos: «Me han invitado» (pegar el enlace), «Tengo un código» (explica de dónde sale la dirección de tu Lazo y comprueba la conexión antes de entrar) y «Quiero organizar un grupo» (cómo montarlo en casa, con la guía). Y, debajo, la demo.
 
