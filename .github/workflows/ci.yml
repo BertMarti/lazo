@@ -42,6 +42,12 @@ jobs:
           curl -fsSL -o /tmp/pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.40.6/pocketbase_0.40.6_linux_amd64.zip
           unzip -q /tmp/pb.zip pocketbase -d /tmp/pb
           PB_BIN=/tmp/pb/pocketbase node --test server/test/*.test.mjs
+      # El mismo binario para e2e/pocketbase.spec.ts (la imagen de Playwright no trae unzip).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pocketbase
+          path: /tmp/pb/pocketbase
+          retention-days: 1
       - run: npm run build
 
   e2e:
@@ -57,6 +63,14 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
+      # e2e/pocketbase.spec.ts: la app en modo real contra un PocketBase temporal (sus hooks salen de build:server).
+      - run: npm run build:server
+      - uses: actions/download-artifact@v4
+        with:
+          name: pocketbase
+          path: /tmp/pb
+      - run: chmod +x /tmp/pb/pocketbase
       - run: npx playwright test
         env:
           HOME: /root
+          PB_BIN: /tmp/pb/pocketbase

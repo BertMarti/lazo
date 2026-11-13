@@ -1,6 +1,7 @@
 import { CaretLeft, Gear, PiggyBank, ShoppingBag, Shuffle, UsersThree, type Icon } from '@phosphor-icons/react';
 import { useCallback, useRef, useState } from 'react';
 import { DemoApi } from './api/demo';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import type { Api } from './api/types';
 import { Avisos } from './ui/Avisos';
 import { IconButton } from './ui/Button';
@@ -110,7 +111,7 @@ export function App({ api }: { api: Api }) {
                 </div>
               </div>
             )}
-            {screen}
+            <ErrorBoundary key={routeKey}>{screen}</ErrorBoundary>
           </main>
           <nav className="tabbar" aria-label="Principal" hidden={bare}>
             <Tabs section={section} group={group} />

@@ -41,10 +41,19 @@ export class PocketBaseApi implements Api {
     if (this.pb.authStore.isValid) await this.pb.collection('users').authRefresh().catch(() => this.pb.authStore.clear());
   }
 
+  /**
+   * Siempre el MISMO objeto mientras no cambie la persona: las pantallas lo ponen en dependencias de efectos.
+   * (authStore.record lee y parsea localStorage en cada llamada; un objeto nuevo por render dejaba
+   * «Tu lista» en un bucle de renders, React #185, y la pantalla en negro.)
+   */
   me(): User | null {
     const r = this.pb.authStore.record;
-    return r ? { id: r.id, name: String(r.name ?? ''), color: String(r.color ?? '') } : null;
+    const u = r ? user(r) : null;
+    const c = this.meCache;
+    if (!u || !c || c.id !== u.id || c.name !== u.name || c.color !== u.color) this.meCache = u;
+    return this.meCache;
   }
+  private meCache: User | null = null;
   private uid() {
     const id = this.pb.authStore.record?.id;
     if (!id) throw new ApiError('Entra con tu enlace de invitación.');

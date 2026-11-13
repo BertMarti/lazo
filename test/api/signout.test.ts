@@ -17,6 +17,17 @@ const left = () => Object.keys(localStorage).sort();
 
 afterEach(() => vi.unstubAllGlobals());
 
+describe('me', () => {
+  // v1.1.2: un objeto nuevo en cada llamada ponía «Tu lista» en un bucle de renders (pantalla en negro).
+  it('devuelve el mismo objeto mientras no cambie la persona', () => {
+    const api = new PocketBaseApi('http://lazo.test');
+    fill(api);
+    expect(api.me()).toBe(api.me());
+    api.pb.authStore.save('token.viejo.x', { id: 'u1', collectionId: 'users', collectionName: 'users', name: 'Papá Noel' });
+    expect(api.me()?.name).toBe('Papá Noel');
+  });
+});
+
 describe('signOut', () => {
   it('en este móvil: sin sesión ni avisos, pendientes, último grupo ni clave de IA; sin llamar al servidor', async () => {
     const f = vi.fn<typeof fetch>();
