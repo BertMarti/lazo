@@ -9,7 +9,8 @@ import { PRIORITY } from '../Gift';
 import { errorText, Sheet, useToast } from '../kit';
 import { listaId, parseListaPegada, soloEnlace } from '../../core/amazonLista';
 import { leeCompartido, olvidaCompartido } from '../compartido';
-import { AmazonLista } from './AmazonLista';
+import { codigoCorto } from '../../core/amazonServidor';
+import { AmazonLista, type EnlaceLista } from './AmazonLista';
 import { ItemForm } from './ItemForm';
 
 /** Primera URL de un texto («Mira esto en Amazon https://amzn.eu/d/…» → la URL). */
@@ -21,15 +22,16 @@ type Step =
   | { kind: 'reading' }
   | { kind: 'added'; item: Item }
   | { kind: 'manual'; url?: string; hint?: string }
-  | { kind: 'amazon'; aviso?: string; pegado?: Pegado; deOtraApp?: boolean };
+  | { kind: 'amazon'; aviso?: string; enlace?: EnlaceLista; corto?: string; pegado?: Pegado; deOtraApp?: boolean };
 
 const ENLACE_DE_LISTA = 'Es el enlace de una lista de Amazon. Lazo no entra en Amazon por ti, así que necesita el texto de la página: sigue estos pasos.';
 
-/** ¿Lo pegado es una lista de Amazon (su enlace, o la página copiada entera)? */
+/** ¿Lo pegado es una lista de Amazon (su enlace, o la página copiada entera)? Con el enlace, el servidor puede leerla. */
 function comoLista(p: Pegado): Step | null {
-  if (soloEnlace(p.text)) return { kind: 'amazon', aviso: ENLACE_DE_LISTA };
+  const id = listaId(p.text);
+  if (id && soloEnlace(p.text)) return { kind: 'amazon', aviso: ENLACE_DE_LISTA, enlace: { id } };
   const n = parseListaPegada(p.text, p.html).length; // V11-1: una sola pasada
-  if (listaId(p.text) && !n) return { kind: 'amazon', aviso: ENLACE_DE_LISTA };
+  if (id && !n) return { kind: 'amazon', aviso: ENLACE_DE_LISTA, enlace: { id } };
   return n >= 2 ? { kind: 'amazon', pegado: p } : null;
 }
 
@@ -64,9 +66,13 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
       .catch(() => {});
   }, []);
 
-  const fromUrl = async (url: string) => {
+  const fromUrl = async (url: string, noEsLista = false) => {
     if (busyRef.current) return;
-    if (listaId(url)) return setStep({ kind: 'amazon', aviso: ENLACE_DE_LISTA });
+    const id = listaId(url);
+    if (id) return setStep({ kind: 'amazon', aviso: ENLACE_DE_LISTA, enlace: { id } });
+    // amzn.eu/d/…: puede ser una lista o un producto. Si el servidor lee listas, lo averigua él (sin abrir la lista).
+    const corto = noEsLista ? null : codigoCorto(url);
+    if (corto && (await api.capacidades()).amazon) return setStep({ kind: 'amazon', enlace: { corto }, corto: url });
     busyRef.current = true;
     setStep({ kind: 'reading' });
     try {
@@ -132,7 +138,19 @@ export function AddGift({ listId, onClose, onSaved, onImport, amazon }: { listId
   });
 
   if (step.kind === 'amazon') {
-    return <AmazonLista listId={listId} aviso={step.aviso} compartido={step.pegado} deOtraApp={step.deOtraApp} onClose={onClose} onSaved={onSaved} />;
+    const corto = step.corto;
+    return (
+      <AmazonLista
+        listId={listId}
+        aviso={step.aviso}
+        enlace={step.enlace}
+        compartido={step.pegado}
+        deOtraApp={step.deOtraApp}
+        onNoEsLista={corto ? () => (setStep({ kind: 'idle' }), void fromUrl(corto, true)) : undefined}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
+    );
   }
 
   if (step.kind === 'manual') {

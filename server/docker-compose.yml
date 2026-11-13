@@ -12,6 +12,8 @@ services:
       TZ: ${TZ:-Europe/Madrid}
       UNFURL_KEY: ${UNFURL_KEY:?Falta UNFURL_KEY en .env (openssl rand -hex 32)}
       UNFURL_URL: http://unfurl:8787
+      # Lista de Amazon leída por el servidor: apagada salvo AMAZON_IMPORT=on en .env (docs/legal/AMAZON.md).
+      AMAZON_IMPORT: ${AMAZON_IMPORT:-}
     # Panel /_/ solo desde la propia máquina (túnel SSH o VPN). Nunca 0.0.0.0: Caddy lo bloquea por fuera.
     ports:
       - "127.0.0.1:8090:8090"
@@ -28,6 +30,7 @@ services:
       - no-new-privileges:true
     environment:
       UNFURL_KEY: ${UNFURL_KEY:?Falta UNFURL_KEY en .env}
+      AMAZON_IMPORT: ${AMAZON_IMPORT:-}
     # Sin puertos publicados: solo lo alcanza PocketBase por la red interna. Sale a Internet para leer páginas.
     networks: [interna, salida]
 

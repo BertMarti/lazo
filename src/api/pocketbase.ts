@@ -1,6 +1,7 @@
 import PocketBase, { ClientResponseError, type RecordModel, type RecordSubscription } from 'pocketbase';
 import { seenFacts } from '../core/avisos';
 import { olvidaCompartido } from '../ui/compartido';
+import type { AmazonProducto } from '../core/amazonLista';
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { Budget, Cents, Claim, Contribution, Draw, GiftList, Group, Id, Item, JoinRequest, Payment, Received, User } from '../core/types';
@@ -248,6 +249,26 @@ export class PocketBaseApi implements Api {
     });
 
   unfurl = (url: string) => this.read(() => this.pb.send<PageMeta>('/api/lazo/unfurl', { method: 'POST', body: { url } }));
+
+  private caps?: Promise<{ amazon: boolean }>;
+  capacidades = () =>
+    (this.caps ??= this.pb.send<{ amazon: boolean }>('/api/lazo/capacidades', { method: 'GET' }).then(
+      (c) => ({ amazon: c.amazon === true }),
+      () => ((this.caps = undefined), { amazon: false }), // sin red o servidor antiguo: modo manual
+    ));
+
+  /** Las rutas de Amazon responden `{code, message}`: el código llega a la pantalla para elegir qué ofrecer. */
+  private amazon<T>(path: string, body: object) {
+    return this.pb.send<T>(path, { method: 'POST', body }).catch((e: unknown) => {
+      if (e instanceof ClientResponseError && e.status !== 0) {
+        const code = (e.response?.code as string | undefined) ?? (e.status === 429 ? 'LIMITE' : 'ERROR');
+        throw new ApiError((e.response?.message as string) || 'No hemos podido leer la lista. Prueba otra vez o copia y pega la página.', code);
+      }
+      throw new ApiError(OFFLINE_READ, 'ERROR');
+    });
+  }
+  amazonLista = (id: string) => this.amazon<{ productos: AmazonProducto[]; partial?: boolean }>('/api/lazo/amazon-lista', { id });
+  amazonCorto = async (codigo: string) => (await this.amazon<{ id: string }>('/api/lazo/amazon-corto', { corto: codigo })).id;
 
   purchases = () =>
     this.read(async (): Promise<Purchase[]> => {

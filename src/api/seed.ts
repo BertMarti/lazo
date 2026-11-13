@@ -136,6 +136,8 @@ export const DEMO_UNFURL: { match: RegExp; meta: { title: string; priceCents?: n
 
 /** Lista de Amazon de ejemplo (inventada) para probar la importación en la demo: como si se hubiera copiado la página. */
 export const DEMO_AMAZON_LISTA = 'https://www.amazon.es/hz/wishlist/ls/LAZODEMO2026X?ref_=wl_share';
+/** En la demo, esta lista simula que Amazon pide captcha. */
+export const DEMO_AMAZON_BLOQUEA = 'LAZODEMOBLOQUEA';
 const demoFicha = (asin: string, title: string, price: string) =>
   `<li data-itemid="I${asin}" data-price="${price}"><a id="itemName_I${asin}" title="${title}" href="/dp/${asin}/?coliid=I${asin}&amp;ref_=lv_ov">${title}</a><span class="a-offscreen">${price.replace('.', ',')} €</span></li>`;
 export const DEMO_AMAZON_HTML = `<ul>${[

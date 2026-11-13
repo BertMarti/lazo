@@ -1,3 +1,4 @@
+import type { AmazonProducto } from '../core/amazonLista';
 import type { ItemDraft } from '../core/columns';
 import type { PageMeta } from '../core/meta';
 import type { SharedList } from '../core/shared';
@@ -144,6 +145,15 @@ export interface Api {
   runDraw(groupId: Id, participants: Id[], exclusions: [Id, Id][], budgetCents?: Cents): Promise<void>;
   drawInfo(groupId: Id): Promise<DrawInfo>;
   unfurl(url: string): Promise<PageMeta>;
+  /** Qué tiene encendido el servidor. La lectura de listas de Amazon va apagada salvo `AMAZON_IMPORT=on`. */
+  capacidades(): Promise<{ amazon: boolean }>;
+  /**
+   * Lista de Amazon leída por el servidor (solo el identificador viaja). Falla con `ApiError.code`: AMAZON_BLOQUEA,
+   * NO_ES_LISTA, LISTA_PRIVADA, VACIA, LIMITE, OCUPADO o ERROR.
+   */
+  amazonLista(id: string): Promise<{ productos: AmazonProducto[]; partial?: boolean }>;
+  /** Identificador de la lista a la que lleva un `amzn.eu/d/<código>`, o `ApiError` con code NO_ES_LISTA. */
+  amazonCorto(codigo: string): Promise<string>;
   purchases(): Promise<Purchase[]>;
   /**
    * Tiempo real: llama a `onChange` (agrupado) cuando cambia algo que quien mira PUEDE ver; el servidor no le manda
@@ -157,7 +167,15 @@ export interface Api {
   sharedList(token: string): Promise<SharedList>;
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  /** Código de un conjunto cerrado cuando la pantalla tiene que distinguir el fallo (lista de Amazon). */
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
 
 /** Mismo texto para todo token malo: no se distingue «no existe» de «caducado» ni de «revocado». */
 export const BAD_INVITE = 'Esta invitación no existe o ha caducado. Pide un enlace nuevo.';

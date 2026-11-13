@@ -17,7 +17,7 @@
     "lint": "eslint .",
     "check": "eslint . && tsc -b && vitest run",
     "e2e": "playwright test",
-    "build:server": "esbuild src/core/meta.ts --bundle --format=esm --platform=node --outfile=server/unfurl/meta.mjs && esbuild src/core/draw.ts --bundle --format=cjs --platform=neutral --target=es2020 --outfile=server/pb/pb_hooks/lib/draw.cjs && esbuild src/core/plazas.ts --bundle --format=cjs --platform=neutral --target=es2020 --outfile=server/pb/pb_hooks/lib/plazas.cjs && esbuild src/core/copia.ts --bundle --format=cjs --platform=neutral --target=es2020 --outfile=server/pb/pb_hooks/lib/copia.cjs",
+    "build:server": "esbuild src/core/meta.ts --bundle --format=esm --platform=node --outfile=server/unfurl/meta.mjs && esbuild src/core/amazonServidor.ts --bundle --format=esm --platform=node --outfile=server/unfurl/amazon.mjs && esbuild src/core/draw.ts --bundle --format=cjs --platform=neutral --target=es2020 --outfile=server/pb/pb_hooks/lib/draw.cjs && esbuild src/core/plazas.ts --bundle --format=cjs --platform=neutral --target=es2020 --outfile=server/pb/pb_hooks/lib/plazas.cjs && esbuild src/core/copia.ts --bundle --format=cjs --platform=neutral --target=es2020 --outfile=server/pb/pb_hooks/lib/copia.cjs",
     "test:live": "vitest run test/integration",
     "test:server": "node --test server/unfurl/test/*.test.mjs",
     "rendimiento": "node scripts/rendimiento.mjs"

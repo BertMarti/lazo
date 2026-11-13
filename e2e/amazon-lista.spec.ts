@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { DEMO_AMAZON_HTML, DEMO_AMAZON_LISTA } from '../src/api/seed';
+import { DEMO_AMAZON_BLOQUEA, DEMO_AMAZON_HTML, DEMO_AMAZON_LISTA } from '../src/api/seed';
 import { hostilAnidadas, hostilEnlaces } from '../test/fixtures/amazon-lista/grande';
 
 // Importar una lista de Amazon copiando y pegando (camino b). Lazo no hace ninguna petición a Amazon.
@@ -25,20 +25,49 @@ const paste = (page: Page, text: string, html?: string) =>
     document.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   }, [text, html] as const);
 
-test('pegar el enlace de la lista abre el modo manual; la página copiada da la vista previa con el duplicado desmarcado', async ({ page }) => {
+test('pegar el enlace de la lista la lee sola (servidor con AMAZON_IMPORT=on; la demo lo simula) y cada regalo lleva su /dp/', async ({ page, baseURL }) => {
+  const fuera: string[] = [];
+  page.on('request', (r) => {
+    if (!r.url().startsWith(baseURL!) && !r.url().startsWith('data:')) fuera.push(r.url());
+  });
   await page.goto('/#/l/l-alberto/nuevo');
   await expect(page.getByRole('heading', { name: 'Añadir a tu lista' })).toBeVisible();
   await paste(page, `¡Echa un vistazo a mi lista! ${DEMO_AMAZON_LISTA}`);
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('heading', { name: 'Importar lista de Amazon' })).toBeVisible();
-  await expect(sheet.getByRole('status')).toContainText('Lazo no entra en Amazon por ti');
+  await expect(sheet.getByText('Leyendo tu lista…')).toBeVisible();
+  await expect(sheet.getByRole('progressbar', { name: 'Leyendo tu lista' })).toBeVisible();
+  await expect(sheet.getByText('He encontrado 8 productos.')).toBeVisible();
+  await expect(sheet.getByText('1 ya está en tu lista')).toBeVisible();
+  await expect(sheet.getByText('Las fotos aparecerán al añadirlos.')).toHaveCount(0);
+  await expect(sheet.getByRole('checkbox', { name: /Teclado mecánico compacto/ })).not.toBeChecked();
+  await sheet.getByRole('button', { name: 'Añadir 7', exact: true }).click();
+  await expect(page.getByText('7 regalos añadidos.')).toBeVisible();
+  const urls = await page.evaluate(() => JSON.parse(localStorage.getItem('lazo-demo-v4') ?? '{}').items.filter((i: { title: string }) => /Termo de acero|Puzle de 1000/.test(i.title)).map((i: { url: string }) => i.url));
+  expect(urls.sort()).toEqual(['https://www.amazon.es/dp/B0LAZODM02', 'https://www.amazon.es/dp/B0LAZODM08']);
+  expect(fuera).toEqual([]); // la demo no sale a ningún sitio
+});
+
+test('si Amazon bloquea: el aviso, «Reintentar» y, como alternativa, copiar y pegar la página', async ({ page }) => {
+  await page.goto('/#/l/l-alberto/nuevo');
+  await paste(page, `https://www.amazon.es/hz/wishlist/ls/${DEMO_AMAZON_BLOQUEA}?ref_=wl_share`);
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('status')).toHaveText('Amazon no deja leer la lista ahora mismo. Prueba dentro de un rato.');
+  await sheet.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(sheet.getByText('Leyendo tu lista…')).toBeVisible();
+  await expect(sheet.getByRole('status')).toHaveText(/Amazon no deja leer la lista/);
+  await sheet.getByRole('button', { name: 'Copiar y pegar la página' }).click();
   await expect(sheet.getByRole('button', { name: 'Pegar', exact: true })).toBeVisible();
-
-  // Pegar otra vez solo el enlace: explica qué falta, sin ir a ningún sitio.
-  await paste(page, DEMO_AMAZON_LISTA);
-  await expect(sheet.getByRole('status')).toContainText('solo el enlace');
-
   await paste(page, 'texto de la página', DEMO_AMAZON_HTML);
+  await expect(sheet.getByText('He encontrado 8 productos.')).toBeVisible();
+  await expect(sheet.getByText('Las fotos aparecerán al añadirlos.')).toBeVisible(); // lo pegado: sin fotos antes de confirmar
+});
+
+test('la página copiada da la vista previa con el duplicado desmarcado', async ({ page }) => {
+  await page.goto('/#/l/l-alberto/nuevo');
+  await expect(page.getByRole('heading', { name: 'Añadir a tu lista' })).toBeVisible();
+  await paste(page, 'texto de la página', DEMO_AMAZON_HTML);
+  const sheet = page.getByRole('dialog');
   await expect(sheet.getByText('He encontrado 8 productos.')).toBeVisible();
   await expect(sheet.getByText('1 ya está en tu lista')).toBeVisible();
   await expect(sheet.getByRole('checkbox', { name: /Teclado mecánico compacto/ })).not.toBeChecked();
