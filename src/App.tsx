@@ -5,7 +5,7 @@ import { ErrorBoundary } from './ui/ErrorBoundary';
 import type { Api } from './api/types';
 import { Avisos } from './ui/Avisos';
 import { IconButton } from './ui/Button';
-import { ApiCtx, go, lastGroup, useRoute } from './ui/ctx';
+import { ApiCtx, go, lastGroup, stepsBackTo, useRoute } from './ui/ctx';
 import { Brand } from './ui/Bow';
 import { Avatar, daysUntil, OfflineBand, ToastProvider } from './ui/kit';
 import { AmazonDestino } from './ui/screens/AmazonLista';
@@ -92,7 +92,17 @@ export function App({ api }: { api: Api }) {
             {t.name && (
               <div className="page-head">
                 {t.back && (
-                  <a className="back" href={`#${t.back}`}>
+                  <a
+                    className="back"
+                    href={`#${t.back}`}
+                    onClick={(e) => {
+                      // Si el destino es la pantalla anterior, atrás de verdad (como el gesto del sistema).
+                      if (stepsBackTo(t.back!, history.state)) {
+                        e.preventDefault();
+                        go(t.back!);
+                      }
+                    }}
+                  >
                     <CaretLeft size={18} weight="bold" aria-hidden /> {t.backLabel ?? 'Volver'}
                   </a>
                 )}

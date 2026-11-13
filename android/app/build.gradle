@@ -16,6 +16,14 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // App Links: LAZO_HOST=milazo.duckdns.org hace que los enlaces de invitación de ese dominio abran la app.
+    // Vacía (por defecto), el APK no reclama ningún dominio.
+    def lazoHost = System.getenv('LAZO_HOST') ?: ''
+    defaultConfig.manifestPlaceholders = [lazoHost: lazoHost]
+    if (lazoHost) {
+        sourceSets.debug.manifest.srcFile 'src/applinks/AndroidManifest.xml'
+        sourceSets.release.manifest.srcFile 'src/applinks/AndroidManifest.xml'
+    }
     buildTypes {
         release {
             minifyEnabled false

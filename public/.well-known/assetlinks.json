@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bertmarti.lazo",
+      "sha256_cert_fingerprints": ["03:ED:3D:2D:8B:1C:6B:39:5C:0E:69:D9:C0:4F:34:93:39:70:95:D3:72:11:5E:CD:B5:E1:0C:23:CD:74:8B:40"]
+    }
+  }
+]
