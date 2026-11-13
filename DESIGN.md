@@ -90,7 +90,7 @@ Cada persona tiene un color fijo, el mismo en claro y en oscuro, siempre con la 
 | `--t-1` | 32 px | 40 px | Título de la entrada por enlace |
 | `--t-2` | 24 px | 28 px | Secciones y hojas |
 | `--t-3` | 20 px | 20 px | Nombre en la tarjeta de persona |
-| `--t-cifra` | 48 px | 56 px | «Te falta poner» y el código de entrada |
+| `--t-cifra` | 48 px | 56 px | «Te falta poner» y el código de entrada (el código de entrada se encoge en móvil para caber entero: `clamp(24 px, 8vw, --t-cifra)`) |
 | `--t-big` | 18 px | 18 px | Entradilla y estados vacíos |
 | `--t-md` | 16 px | 16 px | Base |
 | `--t-meta` | 15 px | 15 px | Línea secundaria |

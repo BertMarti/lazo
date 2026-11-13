@@ -1,4 +1,5 @@
 import { ArrowSquareOut, DeviceMobile, DownloadSimple, SignOut, UploadSimple } from '@phosphor-icons/react';
+import { Capacitor } from '@capacitor/core';
 import { useState } from 'react';
 import { loadAi, PRESETS, saveAi, type AiSettings } from '../../ai/provider';
 import { suggestIdeas } from '../../ai/tasks';
@@ -223,6 +224,16 @@ function GroupCopy() {
   );
 }
 
+/** La dirección que hay que escribir en «Tengo un código»: en la app, la guardada al conectar; en la web, esta misma. */
+function lazoUrl() {
+  if (!Capacitor.isNativePlatform()) return location.origin;
+  try {
+    return localStorage.getItem('lazo:server') ?? location.origin;
+  } catch {
+    return location.origin;
+  }
+}
+
 /** «Entrar en otro móvil»: un código de un solo uso para «Tengo un código» en el otro móvil. */
 function OtherDevice() {
   const api = useApi();
@@ -249,6 +260,8 @@ function OtherDevice() {
           <span className="code" style={{ fontSize: 'var(--t-display)' }}>{code.code}</span>
           <br />
           <span className="meta">Caduca en {code.minutes} minutos</span>
+          <br />
+          <span style={{ fontSize: 'var(--t-md)', overflowWrap: 'anywhere' }}>Dirección de tu Lazo: {lazoUrl()}</span>
         </p>
       )}
       {err && <p className="notice notice-error" role="alert">{err}</p>}

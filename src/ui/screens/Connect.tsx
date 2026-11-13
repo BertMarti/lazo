@@ -27,7 +27,7 @@ export async function checkLazo(origin: string, ms = 8000): Promise<void> {
   try {
     r = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(ms) });
   } catch {
-    throw new Error('No encuentro tu Lazo en esa dirección. Revisa que esté bien escrita y que el servidor esté encendido.');
+    throw new Error('No encuentro tu Lazo en esa dirección. Comprueba que tienes internet y que la dirección está bien escrita. Si sigue sin salir, avisa a quien organiza.');
   }
   const body = await r.json().catch(() => null);
   if (!r.ok || typeof body?.message !== 'string') throw new Error('Esa dirección no es un Lazo. Revisa que sea la que te han dado.');
@@ -104,10 +104,10 @@ function Invite({ onReady }: { onReady: (server: string, token?: string) => void
       }}
     >
       <h2 className="h-section">Me han invitado</h2>
-      <p>Pega aquí el enlace de invitación que te han mandado por WhatsApp.</p>
+      <p>En WhatsApp, mantén el dedo sobre el mensaje de la invitación y toca «Copiar». Después vuelve aquí y pégalo en este recuadro.</p>
       <label className="field">
         <span>Enlace de invitación</span>
-        <input className="input" type="url" inputMode="url" value={text} onChange={(e) => setText(e.target.value)} placeholder="https://…/#/unirse/…" autoFocus />
+        <input className="input" type="url" inputMode="url" value={text} onChange={(e) => setText(e.target.value)} placeholder="Pega aquí el mensaje" autoFocus />
       </label>
       {err && <p className="notice notice-error" role="alert">{err}</p>}
       <Button type="submit" variant="primary" size="lg" wide icon={LinkSimple}>Entrar</Button>
@@ -122,7 +122,8 @@ function Code({ onReady }: { onReady: (server: string) => void }) {
       claim={async (code) => {
         let origin = '';
         try {
-          const u = new URL(server.trim());
+          const s = server.trim();
+          const u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
           if (u.protocol === 'https:') origin = u.origin;
         } catch {
           /* no es una dirección */
@@ -135,8 +136,8 @@ function Code({ onReady }: { onReady: (server: string) => void }) {
     >
       <label className="field">
         <span>Dirección de tu Lazo</span>
-        <input className="input" type="url" inputMode="url" value={server} onChange={(e) => setServer(e.target.value)} placeholder="https://milazo.duckdns.org" />
-        <small>Es la dirección que te ha dado quien organiza, la misma con la que empiezan los enlaces de invitación, por ejemplo https://milazo.duckdns.org</small>
+        <input className="input" type="text" inputMode="url" autoCapitalize="none" spellCheck={false} value={server} onChange={(e) => setServer(e.target.value)} placeholder="https://milazo.duckdns.org" />
+        <small>Te la da quien organiza. Si ya tienes Lazo en otro móvil, sale junto al código en «Ajustes → Entrar en otro móvil». Ejemplo: https://milazo.duckdns.org</small>
       </label>
     </CodeForm>
   );
@@ -146,7 +147,7 @@ function Host({ onCode }: { onCode: () => void }) {
   return (
     <section className="panel stack" aria-labelledby="host-h">
       <h2 className="h-section" id="host-h">Quiero organizar un grupo</h2>
-      <p>Lazo no guarda vuestras listas en ninguna empresa: se monta en un ordenador de tu casa. Lo hace una vez quien organiza; el resto solo recibe un enlace.</p>
+      <p>Lazo no guarda vuestras listas en ninguna empresa: se monta en un ordenador de tu casa. Lo hace una vez quien organiza; el resto solo recibe un enlace. Si no te manejas con ordenadores, pídeselo a alguien de la familia: tú solo necesitarás el enlace.</p>
       <ol className="steps">
         <li>Consigue un ordenador que pueda quedarse encendido, por ejemplo una Raspberry Pi.</li>
         <li>Sigue la guía: instalas Lazo y le das una dirección, como https://milazo.duckdns.org.</li>

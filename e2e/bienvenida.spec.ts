@@ -28,7 +28,7 @@ test('tres caminos y la demo', async ({ page }) => {
   await expect(page.getByText('lazo-alta')).toBeVisible();
   await page.getByRole('button', { name: 'Ya tengo mi código' }).click();
   await expect(page.getByLabel('Dirección de tu Lazo')).toBeVisible();
-  await expect(page.getByText(/la misma con la que empiezan los enlaces de invitación/)).toBeVisible();
+  await expect(page.getByText(/sale junto al código en «Ajustes → Entrar en otro móvil»/)).toBeVisible();
   await page.getByRole('button', { name: 'Volver' }).click();
 
   await page.getByRole('button', { name: 'Probar la demo' }).click();
@@ -52,16 +52,37 @@ test('tengo un código: comprueba la conexión antes de canjearlo', async ({ pag
 
   await dir.fill('https://apagado.test');
   await entrar.click();
-  await expect(page.getByRole('alert')).toHaveText('No encuentro tu Lazo en esa dirección. Revisa que esté bien escrita y que el servidor esté encendido.');
+  await expect(page.getByRole('alert')).toHaveText(
+    'No encuentro tu Lazo en esa dirección. Comprueba que tienes internet y que la dirección está bien escrita. Si sigue sin salir, avisa a quien organiza.',
+  );
 
   await dir.fill('https://otra-web.test/inicio');
   await entrar.click();
   await expect(page.getByRole('alert')).toContainText('Esa dirección no es un Lazo');
 
-  await dir.fill('https://milazo.test');
+  await dir.fill('http://milazo.test');
+  await entrar.click();
+  await expect(page.getByRole('alert')).toHaveText('Escribe la dirección de tu Lazo, empezando por https://');
+
+  // Sin «https://» también vale: se antepone.
+  await dir.fill('milazo.test');
   await entrar.click();
   await expect.poll(() => claimed).toBe('ABCD2345');
 });
+
+for (const width of [320, 390]) {
+  test(`el código de 8 caracteres cabe entero a ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await open(page);
+    await page.getByRole('button', { name: /Tengo un código/ }).click();
+    const input = page.getByLabel('Código de 8 caracteres');
+    await input.fill('MWMW8888');
+    await expect(input).toHaveValue('MWMW8888');
+    const { scroll, client } = await input.evaluate((el: HTMLInputElement) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+    expect(scroll).toBeLessThanOrEqual(client);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}
 
 test('nada queda bajo la barra de estado', async ({ page }) => {
   await open(page, 48);

@@ -35,4 +35,5 @@ test('Ajustes da un código para entrar en otro móvil', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar en otro móvil' }).click();
   await expect(page.getByText('DEMO2345')).toBeVisible();
   await expect(page.getByText('Caduca en 10 minutos')).toBeVisible();
+  await expect(page.getByText(`Dirección de tu Lazo: ${new URL(page.url()).origin}`)).toBeVisible();
 });
