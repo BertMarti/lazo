@@ -5,7 +5,7 @@ import globals from "globals";
 export default tseslint.config(
   { ignores: ["dist", "dist-demo", "android", "node_modules", ".superpowers", "server/pb/pb_hooks/lib", "server/unfurl/meta.mjs", ".claude", ".impeccable"] },
   js.configs.recommended,
-  { files: ["server/unfurl/**/*.mjs", "server/test/**/*.mjs"], languageOptions: { globals: globals.node } },
+  { files: ["server/unfurl/**/*.mjs", "server/test/**/*.mjs", "e2e/**/*.mjs"], languageOptions: { globals: globals.node } },
   { files: ["server/pb/**/*.js"], languageOptions: { globals: { migrate: "readonly", Collection: "readonly", TextField: "readonly", Record: "readonly", Command: "readonly", routerAdd: "readonly", routerUse: "readonly", onRecordCreateRequest: "readonly", onRecordCreate: "readonly", onRealtimeSubscribeRequest: "readonly", onBatchRequest: "readonly", $app: "readonly", $apis: "readonly", $security: "readonly", $http: "readonly", $os: "readonly", __hooks: "readonly", require: "readonly", BadRequestError: "readonly", ForbiddenError: "readonly", UnauthorizedError: "readonly", NotFoundError: "readonly", Field: "readonly", onRecordDeleteRequest: "readonly", module: "writable" } } },
   ...tseslint.configs.recommended,
   {
