@@ -3,6 +3,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import { lookup as dnsLookup } from 'node:dns';
+import zlib from 'node:zlib';
 import { checkUrl, isBlockedIp, UnfurlError } from './guard.mjs';
 
 export const LIMITS = { timeoutMs: 6000, maxBytes: 1_500_000, maxRedirects: 3 };
@@ -38,7 +39,8 @@ export async function safeFetch(rawUrl, opts = {}) {
   }
 }
 
-function once(url, deadline, opts) {
+/** Una sola petición GET, sin seguir redirecciones: `{redirect}` o `{body, truncated?}`. */
+export function once(url, deadline, opts) {
   return new Promise((resolve, reject) => {
     const mod = url.protocol === 'https:' ? https : http;
     const remaining = deadline - Date.now();
@@ -68,20 +70,31 @@ function once(url, deadline, opts) {
           return reject(new UnfurlError('not_html'));
         }
         const max = opts.maxBytes ?? LIMITS.maxBytes;
+        // Amazon comprime aunque no pidamos compresión: se descomprime en flujo y el tope cuenta los bytes YA
+        // descomprimidos (sin bomba de descompresión).
+        const enc = String(res.headers['content-encoding'] ?? '').toLowerCase();
+        const unzip = { gzip: zlib.createGunzip, 'x-gzip': zlib.createGunzip, deflate: zlib.createInflate, br: zlib.createBrotliDecompress }[enc];
+        if (enc && enc !== 'identity' && !unzip) {
+          res.resume();
+          return reject(new UnfurlError('not_html'));
+        }
+        const body = unzip ? res.pipe(unzip()) : res;
         let size = 0;
         const chunks = [];
-        res.on('data', (c) => {
+        body.on('data', (c) => {
           size += c.length;
           if (size > max) {
             // Suficiente: los metadatos están en la cabecera. Cortamos y nos quedamos con lo leído.
             chunks.push(c.subarray(0, c.length - (size - max)));
             res.destroy();
-            resolve({ body: Buffer.concat(chunks).toString('utf8') });
+            if (body !== res) body.destroy();
+            resolve({ body: Buffer.concat(chunks).toString('utf8'), truncated: true });
             return;
           }
           chunks.push(c);
         });
-        res.on('end', () => resolve({ body: Buffer.concat(chunks).toString('utf8') }));
+        body.on('end', () => resolve({ body: Buffer.concat(chunks).toString('utf8') }));
+        body.on('error', () => reject(new UnfurlError('network')));
         res.on('error', reject);
       },
     );

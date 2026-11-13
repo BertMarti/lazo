@@ -8,7 +8,8 @@ import type { Cents, Claim, GiftList, Group, Id, Item, JoinRequest, Received, Us
 import { LIMITS } from '../core/types';
 import { toShared } from '../core/shared';
 import { canEditList, canSeeStatus } from '../core/visibility';
-import { DEMO_GENERAL_TOKEN, DEMO_UNFURL, seed, type DemoData } from './seed';
+import { parseListaHtml } from '../core/amazonLista';
+import { DEMO_AMAZON_BLOQUEA, DEMO_AMAZON_HTML, DEMO_GENERAL_TOKEN, DEMO_UNFURL, seed, type DemoData } from './seed';
 import {
   ApiError,
   BAD_INVITE,
@@ -604,6 +605,22 @@ export class DemoApi implements Api {
     await new Promise((r) => setTimeout(r, 450));
     const hit = DEMO_UNFURL.find((d) => d.match.test(url))!;
     return { ...hit.meta, url: amazonInfo(url)?.canonical ?? url };
+  }
+
+  /** La demo simula la lectura automática de la lista de Amazon: no hay servidor ni ninguna petición a Amazon. */
+  async capacidades() {
+    return { amazon: true };
+  }
+
+  async amazonLista(id: string) {
+    await new Promise((r) => setTimeout(r, 1200));
+    // Identificador reservado para ver en la demo (y en las pruebas) qué pasa cuando Amazon pide captcha.
+    if (id === DEMO_AMAZON_BLOQUEA) throw new ApiError('Amazon no deja leer la lista ahora mismo. Prueba dentro de un rato.', 'AMAZON_BLOQUEA');
+    return { productos: parseListaHtml(DEMO_AMAZON_HTML) };
+  }
+
+  async amazonCorto(): Promise<string> {
+    throw new ApiError('Ese enlace no es una lista de deseos de Amazon.', 'NO_ES_LISTA');
   }
 
   async purchases(): Promise<Purchase[]> {

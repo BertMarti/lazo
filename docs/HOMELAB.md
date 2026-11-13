@@ -187,6 +187,26 @@ docker compose up -d --build
 
 Las migraciones se aplican solas al arrancar.
 
+## Leer listas de Amazon desde el servidor (opcional, apagado por defecto)
+
+Con esto encendido, la familia pega el enlace de su lista de deseos de Amazon («Invitar» → «Solo ver» → «Copiar enlace») y Lazo trae los productos uno a uno, con su enlace. Apagado, se puede seguir importando copiando y pegando la página.
+
+**Antes, lee los riesgos** en `docs/legal/AMAZON.md`: las condiciones de Amazon prohíben los robots, y Amazon puede pedir captchas a la IP de casa (también cuando compráis). Es tu decisión.
+
+1. En `server/.env`, añade (o descomenta) la línea:
+
+   ```bash
+   AMAZON_IMPORT=on
+   ```
+
+2. Vuelve a levantar los contenedores:
+
+   ```bash
+   cd server && docker compose up -d --build
+   ```
+
+Para apagarlo, borra la línea (o déjala vacía) y repite el paso 2. Si Amazon empieza a pedir captchas, Lazo deja de llamarle durante una hora por su cuenta y ofrece copiar y pegar.
+
 ## Que los enlaces de invitación abran la app (Android, opcional)
 
 Con el APK de serie, un enlace `https://tu-dominio/#/unirse/…` se abre en el navegador. Para que abra la app instalada (App Links), el APK tiene que llevar tu dominio dentro, así que lo compilas tú:

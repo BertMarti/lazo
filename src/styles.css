@@ -488,6 +488,7 @@ dialog.sheet:not(:has(.sheet-foot)) .sheet-body { padding-bottom: calc(var(--s-5
 .amz-vista .check { align-items: center; padding: var(--s-2) 0; border-bottom: 1px solid var(--linea); }
 .amz-vista .gift-thumb { width: 56px; height: 56px; }
 .amz-titulo { display: block; font-weight: 700; overflow-wrap: anywhere; }
+.amz-progreso { width: 100%; height: 8px; accent-color: var(--terracota); }
 .amz-dup { color: var(--terracota-tinta); font-weight: 700; }
 .sheet-photo { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-m); overflow: hidden; background: var(--hundido); }
 .sheet-photo img { width: 100%; height: 100%; object-fit: cover; }

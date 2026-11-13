@@ -4,7 +4,21 @@ Revisado el 2026-11-12 para la v1.1. **No es asesoramiento jurídico.** Es una l
 
 ## En dos frases
 
-Lazo te deja traer a tu lista los productos de **tu propia** lista de deseos pública de amazon.es. La forma principal es **copiar y pegar**: Lazo no se conecta a Amazon. La lectura automática desde el servidor **no se incluye en la v1.1**; si algún día se añade, vendrá apagada.
+Lazo te deja traer a tu lista los productos de **tu propia** lista de deseos pública de amazon.es. Hay dos formas: **copiar y pegar** la página (Lazo no se conecta a Amazon) o, desde la v1.2 y **solo si quien aloja el servidor la enciende**, **pegar el enlace** y que el servidor lea la lista.
+
+## Lectura desde el servidor (v1.2): decisión de quien aloja Lazo
+
+Viene **apagada**. Quien instala Lazo en su casa la enciende a propósito con `AMAZON_IMPORT=on` (cómo: `docs/HOMELAB.md`). El dueño de este proyecto la usa en su propio servidor, para sus propias listas, y asume el riesgo. Cada dueño de un servidor decide por sí mismo.
+
+**El riesgo, en sencillo:**
+
+- **Las condiciones de Amazon prohíben los robots** que leen sus páginas. Encenderla es incumplirlas, aunque sea tu lista y una lectura puntual (ver «¿Chocan los caminos…?» más abajo).
+- **Amazon puede bloquear la IP de casa** con captchas. Es la misma IP desde la que compráis: durante un rato, también a ti te puede pedir captchas en Amazon.
+- Si Amazon contesta con un captcha, Lazo **se para, no reintenta y no intenta saltarlo**, y durante una hora no vuelve a llamar a Amazon. Te dice «Amazon no deja leer la lista ahora mismo. Prueba dentro de un rato» y te ofrece copiar y pegar la página.
+
+**Cómo lee:** solo la lista que pegas, cuando la pegas. Del enlace se queda solo el identificador (`/hz/wishlist/ls/<ID>`); la dirección la construye el servidor, solo «No comprados». Como mucho 10 tramos y 200 productos, con una pausa de 1 a 2 segundos entre tramo y tramo, con el nombre de programa honesto `LazoBot`, sin cookies ni sesión y sin salir de amazon.es. Una lectura a la vez en todo el servidor y 5 por persona y hora. Los enlaces cortos `amzn.eu/d/…` se siguen solo dentro de amzn.eu, sin abrir la página. La lista tiene que estar compartida en modo «Solo ver» (en Amazon: «Invitar» → «Solo ver» → «Copiar enlace»).
+
+**Qué ve Amazon:** una visita a la lista pública desde la IP de tu servidor, y después las fotos de la vista previa (que se cargan ya, antes de confirmar: Amazon ya sabe de esa visita).
 
 ## Qué hace Lazo con una lista de Amazon
 
@@ -17,13 +31,13 @@ Lazo te deja traer a tu lista los productos de **tu propia** lista de deseos pú
 | **Qué se guarda** | Por cada regalo: título, dirección de la foto (la foto no se copia: se sigue viendo desde Amazon), precio y el enlace limpio `https://www.amazon.es/dp/<ASIN>` |
 | **Prioridad y cantidad** | Si la copia las trae, se guardan como datos de tu propio regalo («Me encantaría», «2 unidades»): son tuyos, no de Amazon |
 | **Qué no se guarda** | El enlace ni el identificador de tu lista de Amazon, tu nombre en Amazon, comentarios, dirección de envío, ni la página descargada |
-| **Tope** | 100 productos por importación |
+| **Tope** | 100 productos al copiar y pegar; 200 cuando lee el servidor |
 
 ### Los dos caminos
 
 **(b) Copiar y pegar (el principal).** Abres tu lista en Amazon con tu navegador, seleccionas todo (Ctrl+A), copias (Ctrl+C) y lo pegas en Lazo. Lazo lo analiza en tu móvil u ordenador. **No hay ninguna petición de Lazo a Amazon**: quien visita Amazon eres tú, como cualquier otro día.
 
-**(a) Lectura desde el servidor (no incluida en la v1.1).** El servidor de casa descargaría la página pública de la lista: una lectura por importación, como mucho 5 páginas y 100 productos, con límite de peticiones y con un nombre de programa honesto (`LazoBot`). Si Amazon contesta con un captcha o un error, Lazo se detiene y te ofrece copiar y pegar.
+**(a) Lectura desde el servidor (v1.2, apagada por defecto).** El servidor de casa descarga la página pública de la lista: una lectura por importación, como mucho 10 tramos y 200 productos, con límite de peticiones y con un nombre de programa honesto (`LazoBot`). Si Amazon contesta con un captcha o un error, Lazo se detiene y te ofrece copiar y pegar. Ver la sección de arriba.
 
 ### Lo que Lazo no hace, en ningún caso
 
@@ -78,7 +92,7 @@ Una pista práctica: que hoy Amazon haya cortado una simple descarga de su pági
 ## Recomendación
 
 1. **Camino principal: (b), copiar y pegar.** Funciona sin servidor (también en la demo y en el APK), no depende de que Amazon deje pasar a un robot y no choca con sus condiciones.
-2. **Camino (a): no implementarlo en la v1.1.** Aporta comodidad, pero choca con la letra de la licencia, pone en juego la IP de casa y lo más probable es que Amazon lo corte.
+2. **Camino (a): no implementarlo en la v1.1.** Aporta comodidad, pero choca con la letra de la licencia, pone en juego la IP de casa y lo más probable es que Amazon lo corte. *(v1.2: el dueño del proyecto decidió hacerlo para su servidor, con las condiciones del punto 3; ver «Lectura desde el servidor».)*
 3. **Si más adelante se decide hacerlo**, que sea:
    - **apagado por defecto**, y lo enciende quien aloja el servidor sabiendo lo que hay (una variable del servidor, no un ajuste de cada usuario);
    - nunca en la demo pública;
@@ -91,7 +105,7 @@ Una pista práctica: que hoy Amazon haya cortado una simple descarga de su pági
 - Leer en un navegador la cláusula «Licencia y acceso» vigente y sustituir aquí el resumen de memoria por la cita literal con su fecha.
 - Volver a mirar el `robots.txt` antes de cada versión, por si aparece `/hz/wishlist/`.
 
-> Las fotos de la vista previa no se cargan hasta que confirmas: antes de pulsar «Añadir», Lazo no hace ninguna petición a Amazon (AMZ-16). Después, como con cualquier regalo, la foto se muestra desde la tienda.
+> Al copiar y pegar, las fotos de la vista previa no se cargan hasta que confirmas: antes de pulsar «Añadir», Lazo no hace ninguna petición a Amazon (AMZ-16). Después, como con cualquier regalo, la foto se muestra desde la tienda. Cuando lee el servidor, las fotos se ven ya en la vista previa.
 
 ## Modelos y su función
 

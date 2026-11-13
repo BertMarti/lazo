@@ -1,7 +1,8 @@
 import { Capacitor } from '@capacitor/core';
-import { ClipboardText } from '@phosphor-icons/react';
+import { ArrowClockwise, ClipboardText } from '@phosphor-icons/react';
 import { useEffect, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode } from 'react';
-import { esDuplicado, MAX_PEGADO, parseListaPegada, soloEnlace, type AmazonProducto } from '../../core/amazonLista';
+import { esDuplicado, listaId, MAX_PEGADO, parseListaPegada, soloEnlace, type AmazonProducto } from '../../core/amazonLista';
+import { ApiError } from '../../api/types';
 import { formatMoney } from '../../core/money';
 import type { Item } from '../../core/types';
 import { DEMO_AMAZON_HTML } from '../../api/seed';
@@ -61,34 +62,79 @@ const SOLO_ENLACE =
   'Eso es solo el enlace de la lista. Lazo no entra en Amazon por ti: necesita el texto de la página. Ábrela en el navegador y sigue los pasos.';
 const NADA = 'No encuentro productos en lo que has pegado. Copia la página entera de tu lista (sigue los pasos) y vuelve a pegarla.';
 
+/** El enlace de una lista: su identificador o el código de un `amzn.eu/d/…` (que el servidor resuelve). */
+export type EnlaceLista = { id: string; corto?: undefined } | { corto: string; id?: undefined };
+
 /**
- * Importar una lista de Amazon copiando y pegando (docs/legal/AMAZON.md, camino b). Lazo no hace ninguna petición a
- * Amazon: lo pegado se analiza aquí, no se guarda ni se envía, y solo se crean los regalos que la persona marca.
+ * Importar una lista de Amazon. Si el servidor tiene encendida la lectura (`AMAZON_IMPORT=on`), basta el enlace: lo lee
+ * el servidor (camino a). Si no, o si Amazon no deja, copiar y pegar la página (camino b, docs/legal/AMAZON.md): lo
+ * pegado se analiza aquí, no se guarda ni se envía. En los dos casos solo se crean los regalos que la persona marca.
  */
-export function AmazonLista({ listId, aviso, compartido, deOtraApp, onClose, onSaved }: { listId: string; aviso?: string; compartido?: { text: string; html?: string }; deOtraApp?: boolean; onClose: () => void; onSaved: () => void }) {
+export function AmazonLista({ listId, aviso, enlace, compartido, deOtraApp, onNoEsLista, onClose, onSaved }: { listId: string; aviso?: string; enlace?: EnlaceLista; compartido?: { text: string; html?: string }; deOtraApp?: boolean; onNoEsLista?: () => void; onClose: () => void; onSaved: () => void }) {
   const api = useApi();
   const toast = useToast();
   const [plat, setPlat] = useState<Plataforma>(() => plataforma());
-  const [hint, setHint] = useState(aviso);
+  const [hint, setHint] = useState(enlace ? undefined : aviso);
   // En el APK el WebView puede no dejar leer el portapapeles: el campo de pegar está a la vista desde el principio.
   const [aMano, setAMano] = useState(() => Capacitor.isNativePlatform());
   const [ajeno, setAjeno] = useState(false);
   const [productos, setProductos] = useState<AmazonProducto[] | null>(null);
   const [visibles, setVisibles] = useState<Item[] | null>(null);
+  // Lectura automática: en curso, su fallo (con su código) y si la vista previa vino del servidor (con fotos).
+  const [leyendo, setLeyendo] = useState(!!enlace);
+  const [fallo, setFallo] = useState<{ code?: string; message: string; id?: string } | null>(null);
+  const [delServidor, setDelServidor] = useState<{ partial?: boolean } | null>(null);
 
   // AMZ-11: los duplicados, solo contra lo que la dueña ve de su lista (el servidor ya no le manda sorpresas ni retirados).
   useEffect(() => {
     api.listDetail(listId).then((d) => setVisibles(d.items), () => setVisibles([]));
   }, [api, listId]);
 
+  const leer = async (ref: EnlaceLista) => {
+    setLeyendo(true);
+    setFallo(null);
+    setHint(undefined);
+    let id = ref.id;
+    try {
+      id ??= await api.amazonCorto(ref.corto!);
+      const r = await api.amazonLista(id);
+      setDelServidor({ partial: r.partial });
+      setProductos(r.productos);
+    } catch (e) {
+      const code = e instanceof ApiError ? e.code : undefined;
+      if (code === 'NO_ES_LISTA' && ref.corto && onNoEsLista) return onNoEsLista(); // era un producto, no una lista
+      setFallo({ code, message: errorText(e), id });
+    } finally {
+      setLeyendo(false);
+    }
+  };
+
+  /** Con el enlace de una lista: si el servidor sabe leerla, la lee; si no, los pasos de copiar y pegar. */
+  const conEnlace = (ref: EnlaceLista, sinLectura: string | undefined) => {
+    setLeyendo(true);
+    void api.capacidades().then((c) => {
+      if (c.amazon) return leer(ref);
+      setLeyendo(false);
+      if (ref.corto && onNoEsLista) return onNoEsLista();
+      setHint(sinLectura);
+    });
+  };
+
+  useEffect(() => {
+    if (enlace) conEnlace(enlace, aviso);
+  }, []);
+
   const analiza = (text: string, html?: string) => {
     const t = text.slice(0, MAX_PEGADO);
     const found = parseListaPegada(t, html?.slice(0, MAX_PEGADO));
     setAjeno(false);
+    setDelServidor(null);
+    const id = listaId(t);
     if (found.length) {
       setProductos(found);
       setHint(undefined);
-    } else setHint(soloEnlace(t) ? SOLO_ENLACE : NADA);
+    } else if (soloEnlace(t) && id) conEnlace({ id }, SOLO_ENLACE);
+    else setHint(NADA);
   };
 
   // Lo compartido desde otra app (Android) va directo a la vista previa.
@@ -101,7 +147,7 @@ export function AmazonLista({ listId, aviso, compartido, deOtraApp, onClose, onS
 
   // Ctrl+V en cualquier punto de la hoja (y el campo de respaldo): se lee el evento, nada se pinta en la página.
   useEffect(() => {
-    if (productos) return;
+    if (productos || leyendo) return;
     const on = (e: ClipboardEvent) => {
       if (!e.clipboardData) return;
       e.preventDefault();
@@ -133,7 +179,33 @@ export function AmazonLista({ listId, aviso, compartido, deOtraApp, onClose, onS
     }
   };
 
-  if (productos && visibles) return <Vista productos={productos} visibles={visibles ?? []} ajeno={ajeno} onBack={() => setProductos(null)} onClose={onClose} onAdd={async (sel) => {
+  if (leyendo) return <Leyendo onClose={onClose} />;
+
+  if (fallo) {
+    return (
+      <Sheet
+        title="Importar lista de Amazon"
+        onClose={onClose}
+        footer={
+          <ButtonGroup align="stretch">
+            {fallo.id && fallo.code !== 'LISTA_PRIVADA' && fallo.code !== 'VACIA' && (
+              <Button variant="primary" icon={ArrowClockwise} onClick={() => void leer({ id: fallo.id! })}>
+                Reintentar
+              </Button>
+            )}
+            <Button variant="secondary" icon={ClipboardText} onClick={() => setFallo(null)}>
+              Copiar y pegar la página
+            </Button>
+          </ButtonGroup>
+        }
+      >
+        <p className="notice" role="status">{fallo.message}</p>
+        <p className="meta">También puedes abrir tu lista en el navegador, copiar la página entera y pegarla aquí: así no hace falta que Lazo entre en Amazon.</p>
+      </Sheet>
+    );
+  }
+
+  if (productos && visibles) return <Vista productos={productos} visibles={visibles ?? []} ajeno={ajeno} delServidor={delServidor} onBack={() => setProductos(null)} onClose={onClose} onAdd={async (sel) => {
     try {
       const n = await api.importItems(listId, sel.map((p) => ({ title: p.title, priceCents: p.priceCents, url: p.url, image: p.image, store: 'Amazon', priority: p.priority ?? 2, quantity: p.quantity ?? 1 })));
       toast(n === 1 ? '1 regalo añadido.' : `${n} regalos añadidos.`);
@@ -194,7 +266,29 @@ export function AmazonLista({ listId, aviso, compartido, deOtraApp, onClose, onS
   );
 }
 
-function Vista({ productos, visibles, ajeno, onBack, onClose, onAdd }: { productos: AmazonProducto[]; visibles: Item[]; ajeno?: boolean; onBack: () => void; onClose: () => void; onAdd: (sel: AmazonProducto[]) => Promise<void> }) {
+/** «Leyendo tu lista…»: el servidor va por tramos, con una pausa entre uno y otro, así que puede tardar. */
+function Leyendo({ onClose }: { onClose: () => void }) {
+  const [largo, setLargo] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLargo(true), 6000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <Sheet title="Importar lista de Amazon" onClose={onClose}>
+      <div className="stack" role="status" aria-live="polite">
+        <p className="lead">Leyendo tu lista…</p>
+        <progress className="amz-progreso" aria-label="Leyendo tu lista" />
+        <p className="meta">
+          {largo
+            ? 'Las listas largas tardan un poco más: Lazo lee los productos por tramos y espera un momento entre uno y otro.'
+            : 'Tu servidor está leyendo la lista pública en Amazon. No se guarda nada hasta que elijas.'}
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
+function Vista({ productos, visibles, ajeno, delServidor, onBack, onClose, onAdd }: { productos: AmazonProducto[]; visibles: Item[]; ajeno?: boolean; delServidor?: { partial?: boolean } | null; onBack: () => void; onClose: () => void; onAdd: (sel: AmazonProducto[]) => Promise<void> }) {
   const dup = productos.map((p) => esDuplicado(p, visibles));
   const [on, setOn] = useState(() => dup.map((d) => !d));
   const [busy, setBusy] = useState(false);
@@ -209,7 +303,7 @@ function Vista({ productos, visibles, ajeno, onBack, onClose, onAdd }: { product
           <Button variant="primary" loading={busy} disabled={n === 0} onClick={async () => { setBusy(true); await onAdd(productos.filter((_, i) => on[i])); setBusy(false); }}>
             {`Añadir ${n}`}
           </Button>
-          <Button variant="secondary" onClick={onBack}>Volver a pegar</Button>
+          <Button variant="secondary" onClick={onBack}>{delServidor ? 'Copiar y pegar la página' : 'Volver a pegar'}</Button>
         </ButtonGroup>
       }
     >
@@ -217,7 +311,8 @@ function Vista({ productos, visibles, ajeno, onBack, onClose, onAdd }: { product
         {ajeno && <p className="notice" role="status">Texto recibido de otra app. Revisa la lista: no se añade nada hasta que pulses «Añadir».</p>}
         <p className="lead">{productos.length === 1 ? 'He encontrado 1 producto.' : `He encontrado ${productos.length} productos.`}</p>
         {dups > 0 && <p className="meta">{dups === 1 ? '1 ya está en tu lista: lo dejamos sin marcar.' : `${dups} ya están en tu lista: los dejamos sin marcar.`}</p>}
-        <p className="meta">Las fotos aparecerán al añadirlos.</p>
+        {delServidor?.partial && <p className="meta">Tu lista es muy larga: aquí están los primeros {productos.length}.</p>}
+        {!delServidor && <p className="meta">Las fotos aparecerán al añadirlos.</p>}
       </div>
       <ul className="amz-vista">
         {productos.map((p, i) => (
@@ -225,8 +320,9 @@ function Vista({ productos, visibles, ajeno, onBack, onClose, onAdd }: { product
             <label className="check">
               <input type="checkbox" checked={on[i]} onChange={(e) => setOn((o) => o.map((v, j) => (j === i ? e.target.checked : v)))} />
               <span className="gift-thumb paper" aria-hidden>
-                {/* AMZ-16: nada sale hacia Amazon antes de confirmar; la foto se ve después, ya en tu lista. */}
-                <span className="noimg"><Bow size={28} /></span>
+                {/* AMZ-16: con lo pegado, nada sale hacia Amazon antes de confirmar. Si la lista la leyó el servidor,
+                    Amazon ya ha recibido esa visita: las fotos (solo de sus hosts, AMZ-10) se ven ya. */}
+                {delServidor && p.image ? <img src={p.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <span className="noimg"><Bow size={28} /></span>}
               </span>
               <span className="grow">
                 <span className="amz-titulo">{p.title}</span>
