@@ -23,6 +23,7 @@
     "rendimiento": "node scripts/rendimiento.mjs"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.2",
     "@capacitor/core": "^8.6.0",
     "@fontsource-variable/nunito": "^5.3.0",
     "@fontsource/young-serif": "^5.3.0",

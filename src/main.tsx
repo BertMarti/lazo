@@ -1,4 +1,6 @@
+import { App as CapApp } from '@capacitor/app';
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { androidBack } from './ui/atras';
 import { guardaCompartido } from './ui/compartido';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -62,6 +64,29 @@ if (native) {
   };
   share.take().then((r) => open(r.text), () => {});
   void share.addListener('share', (d) => open(d.text));
+  void CapApp.addListener('backButton', ({ canGoBack }) => {
+    if (androidBack(!!document.querySelector('dialog[open]'), canGoBack) === 'back') history.back();
+    else void CapApp.exitApp();
+  });
+  // App Links (APK compilado con LAZO_HOST): un enlace de invitación abre la app en «Unirse».
+  const invite = (url?: string) => {
+    if (!url) return;
+    const u = new URL(url);
+    if (!/^#\/unirse\/[A-Za-z0-9]{20,64}$/.test(u.hash)) return;
+    if (!read(SERVER_KEY)) {
+      // Primera vez: el servidor es el del enlace, como si se hubiera pegado en «Tengo un enlace».
+      try {
+        localStorage.setItem(SERVER_KEY, u.origin);
+      } catch {
+        return;
+      }
+      location.hash = u.hash;
+      return location.reload();
+    }
+    if (u.origin === read(SERVER_KEY)) location.hash = u.hash;
+  };
+  void CapApp.addListener('appUrlOpen', (e) => invite(e.url));
+  CapApp.getLaunchUrl().then((r) => invite(r?.url), () => {});
 }
 
 if (import.meta.env.PROD && !native && 'serviceWorker' in navigator) {

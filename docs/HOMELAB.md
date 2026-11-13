@@ -187,6 +187,21 @@ docker compose up -d --build
 
 Las migraciones se aplican solas al arrancar.
 
+## Que los enlaces de invitación abran la app (Android, opcional)
+
+Con el APK de serie, un enlace `https://tu-dominio/#/unirse/…` se abre en el navegador. Para que abra la app instalada (App Links), el APK tiene que llevar tu dominio dentro, así que lo compilas tú:
+
+1. **Compila el APK con tu dominio** (WSL o Linux, ver `scripts/firmar-apk.sh`):
+   ```bash
+   LAZO_HOST=milazo.duckdns.org bash scripts/firmar-apk.sh 1.1.2
+   ```
+   Al terminar imprime la huella `SHA-256` del certificado con el que se firmó. Sin `LAZO_HOST`, el APK no reclama ningún dominio.
+2. **Pon esa huella en `public/.well-known/assetlinks.json`** si no es la del APK publicado (`03:ED:3D:…:8B:40`): con tu propia clave será otra. Luego `docker compose up -d --build`; PocketBase lo sirve desde `pb_public` y Caddy no lo bloquea.
+3. **Comprueba que se sirve**: `curl -sI https://milazo.duckdns.org/.well-known/assetlinks.json` debe dar `200` y `content-type: application/json`.
+4. **Comprueba la verificación** con la herramienta de Google, [Statement List Generator and Tester](https://developers.google.com/digital-asset-links/tools/generator): dominio, `com.bertmarti.lazo` y la huella → «Test statement». En el móvil, tras instalar: `adb shell pm get-app-links com.bertmarti.lazo` debe decir `verified` para tu dominio.
+
+Si la verificación falla, los enlaces siguen funcionando en el navegador.
+
 ## Problemas frecuentes
 
 | Síntoma | Causa probable |

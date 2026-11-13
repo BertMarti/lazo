@@ -4,6 +4,8 @@
 # Si no existe, se crea la primera vez. Guárdala a buen recaudo: sin ella no se puede publicar una
 # actualización que Android acepte encima de la instalada.
 # Uso (desde Git Bash): bash scripts/wsl.sh 'bash scripts/firmar-apk.sh 1.0.0'
+# Con tu dominio, para que los enlaces de invitación abran la app (App Links, docs/HOMELAB.md):
+#   bash scripts/wsl.sh 'LAZO_HOST=milazo.duckdns.org bash scripts/firmar-apk.sh 1.0.0'
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VER="${1:?Uso: firmar-apk.sh <versión>}"

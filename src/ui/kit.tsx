@@ -60,6 +60,35 @@ export function VisibilityNote({ children, wide }: { children: ReactNode; wide?:
   );
 }
 
+/** Una hoja abierta es una entrada del historial: atrás (gesto, botón de Android) la cierra antes que cambiar de pantalla. */
+function useSheetHistory(onClose: () => void) {
+  const close = useRef(onClose);
+  close.current = onClose;
+  const depth = useRef(0);
+  const alive = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    // StrictMode monta dos veces: la entrada se mete una sola.
+    if (!depth.current) {
+      depth.current = ((history.state?.sheet as number | undefined) ?? 0) + 1;
+      history.pushState({ ...history.state, sheet: depth.current }, '');
+    }
+    const mine = depth.current;
+    const onPop = () => {
+      if (((history.state?.sheet as number | undefined) ?? 0) < mine) close.current();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      alive.current = false;
+      window.removeEventListener('popstate', onPop);
+      // Cerrada con la ✕, Escape o al guardar: se quita su entrada para no dejar atrás «vacíos».
+      setTimeout(() => {
+        if (!alive.current && history.state?.sheet === mine) history.back();
+      });
+    };
+  }, []);
+}
+
 /** Hoja: <dialog> nativo (foco atrapado, Escape y fondo gratis). Abajo en móvil, centrada en escritorio. */
 export function Sheet({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -71,6 +100,7 @@ export function Sheet({ title, onClose, children, footer }: { title: string; onC
       (d.querySelector<HTMLElement>('[data-autofocus]') ?? d.querySelector<HTMLElement>('.sheet-body input, .sheet-body select, .sheet-body textarea, .sheet-body button, .sheet-foot button'))?.focus();
     }
   }, []);
+  useSheetHistory(onClose);
   return (
     <dialog
       ref={ref}
