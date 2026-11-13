@@ -14,6 +14,7 @@ Arreglos de lo que encontramos al probar la app de Android en un móvil de verda
 - **El primer arranque ya no es un callejón sin salida.** «Te damos la bienvenida a Lazo» ofrece tres caminos: «Me han invitado» (pegar el enlace), «Tengo un código» (explica de dónde sale la dirección de tu Lazo y comprueba la conexión antes de entrar) y «Quiero organizar un grupo» (cómo montarlo en casa, con la guía). Y, debajo, la demo.
 
 ### Cambiado
+- **Icono nuevo:** el lazo de la marca, terracota sobre crema, en Android (adaptativo y con la versión de un color para los iconos temáticos), la web instalable y el iPhone. Adiós al aspa azul de serie.
 - Los nombres de ejemplo de la demo pasan a ser genéricos: Marta y Javier.
 - **El README es ahora una guía para usuarios**, paso a paso y con capturas reales del móvil: crear el grupo, invitar, entrar, añadir regalos (enlace, Amazon y Excel), reservar y la hucha, la regla de la sorpresa, el amigo invisible, el día de la entrega, imprimir y preguntas frecuentes. Lo técnico está en `docs/DESARROLLO.md`.
 
