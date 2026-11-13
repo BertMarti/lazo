@@ -57,6 +57,12 @@
   --btn-h: 48px;
   --gutter: 20px;
   --max: 1140px;
+  /* Zonas seguras (barra de estado, muesca y barra de gestos). En el APK, Capacitor 8 (SystemBars, insetsHandling «css»)
+     inyecta --safe-area-inset-*, fiables aunque el WebView aún calcule mal env(); en el navegador, env(). */
+  --sa-t: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sa-r: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --sa-b: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sa-l: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 
   --sombra-1: 0 1px 2px rgb(74 45 20 / 0.08), 0 2px 8px rgb(74 45 20 / 0.06);
   --sombra-2: 0 4px 10px rgb(74 45 20 / 0.10), 0 12px 28px rgb(74 45 20 / 0.10);
@@ -128,6 +134,8 @@ p { margin: 0; }
 input, select, textarea, button { font: inherit; color: inherit; }
 * { scrollbar-color: var(--linea-fuerte) transparent; scrollbar-width: thin; }
 [hidden] { display: none !important; }
+/* Tapa la barra de estado con el papel: lo que pasa por debajo al hacer scroll no se mezcla con la hora. */
+body::before { content: ''; position: fixed; inset: 0 0 auto; z-index: 100; height: var(--sa-t); background: var(--papel); pointer-events: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 input, textarea { caret-color: var(--terracota); }
 
@@ -153,7 +161,7 @@ input, textarea { caret-color: var(--terracota); }
 }
 
 /* ————— Cáscara ————— */
-.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.app { min-height: 100dvh; display: flex; flex-direction: column; padding: var(--sa-t) var(--sa-r) 0 var(--sa-l); }
 .app > main { flex: 1; }
 .demo-bar {
   display: flex; align-items: center; gap: var(--s-3); white-space: nowrap;
@@ -164,14 +172,14 @@ input, textarea { caret-color: var(--terracota); }
 .demo-bar a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
 .demo-bar select { min-width: 0; max-width: 8.5rem; min-height: 44px; padding: 0 var(--s-3); border-radius: var(--r-pill); border: 1.5px solid var(--linea-fuerte); background: var(--tarjeta); color: var(--tinta); font-weight: 700; }
 
-.masthead { padding: calc(var(--s-3) + env(safe-area-inset-top)) var(--gutter) var(--s-3); }
+.masthead { padding: var(--s-3) var(--gutter); }
 .masthead-in { max-width: var(--max); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
 .brand { display: inline-flex; align-items: center; gap: var(--s-2); min-height: 44px; font-family: var(--f-display); font-size: 1.5rem; color: var(--terracota-tinta); text-decoration: none; }
 .brand .bow { color: var(--terracota); }
 .masthead-end { display: flex; align-items: center; gap: var(--s-2); }
 .tabs-top { display: none; }
 
-main { width: 100%; max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 auto; padding: var(--s-2) var(--gutter) calc(104px + env(safe-area-inset-bottom)); }
+main { width: 100%; max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 auto; padding: var(--s-2) var(--gutter) calc(104px + var(--sa-b)); }
 
 .page-head { display: grid; gap: var(--s-2); margin-bottom: var(--s-6); }
 .page-head .back { display: inline-flex; align-items: center; gap: var(--s-1); width: fit-content; min-height: 44px; margin-bottom: calc(-1 * var(--s-2)); color: var(--tinta-2); font-weight: 700; text-decoration: none; }
@@ -186,7 +194,8 @@ main { width: 100%; max-width: calc(var(--max) + 2 * var(--gutter)); margin: 0 a
 
 .tabbar {
   position: fixed; inset: auto 0 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr);
-  background: var(--tarjeta); border-top: 1px solid var(--linea); padding: var(--s-1) var(--s-2) calc(var(--s-1) + env(safe-area-inset-bottom));
+  background: var(--tarjeta); border-top: 1px solid var(--linea);
+  padding: var(--s-1) calc(var(--s-2) + var(--sa-r)) calc(var(--s-1) + var(--sa-b)) calc(var(--s-2) + var(--sa-l));
 }
 .tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px;
@@ -445,7 +454,7 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
 /* ————— Lista ————— */
 .list-layout { display: grid; gap: var(--s-6); }
 .list-side { display: none !important; }
-.sticky-cta { position: fixed; left: 0; right: 0; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 15; padding: var(--s-3) var(--gutter); background: color-mix(in srgb, var(--papel) 94%, transparent); border-top: 1px solid var(--linea); }
+.sticky-cta { position: fixed; left: 0; right: 0; bottom: calc(68px + var(--sa-b)); z-index: 15; padding: var(--s-3) calc(var(--gutter) + var(--sa-r)) var(--s-3) calc(var(--gutter) + var(--sa-l)); background: color-mix(in srgb, var(--papel) 94%, transparent); border-top: 1px solid var(--linea); }
 @media (min-width: 900px) { .sticky-cta { position: static; padding: 0; background: none; border: 0; margin-bottom: var(--s-6); } .sticky-cta .btn { width: auto; display: inline-flex; } }
 .has-cta { padding-bottom: 96px; }
 @media (min-width: 900px) { .has-cta { padding-bottom: 0; } }
@@ -453,7 +462,7 @@ details.more[open] > summary { margin-bottom: var(--s-3); }
 /* ————— Hoja (dialog nativo) ————— */
 dialog.sheet {
   /* max-width: el del navegador (100% − 2em) dejaba la hoja del móvil flotando a medias. */
-  width: 100%; max-width: 100%; max-height: min(92dvh, 880px); margin: auto 0 0; padding: 0; border: 0; border-radius: var(--r-l) var(--r-l) 0 0;
+  width: 100%; max-width: 100%; max-height: min(calc(92dvh - var(--sa-t)), 880px); margin: auto 0 0; padding: 0 var(--sa-r) 0 var(--sa-l); border: 0; border-radius: var(--r-l) var(--r-l) 0 0;
   background: var(--tarjeta); color: var(--tinta); box-shadow: var(--sombra-2), var(--borde-tarjeta); overflow: hidden;
 }
 dialog.sheet[open] { display: grid; grid-template-rows: auto 1fr auto; animation: sheet-in 220ms var(--ease-drawer); }
@@ -469,7 +478,8 @@ dialog.sheet::backdrop { background: var(--velo); backdrop-filter: blur(3px); an
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-4) var(--s-3) var(--s-2) var(--s-5); }
 .sheet-head h2 { font-family: var(--f-display); font-weight: 400; font-size: var(--t-2); line-height: 1.2; }
 .sheet-body { overflow-y: auto; padding: var(--s-2) var(--s-5) var(--s-5); display: grid; gap: var(--s-5); align-content: start; }
-.sheet-foot { padding: var(--s-3) var(--s-5) calc(var(--s-4) + env(safe-area-inset-bottom)); border-top: 1px solid var(--linea); background: var(--tarjeta); display: grid; gap: var(--s-2); }
+dialog.sheet:not(:has(.sheet-foot)) .sheet-body { padding-bottom: calc(var(--s-5) + var(--sa-b)); }
+.sheet-foot { padding: var(--s-3) var(--s-5) calc(var(--s-4) + var(--sa-b)); border-top: 1px solid var(--linea); background: var(--tarjeta); display: grid; gap: var(--s-2); }
 /* Importar lista de Amazon */
 .amz-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
 .amz-pasos li { display: flex; align-items: center; gap: var(--s-4); }
@@ -520,7 +530,7 @@ dialog.sheet::backdrop { background: var(--velo); backdrop-filter: blur(3px); an
 .envelope .who { font-family: var(--f-display); font-weight: 400; font-size: var(--t-display); line-height: 1.05; color: var(--terracota-tinta); }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 60; transform: translateX(-50%);
+  position: fixed; left: 50%; bottom: calc(84px + var(--sa-b)); z-index: 60; transform: translateX(-50%);
   display: flex; align-items: center; gap: var(--s-4); width: max-content; max-width: min(92vw, 520px); min-height: 52px; padding: var(--s-2) var(--s-4) var(--s-2) var(--s-5);
   border-radius: var(--r-m); background: var(--tinta); color: var(--papel); box-shadow: var(--sombra-2); font-weight: 700;
   transition: opacity 160ms ease, transform 240ms var(--ease-out);
@@ -540,7 +550,7 @@ table.preview th { background: var(--hundido); font-weight: 800; }
 .join-hero h1 { font-family: var(--f-display); font-weight: 400; font-size: var(--t-1); line-height: 1.15; }
 
 @media (max-width: 719px) { .hide-sm { display: none; } }
-.app:has(.tabbar[hidden]) > main { padding-bottom: var(--s-8); }
+.app:has(.tabbar[hidden]) > main, .connect > main { padding-bottom: calc(var(--s-8) + var(--sa-b)); }
 .gift-foot { position: relative; }
 .gift-photo > img { position: absolute; inset: 0; }
 .gift-thumb .noimg { display: grid; place-items: center; width: 100%; height: 100%; color: var(--oro); }
@@ -633,7 +643,7 @@ table.preview th { background: var(--hundido); font-weight: 800; }
 .vista-line .grow { flex: 0 1 auto; }
 @media (max-width: 389px) { .page-head .when { font-size: var(--t-md); } }
 @media (max-width: 719px) {
-  .masthead { padding-top: calc(var(--s-1) + env(safe-area-inset-top)); padding-bottom: var(--s-1); }
+  .masthead { padding-top: var(--s-1); padding-bottom: var(--s-1); }
   .demo-bar { gap: var(--s-2); }
   .demo-bar select { max-width: 7.5rem; padding: 0 var(--s-2); font-size: var(--t-mark); }
   /* Un regalo solo en su sección va a lo ancho, con foto 4:3: sin media fila vacía y sin tarjeta gigante. */
@@ -706,8 +716,28 @@ table.map-table .select { min-width: 9rem; }
 .rows > li.plaza-lost { flex-wrap: wrap; }
 .plaza-lost-confirm { flex: 1 1 100%; gap: var(--s-2); }
 /* v10-red */
-.offline-band { position: sticky; top: 0; z-index: 20; margin: 0; padding: var(--s-2) var(--gutter); background: var(--oro-suave); color: var(--sobre-oro-suave); font-size: var(--t-md); font-weight: 700; text-align: center; }
+.offline-band { position: sticky; top: var(--sa-t); z-index: 20; margin: 0; padding: var(--s-2) var(--gutter); background: var(--oro-suave); color: var(--sobre-oro-suave); font-size: var(--t-md); font-weight: 700; text-align: center; }
 
 /* v10-copia */
 .copia .meta { font-size: var(--t-md); }
 .copia .btn { max-width: 100%; height: auto; min-height: var(--btn-h); padding-block: var(--s-2); white-space: normal; line-height: 1.2; text-align: center; }
+
+/* v111-bienvenida: primer arranque del APK sin invitación */
+.connect main { max-width: calc(560px + 2 * var(--gutter)); align-content: start; }
+.connect .join-hero { padding-top: var(--s-6); }
+.doors { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.door {
+  display: flex; align-items: center; gap: var(--s-4); width: 100%; min-height: 76px; padding: var(--s-4) var(--s-5);
+  border: 0; border-radius: var(--r-l); background: var(--tarjeta); color: var(--tinta); box-shadow: var(--sombra-1), var(--borde-tarjeta);
+  text-align: left; cursor: pointer; transition: transform 150ms var(--ease-out), box-shadow 150ms ease;
+}
+.door > svg:first-child { flex: none; color: var(--terracota-tinta); }
+.door > svg:last-child { flex: none; margin-left: auto; color: var(--tinta-2); }
+.door-text { display: grid; gap: 2px; }
+.door-text b { font-family: var(--f-display); font-weight: 400; font-size: var(--t-3); line-height: 1.2; }
+.door-text span { color: var(--tinta-2); font-size: var(--t-meta); }
+.door:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) { .door:hover { transform: translateY(-2px); box-shadow: var(--sombra-2), var(--borde-tarjeta); } }
+.connect-path > .btn-ghost { justify-self: start; }
+.steps { margin: 0; padding-left: var(--s-6); display: grid; gap: var(--s-2); }
+.steps code { font-weight: 800; overflow-wrap: anywhere; }
