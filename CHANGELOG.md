@@ -4,9 +4,18 @@ Todas las novedades de Lazo. Formato [Keep a Changelog](https://keepachangelog.c
 
 ## [Sin publicar]
 
+## [1.1.2] - 2026-11-13 · Atrás
+
+Lo que pidió la familia al usar Lazo de verdad: volver atrás como en cualquier app, poder borrar un grupo y salir de él.
+
 ### Lo nuevo
 - **Eliminar el grupo.** Quien lo creó tiene, al pie del grupo, «Eliminar el grupo». Avisa de que se pierden todas las listas, reservas, la hucha, el sorteo y los enlaces, ofrece «Descargar una copia antes» y solo deja borrar tras escribir el nombre exacto del grupo. En el servidor se borra todo de una vez, sin dejar restos, y solo puede hacerlo el dueño.
 - **Salir del grupo**, para quien no lo creó. Su lista se queda como un sitio libre al que se le puede volver a invitar; lo que tenía reservado para otros y lo que iba a poner a medias se suelta para que otro pueda regalarlo, y lo ya comprado o pagado se queda apuntado. Quien lleva las cuentas de la hucha no puede salir, y quien creó el grupo tampoco (pasar el grupo a otra persona aún no se puede).
+- **Atrás como en cualquier app.** El gesto y el botón de atrás de Android, y deslizar desde el borde en el iPhone, vuelven a la pantalla anterior. Si hay una hoja abierta, primero la cierran. En la pantalla de inicio, atrás sale de la app.
+- **Las invitaciones pueden abrir la app** (opcional): si compilas el APK con tu dominio y publicas `assetlinks.json`, los enlaces de WhatsApp abren Lazo en vez del navegador. Pasos en `docs/HOMELAB.md`.
+
+### Seguridad
+- Revisión de Fable 5.2 (V-32 a V-38), corregida: las invitaciones dejan de valer si quien las creó sale o deja de organizar; la app solo acepta un servidor nuevo desde un enlace si es el de tu compilación; al salir se sueltan también las listas de niños que llevabas y tu enlace de solo lectura, y dejas de ver el sorteo de ese grupo.
 
 ## [1.1.1] - 2026-11-13 · Bienvenida
 
